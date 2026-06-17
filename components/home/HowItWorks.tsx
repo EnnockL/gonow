@@ -1,0 +1,137 @@
+'use client'
+
+import { MessageSquare, Route, MapPin } from 'lucide-react'
+
+const steps = [
+  {
+    icon: MessageSquare,
+    num: '01',
+    title: 'Berätta vart det ska',
+    desc: 'Skriv fritt vad du vill skicka, varifrån och vart. Vår AI förstår naturligt språk, inga formulär att fylla i.',
+  },
+  {
+    icon: Route,
+    num: '02',
+    title: 'Vi matchar med en bärare',
+    desc: 'Systemet hittar BankID-verifierade bärare som redan kör din rutt. Du väljer, betalar och är klar.',
+  },
+  {
+    icon: MapPin,
+    num: '03',
+    title: 'Spåra live tills det är framme',
+    desc: 'Realtidsspårning på kartan. Mottagaren bekräftar med QR-kod och betalning frigörs först vid leverans.',
+  },
+]
+
+export default function HowItWorks() {
+  return (
+    <section
+      className="section"
+      style={{
+        background: 'transparent',
+        borderTop: '1px solid var(--border)',
+        borderBottom: '1px solid var(--border)',
+      }}
+    >
+      <div style={{ maxWidth: 1152, margin: '0 auto' }}>
+        <div
+          style={{
+            background: 'var(--service-card-bg)',
+            border: '1px solid var(--service-card-border)',
+            borderRadius: 32,
+            boxShadow: 'var(--service-card-shadow)',
+            padding: '56px 24px 28px',
+          }}
+        >
+          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+            <p className="label" style={{ marginBottom: 10, color: 'var(--secondary-strong)' }}>
+              Hur det fungerar
+            </p>
+            <h2
+              style={{
+                fontSize: 'clamp(1.8rem, 3vw, 2.5rem)',
+                fontWeight: 700,
+                letterSpacing: '-0.025em',
+                color: 'var(--secondary-strong)',
+              }}
+            >
+              Tre steg. Det är allt.
+            </h2>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
+            {steps.map((step, index) => (
+              <div
+                key={step.num}
+                style={{
+                  padding: '32px 28px',
+                  background: 'linear-gradient(180deg, #b9ff97 0%, #92ff63 100%)',
+                  border: '1px solid rgba(10,10,10,0.08)',
+                  borderRadius: 16,
+                  marginLeft: index > 0 ? -1 : 0,
+                  position: 'relative',
+                  zIndex: 0,
+                  transition: 'z-index 0s, background 0.15s, border-color 0.15s',
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget as HTMLElement
+                  el.style.zIndex = '1'
+                  el.style.borderColor = 'rgba(10,10,10,0.14)'
+                  el.style.background = 'linear-gradient(180deg, #c7ffad 0%, #a0ff76 100%)'
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget as HTMLElement
+                  el.style.zIndex = '0'
+                  el.style.borderColor = 'rgba(10,10,10,0.08)'
+                  el.style.background = 'linear-gradient(180deg, #b9ff97 0%, #92ff63 100%)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: 'rgba(255,255,255,0.28)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <step.icon size={20} style={{ color: '#0a0a0a' }} />
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.1em',
+                      color: 'rgba(10,10,10,0.68)',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
+                    {step.num}
+                  </span>
+                </div>
+                <h3
+                  style={{
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    color: '#0a0a0a',
+                    marginBottom: 10,
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {step.title}
+                </h3>
+                <p style={{ fontSize: '0.83rem', lineHeight: 1.65, color: 'rgba(10,10,10,0.72)' }}>{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
