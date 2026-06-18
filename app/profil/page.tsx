@@ -1248,7 +1248,7 @@ export default function ProfilPage() {
                                   {order?.description || `Order ${payout.order_id.slice(0, 8).toUpperCase()}`}
                                 </p>
                                 <p style={{ fontSize: '0.76rem', color: 'var(--muted)' }}>
-                                  {payout.amount} kr · via {payout.provider ?? 'Stripe Connect'}
+                                  {payout.amount} kr · via Stripe Connect
                                 </p>
                                 <span style={{ display: 'inline-block', marginTop: 6, padding: '3px 8px', borderRadius: 999, fontSize: '0.68rem', fontWeight: 700, background: 'rgba(251,191,36,0.12)', color: '#b45309' }}>
                                   Pågående
