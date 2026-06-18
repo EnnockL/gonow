@@ -1,18 +1,20 @@
 import TripRegistration from '@/components/driver/TripRegistration'
 import EarningsWidget from '@/components/driver/EarningsWidget'
+import MyTrips from '@/components/driver/MyTrips'
+import DemoDataPanel from '@/components/dev/DemoDataPanel'
 import { TrendingUp, Clock, Shield, Cpu, ArrowUpRight, Route, Wallet, Sparkles } from 'lucide-react'
 
 const perks = [
-  { icon: TrendingUp, title: 'Upp till 85%', desc: 'Gonow tar 15% och resten ar ditt.' },
-  { icon: Clock, title: 'Egna tider', desc: 'Inga scheman. Kor nar det passar.' },
-  { icon: Shield, title: 'Forsakrat', desc: '250 000 kr via Trygg-Hansa per resa.' },
-  { icon: Cpu, title: 'AI-optimerad', desc: 'Vi fyller bilen med ratt mix automatiskt.' },
+  { icon: TrendingUp, title: 'Upp till 85%',  desc: 'Gonow tar 15% och resten är ditt.' },
+  { icon: Clock,      title: 'Egna tider',    desc: 'Inga scheman. Kör när det passar.' },
+  { icon: Shield,     title: 'Försäkrat',     desc: '250 000 kr via Trygg-Hansa per resa.' },
+  { icon: Cpu,        title: 'AI-optimerad',  desc: 'Vi fyller bilen med rätt mix automatiskt.' },
 ]
 
 const metrics = [
   { label: 'Snittutbetalning / rutt', value: '1 964 kr', icon: Wallet },
   { label: 'Matchningstid', value: '< 4 min', icon: Sparkles },
-  { label: 'Aktiva barare', value: '420+', icon: Route },
+  { label: 'Aktiva bärare', value: '420+', icon: Route },
 ]
 
 export default function KorPage() {
@@ -25,7 +27,7 @@ export default function KorPage() {
         background: 'linear-gradient(180deg, transparent 0%, rgba(146,255,99,0.05) 100%)',
       }}
     >
-      <div style={{ maxWidth: 1160, margin: '0 auto', padding: '0 24px' }}>
+      <div style={{ maxWidth: 1260, margin: '0 auto', padding: '0 24px' }}>
         <div style={{ paddingTop: 40, paddingBottom: 40 }}>
           <div
             style={{
@@ -59,7 +61,7 @@ export default function KorPage() {
                 }}
               />
               <p className="label" style={{ marginBottom: 14, color: 'var(--secondary-strong)' }}>
-                Kor & tjana
+                Kör &amp; tjäna
               </p>
               <h1
                 style={{
@@ -87,8 +89,8 @@ export default function KorPage() {
                   marginBottom: 26,
                 }}
               >
-                Registrera vart du ska och nar. Gonow matchar automatiskt paket, returer och passagerare langs rutten
-                med enterprise-niva pa trygghet, payout och planering.
+                Registrera vart du ska och när. Gonow matchar automatiskt paket, returer och passagerare längs rutten
+                med hög trygghet, snabb payout och smart planering.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                 {[
@@ -221,11 +223,11 @@ export default function KorPage() {
                   Registrera din resa
                 </p>
                 <p style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>
-                  Ange rutt, kapacitet och vilka uppdrag du accepterar.
+                  Ange rutt, kapacitet och vilka uppdrag du accepterar — vi sköter matchningen.
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                {['Rutt', 'Kapacitet', 'Prissattning', 'Tillatelser'].map((item) => (
+                {['Rutt', 'Kapacitet', 'Prissättning', 'Tillåtelser'].map((item) => (
                   <span
                     key={item}
                     style={{
@@ -248,6 +250,13 @@ export default function KorPage() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'sticky', top: 96 }}>
+            <DemoDataPanel />
+            <div>
+              <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 10 }}>
+                Mina resor
+              </p>
+              <MyTrips />
+            </div>
             <EarningsWidget />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -277,7 +286,7 @@ export default function KorPage() {
                     Operativt tips
                   </p>
                   <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1.2 }}>
-                    Mest lonsamt ar att kombinera 1 passagerare med 2-3 paket.
+                    Mest lönsamt är att kombinera 1 passagerare med 2–3 paket.
                   </p>
                 </div>
                 <div
@@ -296,7 +305,7 @@ export default function KorPage() {
                 </div>
               </div>
               <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6 }}>
-                Var matchningsmotor prioriterar rutter med hog fyllnadsgrad, kort omvag och forutsagbara stopptider,
+                Vår matchningsmotor prioriterar rutter med hög fyllnadsgrad, kort omväg och förutsägbara stopptider,
                 vilket ger snabbare accept och stabilare utbetalning.
               </p>
             </div>

@@ -7,7 +7,7 @@ export default function StatsBar() {
         background: 'var(--surface)',
       }}
     >
-      <div style={{ maxWidth: 1152, margin: '0 auto', padding: '0 24px' }}>
+      <div style={{ maxWidth: 1260, margin: '0 auto', padding: '0 24px' }}>
         <div
           style={{
             display: 'grid',

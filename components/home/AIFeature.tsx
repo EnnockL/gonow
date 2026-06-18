@@ -11,7 +11,7 @@ export default function AIFeature() {
       overflow: 'hidden',
     }}>
       <div style={{
-        maxWidth: 1152,
+        maxWidth: 1260,
         margin: '0 auto',
         display: 'grid',
         gridTemplateColumns: '1fr 1.15fr',

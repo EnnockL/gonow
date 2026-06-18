@@ -8,6 +8,7 @@ export type OrderStatus =
   | 'delivered'
   | 'confirmed'
   | 'disputed'
+  | 'cancelled'
 export type TripStatus = 'active' | 'full' | 'completed' | 'cancelled'
 
 export interface User {
@@ -37,6 +38,11 @@ export interface Trip {
   departure_at: string
   arrival_est?: string
   vehicle_type?: string
+  vehicle_make?: string
+  vehicle_model?: string
+  vehicle_color?: string
+  vehicle_plate?: string
+  vehicle_seats_total?: number
   seats_available: number
   weight_capacity_kg: number
   allows_passengers: boolean
@@ -53,8 +59,10 @@ export interface Trip {
 export interface Order {
   id: string
   sender_id: string
+  carrier_id?: string
   receiver_id?: string
   trip_id?: string
+  booking_request_id?: string
   type: OrderType
   description?: string
   weight_kg?: number
@@ -72,10 +80,13 @@ export interface Order {
   commission: number
   carrier_payout: number
   stripe_payment_intent_id?: string
+  stripe_transfer_id?: string
   status: OrderStatus
   pickup_qr_code?: string
   delivery_photo_url?: string
   confirmed_at?: string
+  picked_up_at?: string
+  delivered_at?: string
   created_at: string
 }
 
@@ -100,6 +111,42 @@ export interface Payout {
   created_at: string
 }
 
+export interface EscrowLedgerEntry {
+  id: string
+  order_id: string
+  payment_id?: string
+  payout_id?: string
+  sender_id?: string
+  carrier_id?: string
+  entry_type:
+    | 'customer_payment_received'
+    | 'platform_fee_reserved'
+    | 'carrier_payout_reserved'
+    | 'carrier_available'
+    | 'carrier_payout_processing'
+    | 'carrier_payout_paid'
+    | 'refund_reserved'
+    | 'refund_completed'
+    | 'dispute_hold'
+    | 'dispute_release'
+  direction: 'credit' | 'debit'
+  bucket:
+    | 'customer_funds'
+    | 'escrow_hold'
+    | 'platform_revenue'
+    | 'carrier_pending'
+    | 'carrier_available'
+    | 'carrier_in_payout'
+    | 'carrier_paid'
+    | 'refund_pool'
+    | 'dispute_hold'
+  amount: number
+  currency: string
+  note?: string
+  metadata?: Record<string, unknown>
+  created_at: string
+}
+
 export interface AIParseResult {
   type: OrderType
   from_city: string
@@ -114,6 +161,12 @@ export interface AIParseResult {
   special_requirements: string | null
   estimated_price_sek: number
   confidence: number
+}
+
+export interface ContactInfo {
+  name: string
+  phone: string
+  email: string
 }
 
 export interface WaitlistEntry {

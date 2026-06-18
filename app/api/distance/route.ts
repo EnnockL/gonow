@@ -1,13 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Remove apartment/unit designations that Nominatim can't geocode
+function stripApt(address: string): string {
+  return address
+    .replace(/\s*,?\s*(?:lgh|lägenhet|apt|apartment|unit|enhet)\.?\s*\d+[a-z]?/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
 async function geocode(place: string): Promise<{ lat: number; lng: number; display: string } | null> {
-  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place + ', Sverige')}&format=json&limit=1`
+  const cleaned = stripApt(place)
+  const hasStreetNumber = /\d/.test(cleaned) || cleaned.includes(',')
+  const query = hasStreetNumber ? cleaned : `${cleaned}, Sverige`
+
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=se`
   const res = await fetch(url, {
     headers: { 'User-Agent': 'Gonow/1.0 (gonow.se)' },
   })
   if (!res.ok) return null
   const data = await res.json()
-  if (!data.length) return null
+  if (!data.length) {
+    // Fallback: retry with ", Sverige" appended
+    const fallback = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleaned + ', Sverige')}&format=json&limit=1`
+    const res2 = await fetch(fallback, { headers: { 'User-Agent': 'Gonow/1.0 (gonow.se)' } })
+    if (!res2.ok) return null
+    const data2 = await res2.json()
+    if (!data2.length) return null
+    return { lat: parseFloat(data2[0].lat), lng: parseFloat(data2[0].lon), display: data2[0].display_name }
+  }
   return {
     lat: parseFloat(data[0].lat),
     lng: parseFloat(data[0].lon),

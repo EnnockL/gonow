@@ -32,7 +32,7 @@ const services = [
     icon: Users,
     title: 'Lift med mig',
     description: 'Dela bilresa och kostnad med någon som ändå kör dit.',
-    href: '/lift',
+    href: '/skicka?tab=lift',
     tag: null,
     stat: '150+ rutter',
   },
@@ -41,7 +41,7 @@ const services = [
 export default function ServiceGrid() {
   return (
     <section style={{ padding: '96px 24px', background: 'var(--bg)' }}>
-      <div style={{ maxWidth: 1152, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1260, margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 48, flexWrap: 'wrap', gap: 16 }}>

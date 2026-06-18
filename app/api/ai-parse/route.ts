@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type Anthropic from '@anthropic-ai/sdk'
 
+// Extracts a full address (street, apt, postal code, city) after a keyword
+function extractLocation(text: string, keywords: string[]): string | null {
+  const lower = text.toLowerCase()
+  for (const kw of keywords) {
+    const idx = lower.indexOf(kw)
+    if (idx === -1) continue
+    const after = text.slice(idx + kw.length).trimStart()
+    // Stop at sentence-end or at "till"/"to" transition
+    const match = after.match(/^(.{4,100}?)(?=\s+(?:till|to)\s|\s*[.!?]|$)/i)
+    if (match) return match[1].trim()
+  }
+  return null
+}
+
 // Simulation: parse free text without calling Claude
 function simulateParse(message: string) {
   const lower = message.toLowerCase()
@@ -14,32 +28,43 @@ function simulateParse(message: string) {
       ? 'pickup'
       : 'package'
 
-  const cityPairs: [string, string, string, string, number][] = [
-    ['stockholm', 'göteborg', 'Stockholm', 'Göteborg', 470],
-    ['stockholm', 'malmö', 'Stockholm', 'Malmö', 610],
-    ['göteborg', 'stockholm', 'Göteborg', 'Stockholm', 470],
-    ['malmö', 'stockholm', 'Malmö', 'Stockholm', 610],
-    ['malmö', 'göteborg', 'Malmö', 'Göteborg', 280],
-    ['göteborg', 'malmö', 'Göteborg', 'Malmö', 280],
-    ['stockholm', 'sundsvall', 'Stockholm', 'Sundsvall', 400],
-    ['stockholm', 'kiruna', 'Stockholm', 'Kiruna', 1400],
-    ['stockholm', 'uppsala', 'Stockholm', 'Uppsala', 70],
-    ['uppsala', 'stockholm', 'Uppsala', 'Stockholm', 70],
-  ]
+  // Try to extract full addresses first (with explicit keywords)
+  let fromRaw = extractLocation(message, ['från ', 'from ', 'avsändare: ', 'upphämtning: '])
+  const toRaw = extractLocation(message, [' till ', ' to ', ' → ', ' -> ', 'leverans: ', 'destination: '])
 
-  let from_city = 'Stockholm'
-  let to_city = 'Göteborg'
-  let km = 470
-
-  for (const [f, t, fc, tc, d] of cityPairs) {
-    if (lower.includes(f) && lower.includes(t)) {
-      from_city = fc
-      to_city = tc
-      km = d
-      break
+  // If "från" was not written but "till" was, extract everything before "till" as from-address
+  if (!fromRaw) {
+    const tillIdx = lower.indexOf(' till ')
+    if (tillIdx > 2) {
+      let beforeTill = message.slice(0, tillIdx).trim()
+      // Strip common leading filler words (allow match at end of string too)
+      beforeTill = beforeTill.replace(/^(?:skicka|hämta|retur|lift|jag vill|vill|kan du|please)(?:\s+|$)/gi, '').trim()
+      beforeTill = beforeTill.replace(/^(?:ett|en|min|mitt)(?:\s+|$)/gi, '').trim()
+      beforeTill = beforeTill.replace(/^(?:paket|paketet|sak|grej|saken)(?:\s+|$)/gi, '').trim()
+      if (beforeTill.length >= 2) fromRaw = beforeTill
     }
-    if (lower.includes(f)) { from_city = fc }
-    if (lower.includes(t)) { to_city = tc }
+  }
+
+  // Fallback: well-known Swedish cities found in text order (not list order)
+  const cities = [
+    'stockholm', 'göteborg', 'malmö', 'uppsala', 'sundsvall',
+    'örebro', 'linköping', 'västerås', 'helsingborg', 'norrköping',
+    'jönköping', 'umeå', 'luleå', 'kiruna', 'gävle', 'borås',
+    'eskilstuna', 'karlstad', 'växjö', 'halmstad',
+  ]
+  const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
+  let from_city = fromRaw || 'Stockholm'
+  let to_city   = toRaw   || 'Göteborg'
+
+  // City fallback (only when both are missing): find cities in text order
+  if (!fromRaw && !toRaw) {
+    const cityMatches = cities
+      .map(c => ({ city: capitalise(c), pos: lower.indexOf(c) }))
+      .filter(m => m.pos !== -1)
+      .sort((a, b) => a.pos - b.pos)
+    if (cityMatches[0]) from_city = cityMatches[0].city
+    if (cityMatches[1]) to_city   = cityMatches[1].city
   }
 
   const weightMatch = lower.match(/(\d+(?:[.,]\d+)?)\s*kg/)
@@ -48,10 +73,8 @@ function simulateParse(message: string) {
   const passengersMatch = lower.match(/(\d+)\s*(person|passagerare|plats)/)
   const passengers = passengersMatch ? parseInt(passengersMatch[1]) : type === 'lift' ? 1 : null
 
-  const storeNames = ['ikea', 'biltema', 'clas ohlson', 'h&m', 'zara', 'nrk', 'netonnet', 'elgiganten']
+  const storeNames = ['ikea', 'biltema', 'clas ohlson', 'h&m', 'zara', 'netonnet', 'elgiganten']
   const store_name = storeNames.find((s) => lower.includes(s))?.replace(/\b\w/g, (c) => c.toUpperCase()) || null
-
-  const estimated_price_sek = Math.round(150 + km + (weight_kg ? weight_kg * 20 : 0))
 
   const urgency = lower.includes('idag') || lower.includes('nu')
     ? 'today'
@@ -75,17 +98,22 @@ function simulateParse(message: string) {
     order_reference: null,
     passengers,
     special_requirements: null,
-    estimated_price_sek,
-    confidence: 0.85,
+    estimated_price_sek: 299,
+    confidence: 0.82,
   }
 }
 
 export async function POST(req: NextRequest) {
   const { message, imageBase64 } = await req.json()
 
-  // Simulation mode — no Anthropic API key needed
-  if (process.env.NEXT_PUBLIC_SIMULATION_MODE === 'true') {
-    await new Promise((r) => setTimeout(r, 800)) // realistic feel
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  const useSimulation =
+    process.env.NEXT_PUBLIC_SIMULATION_MODE === 'true' ||
+    !apiKey ||
+    apiKey === 'placeholder'
+
+  if (useSimulation) {
+    await new Promise((r) => setTimeout(r, 800))
     return NextResponse.json({ success: true, data: simulateParse(message) })
   }
 
@@ -112,8 +140,8 @@ No markdown, no explanation — pure JSON only.
 Return this structure:
 {
   "type": "package" | "pickup" | "return" | "lift",
-  "from_city": string,
-  "to_city": string,
+  "from_city": string,  // Full address if given (e.g. "Vasagatan 11 lgh 302, 111 20 Stockholm"), otherwise city name
+  "to_city": string,    // Full address if given (e.g. "Storgatan 5, 411 38 Göteborg"), otherwise city name
   "description": string,
   "weight_kg": number | null,
   "departure_date": "YYYY-MM-DD" | null,

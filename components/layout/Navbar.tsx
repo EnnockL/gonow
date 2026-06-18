@@ -1,10 +1,13 @@
-'use client'
+﻿'use client'
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { Menu, X, Moon, Sun } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { signOut } from '@/lib/auth'
+import AuthModal from '@/components/auth/AuthModal'
 
 const DARK_VARS: Record<string, string> = {
   '--bg': '#0a0a0a', '--surface': '#111111', '--surface-2': '#181818', '--surface-3': '#232323',
@@ -57,20 +60,34 @@ const links = [
   { href: '/skicka', label: 'Skicka' },
   { href: '/hamta', label: 'Hämta' },
   { href: '/retur', label: 'Retur' },
-  { href: '/lift', label: 'Lift' },
+  { href: '/skicka?tab=lift', label: 'Lift' },
   { href: '/kor', label: 'Kör & tjäna' },
 ]
 
 const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)'
 
 export default function Navbar() {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen]         = useState(false)
   const [isDesktop, setIsDesktop] = useState(true)
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [theme, setTheme]       = useState<'light' | 'dark'>('light')
   const [scrolled, setScrolled] = useState(false)
-  const [visible, setVisible] = useState(true)
+  const [visible, setVisible]   = useState(true)
+  const [showAuth, setShowAuth] = useState(false)
   const lastY = useRef(0)
-  const path = usePathname()
+  const path        = usePathname()
+  const searchParams = useSearchParams()
+  const { userId, profile } = useAuth()
+
+  function isActive(href: string) {
+    const [linkPath, linkQuery] = href.split('?')
+    if (path !== linkPath) return false
+    if (!linkQuery) {
+      // "Skicka" should NOT be active when ?tab=lift is set
+      return linkPath !== '/skicka' || searchParams.get('tab') !== 'lift'
+    }
+    const lp = new URLSearchParams(linkQuery)
+    return [...lp.entries()].every(([k, v]) => searchParams.get(k) === v)
+  }
 
   useEffect(() => {
     function onResize() { setIsDesktop(window.innerWidth >= 768) }
@@ -130,10 +147,10 @@ export default function Navbar() {
       transform: visible ? 'translateY(0)' : 'translateY(-120%)',
       transition: `padding 0.45s ${EASE}, transform 0.4s ${EASE}`,
     }}>
-      {/* ── Main bar / pill ── */}
+      {/* Main bar / pill */}
       <div style={{
         margin: '0 auto',
-        maxWidth: scrolled ? 860 : 1200,
+        maxWidth: scrolled ? 900 : 1300,
         borderRadius: 999,
         background: scrolled ? pillBg : 'var(--nav-bg)',
         backdropFilter: 'blur(22px)',
@@ -178,7 +195,7 @@ export default function Navbar() {
         {/* Center links */}
         <div style={{ display: isDesktop ? 'flex' : 'none', alignItems: 'center' }}>
           {links.map((l) => {
-            const active = path === l.href
+            const active = isActive(l.href)
             return (
               <Link key={l.href} href={l.href} style={{
                 fontSize: scrolled ? '0.79rem' : '0.82rem',
@@ -233,17 +250,43 @@ export default function Navbar() {
             {dark ? <Sun size={14} /> : <Moon size={14} />}
           </button>
 
-          {/* Logga in — hidden when pill */}
-          <Link href="/profil" style={{
-            fontSize: '0.82rem', color: 'var(--muted)', fontWeight: 400,
-            textDecoration: 'none', transition: 'color 0.15s',
-            display: scrolled ? 'none' : 'inline',
-          }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text)' }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--muted)' }}
-          >
-            Logga in
-          </Link>
+          {/* Auth — inloggad: avatar → /profil, ej inloggad: logga in-knapp */}
+          {userId && profile ? (
+            <Link href="/profil" style={{
+              display: scrolled ? 'none' : 'flex', alignItems: 'center', gap: 7,
+              textDecoration: 'none', transition: 'opacity 0.15s',
+            }}
+              onMouseEnter={e => ((e.currentTarget as HTMLElement).style.opacity = '0.75')}
+              onMouseLeave={e => ((e.currentTarget as HTMLElement).style.opacity = '1')}
+            >
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%',
+                background: 'var(--text)', color: 'var(--bg)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.68rem', fontWeight: 700, flexShrink: 0,
+              }}>
+                {profile.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+              </div>
+              <span style={{ fontSize: '0.82rem', color: 'var(--text)', fontWeight: 500 }}>
+                {profile.name?.split(' ')[0]}
+              </span>
+            </Link>
+          ) : (
+            <button
+              onClick={() => setShowAuth(true)}
+              style={{
+                fontSize: '0.82rem', color: 'var(--muted)', fontWeight: 400,
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontFamily: 'inherit', transition: 'color 0.15s',
+                display: scrolled ? 'none' : 'inline',
+                padding: 0,
+              }}
+              onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = 'var(--text)')}
+              onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = 'var(--muted)')}
+            >
+              Logga in
+            </button>
+          )}
 
           {/* CTA */}
           <Link href="/skicka" style={{
@@ -274,7 +317,7 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* Mobile menu — floats as card below pill */}
+      {/* Mobile menu - floats as card below pill */}
       {open && !isDesktop && (
         <div style={{
           margin: '8px 20px 0',
@@ -305,7 +348,38 @@ export default function Navbar() {
                 {l.label}
               </Link>
             ))}
-            <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {userId && profile ? (
+                <>
+                  <Link href="/profil" onClick={() => setOpen(false)} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 12px', borderRadius: 10,
+                    border: '1px solid var(--border)', background: 'var(--surface)',
+                    textDecoration: 'none',
+                  }}>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--text)', color: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 700 }}>
+                      {profile.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </div>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text)' }}>{profile.name?.split(' ')[0]}</span>
+                  </Link>
+                  <button onClick={async () => { await signOut(); setOpen(false) }} style={{
+                    width: '100%', padding: '10px', borderRadius: 10,
+                    border: '1px solid var(--border)', background: 'none',
+                    color: 'var(--muted)', fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit',
+                  }}>
+                    Logga ut
+                  </button>
+                </>
+              ) : (
+                <button onClick={() => { setShowAuth(true); setOpen(false) }} style={{
+                  width: '100%', padding: '10px', borderRadius: 10,
+                  border: '1px solid var(--border)', background: 'var(--surface)',
+                  color: 'var(--text)', fontSize: '0.875rem', fontWeight: 500,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}>
+                  Logga in / Skapa konto
+                </button>
+              )}
               <Link href="/skicka" onClick={() => setOpen(false)} style={{
                 display: 'block', textAlign: 'center',
                 background: 'var(--accent)', color: '#0a0a0a',
@@ -317,6 +391,13 @@ export default function Navbar() {
             </div>
           </div>
         </div>
+      )}
+      {showAuth && (
+        <AuthModal
+          onClose={() => setShowAuth(false)}
+          onSuccess={() => setShowAuth(false)}
+          redirectTo="/profil"
+        />
       )}
     </nav>
   )

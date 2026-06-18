@@ -33,7 +33,7 @@ export default function HowItWorks() {
         borderBottom: '1px solid var(--border)',
       }}
     >
-      <div style={{ maxWidth: 1152, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1260, margin: '0 auto' }}>
         <div
           style={{
             background: 'var(--service-card-bg)',

@@ -1,15 +1,58 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Shield, Star, Package, MapPin } from 'lucide-react'
+import TripBookingModal, { type TripInfo } from '@/components/booking/TripBookingModal'
+import AllTripsModal from '@/components/booking/AllTripsModal'
+import { loadSharedActiveTrips, type ActiveTripRecord } from '@/lib/active-trips'
 
-const LIVE_TRIPS = [
-  { from: 'Stockholm', to: 'Göteborg', carrier: 'Erik L.', rating: 4.9, price: 149, eta: '2h' },
-  { from: 'Malmö', to: 'Stockholm', carrier: 'Sara J.', rating: 4.7, price: 219, eta: '5h' },
-  { from: 'Uppsala', to: 'Stockholm', carrier: 'Mikael B.', rating: 5.0, price: 89, eta: '45 min' },
+const DEMO_TRIPS = [
+  { id: 'demo-0', from: 'Stockholm', to: 'Göteborg', carrier: 'Erik L.', rating: 4.9 as number | null, price: 149, eta: '2h', isReal: false },
+  { id: 'demo-1', from: 'Malmö', to: 'Stockholm', carrier: 'Sara J.', rating: 4.7 as number | null, price: 219, eta: '5h', isReal: false },
+  { id: 'demo-2', from: 'Uppsala', to: 'Stockholm', carrier: 'Mikael B.', rating: 5.0 as number | null, price: 89, eta: '45 min', isReal: false },
 ]
 
+function realTripToDisplay(trip: ActiveTripRecord) {
+  const depMs = new Date(trip.departure_at).getTime()
+  const diffMin = Math.max(0, Math.round((depMs - Date.now()) / 60000))
+  const eta = diffMin < 60
+    ? `${diffMin} min`
+    : diffMin < 1440
+      ? `${Math.floor(diffMin / 60)} h`
+      : `${Math.floor(diffMin / 1440)} dag`
+  const price = (trip.price_per_seat && trip.price_per_seat > 0)
+    ? trip.price_per_seat
+    : Math.round((trip.price_per_kg || 0) * 5) || 149
+  return {
+    id: trip.id,
+    from: trip.from_city.split(',')[0].trim(),
+    to: trip.to_city.split(',')[0].trim(),
+    carrier: trip.users?.name || 'Bärare',
+    rating: trip.users?.rating_count ? Number(trip.users.rating_avg || 0) : null as number | null,
+    price,
+    eta,
+    isReal: true,
+  }
+}
+
 export default function Hero() {
+  const [liveTrips, setLiveTrips] = useState(DEMO_TRIPS)
+  const [booking, setBooking] = useState<TripInfo | null>(null)
+  const [showAllTrips, setShowAllTrips] = useState(false)
+
+  useEffect(() => {
+    async function refresh() {
+      const realTrips = await loadSharedActiveTrips({ packagesOnly: true, limit: 3 })
+      const real = realTrips.map(realTripToDisplay)
+      const fill = DEMO_TRIPS.slice(0, Math.max(0, 3 - real.length))
+      setLiveTrips(real.length > 0 ? [...real, ...fill] : DEMO_TRIPS)
+    }
+    refresh()
+    window.addEventListener('gonow_trips_updated', refresh)
+    return () => window.removeEventListener('gonow_trips_updated', refresh)
+  }, [])
+
   return (
     <section
       className="dot-grid"
@@ -35,7 +78,7 @@ export default function Hero() {
         }}
       />
 
-      <div style={{ maxWidth: 1152, margin: '0 auto', width: '100%', padding: '80px 0 60px' }}>
+      <div style={{ maxWidth: 1260, margin: '0 auto', width: '100%', padding: '80px 0 60px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1.02fr 0.98fr', gap: 64, alignItems: 'center' }}>
           <div>
             <div
@@ -296,26 +339,36 @@ export default function Hero() {
                     </span>
                   </div>
 
-                  {LIVE_TRIPS.map((trip, i) => (
+                  {liveTrips.map((trip, i) => (
                     <div
                       key={i}
+                      onClick={() => setBooking({ id: trip.id, from: trip.from, to: trip.to, carrier: trip.carrier, price: trip.price })}
                       style={{
                         padding: '16px 20px',
-                        borderBottom: i < LIVE_TRIPS.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                        borderBottom: i < liveTrips.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         gap: 12,
+                        cursor: 'pointer',
+                        transition: 'background 0.15s',
                       }}
+                      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(146,255,99,0.07)')}
+                      onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#92ff63', display: 'block' }} />
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: trip.isReal ? '#92ff63' : 'rgba(146,255,99,0.55)', display: 'block' }} />
                           <span style={{ width: 1, height: 16, background: 'linear-gradient(to bottom, #92ff63, #22c55e)', display: 'block' }} />
                           <MapPin size={8} style={{ color: '#86efac' }} />
                         </div>
-                        <div>
-                          <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#ffffff', lineHeight: 1.3 }}>{trip.from}</p>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#ffffff', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.from}</span>
+                            {trip.isReal && (
+                              <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(146,255,99,0.2)', color: '#92ff63', border: '1px solid rgba(146,255,99,0.3)', flexShrink: 0 }}>DIN</span>
+                            )}
+                          </p>
                           <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.68)' }}>→ {trip.to}</p>
                         </div>
                       </div>
@@ -323,8 +376,14 @@ export default function Hero() {
                       <div style={{ textAlign: 'center', flexShrink: 0 }}>
                         <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.92)', fontWeight: 500 }}>{trip.carrier}</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 3, justifyContent: 'center' }}>
-                          <Star size={9} style={{ color: '#fbbf24', fill: '#fbbf24' }} />
-                          <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.68)' }}>{trip.rating}</span>
+                          {trip.rating !== null ? (
+                            <>
+                              <Star size={9} style={{ color: '#fbbf24', fill: '#fbbf24' }} />
+                              <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.68)' }}>{trip.rating}</span>
+                            </>
+                          ) : (
+                            <span style={{ fontSize: '0.62rem', color: 'rgba(146,255,99,0.8)' }}>Ny bärare</span>
+                          )}
                         </div>
                       </div>
 
@@ -335,28 +394,23 @@ export default function Hero() {
                     </div>
                   ))}
 
-                  <div
+                  <button
+                    onClick={() => setShowAllTrips(true)}
                     style={{
+                      width: '100%',
                       padding: '13px 20px',
                       background: 'rgba(255,255,255,0.06)',
                       borderTop: '1px solid rgba(255,255,255,0.08)',
+                      border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      fontSize: '0.78rem', color: '#ffffff', fontWeight: 600,
+                      transition: 'background 0.15s',
                     }}
+                    onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)')}
+                    onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)')}
                   >
-                    <Link
-                      href="/skicka"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        fontSize: '0.78rem',
-                        color: '#ffffff',
-                        fontWeight: 600,
-                        textDecoration: 'none',
-                      }}
-                    >
-                      Boka en av dessa <ArrowRight size={13} />
-                    </Link>
-                  </div>
+                    Boka en av dessa <ArrowRight size={13} />
+                  </button>
                 </div>
               </div>
             </div>
@@ -398,6 +452,14 @@ export default function Hero() {
           </div>
         </div>
       </div>
+      {showAllTrips && (
+        <AllTripsModal
+          trips={liveTrips}
+          onBook={trip => setBooking(trip)}
+          onClose={() => setShowAllTrips(false)}
+        />
+      )}
+      {booking && <TripBookingModal trip={booking} onClose={() => setBooking(null)} />}
     </section>
   )
 }

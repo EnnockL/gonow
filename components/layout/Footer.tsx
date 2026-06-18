@@ -70,7 +70,7 @@ export default function Footer() {
 
       {/* ── Newsletter strip ── */}
       <div style={{ borderBottom: '1px solid var(--footer-divider)', padding: '60px 24px' }}>
-        <div style={{ maxWidth: 1152, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
+        <div style={{ maxWidth: 1260, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
           <div>
             <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--footer-kicker)', textTransform: 'uppercase', marginBottom: 14 }}>
               Tidigt tillträde
@@ -145,7 +145,7 @@ export default function Footer() {
 
       {/* ── Main link columns ── */}
       <div style={{ padding: '64px 24px 56px' }}>
-        <div style={{ maxWidth: 1152, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1260, margin: '0 auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: 32 }}>
 
             {/* Brand column */}
@@ -253,7 +253,7 @@ export default function Footer() {
 
       {/* ── Bottom strip ── */}
       <div style={{ borderTop: '1px solid var(--footer-divider)', padding: '18px 24px' }}>
-        <div style={{ maxWidth: 1152, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ maxWidth: 1260, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
               © 2026 Gonow AB

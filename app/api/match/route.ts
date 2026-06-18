@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   const trips = await findMatchingTrips({
     from_city,
     to_city,
-    departure_date: departure_date || new Date().toISOString().split('T')[0],
+    departure_date: departure_date || null,
     weight_kg: weight_kg || 0,
     type: type || 'package',
   })

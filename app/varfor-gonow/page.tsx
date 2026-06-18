@@ -142,7 +142,7 @@ export default function VarforGonow() {
     <div style={{ background: 'var(--bg)', minHeight: '100vh', paddingTop: 96 }}>
 
       {/* Header */}
-      <div style={{ maxWidth: 1152, margin: '0 auto', padding: '64px 24px 80px' }}>
+      <div style={{ maxWidth: 1260, margin: '0 auto', padding: '64px 24px 80px' }}>
         <Link href="/" style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
           fontSize: '0.8rem', color: 'var(--muted)', textDecoration: 'none',
@@ -171,7 +171,7 @@ export default function VarforGonow() {
       </div>
 
       {/* Quote sections */}
-      <div style={{ maxWidth: 1152, margin: '0 auto', padding: '0 24px 80px' }}>
+      <div style={{ maxWidth: 1260, margin: '0 auto', padding: '0 24px 80px' }}>
         {SECTIONS.map((section) => (
           <div key={section.id} style={{ marginBottom: 72 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>

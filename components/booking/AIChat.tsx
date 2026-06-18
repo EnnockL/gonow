@@ -8,15 +8,15 @@ interface Message { role: 'user' | 'assistant'; content: string }
 interface AIChatProps { onParsed: (result: AIParseResult) => void }
 
 const SUGGESTIONS = [
-  'Skicka ett paket från Stockholm till Göteborg på fredag, ca 2 kg',
-  'Hämta min IKEA-order i Kungens Kurva, leverera till Sundbyberg',
-  'Retur till H&M, paket 500g från Malmö',
-  'Söker lift från Uppsala till Stockholm imorgon',
+  'Skicka 2 kg paket från Vasagatan 11 lgh 302, 111 20 Stockholm till Storgatan 5, 411 38 Göteborg',
+  'Hämta IKEA-order i Kungens Kurva, leverera till Solnavägen 4, 113 65 Stockholm',
+  'Retur till H&M, 500g från Davidshallsgatan 7, 211 45 Malmö till Uppsala',
+  'Söker lift från Drottninggatan 1, Uppsala till Stockholm imorgon',
 ]
 
 export default function AIChat({ onParsed }: AIChatProps) {
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Hej! Berätta vad du vill skicka, varifrån och vart — skriv precis som du tänker.' },
+    { role: 'assistant', content: 'Hej! Berätta vad du vill skicka, varifrån och vart.\n\nDu kan skriva hela adressen — gata, nummer, lgh och postnummer — så hittar vi rätt.' },
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -87,32 +87,33 @@ export default function AIChat({ onParsed }: AIChatProps) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       {/* Chat window */}
       <div style={{
-        height: 340,
+        height: 260,
         overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
-        gap: 12,
+        gap: 10,
         padding: '0 0 8px',
-        marginBottom: 12,
+        marginBottom: 10,
       }}>
         {messages.map((m, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
             {m.role === 'assistant' && (
-              <div style={{ width: 26, height: 26, borderRadius: 8, background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 8, alignSelf: 'flex-end' }}>
-                <Zap size={12} style={{ color: 'var(--accent)' }} />
+              <div style={{ width: 24, height: 24, borderRadius: 7, background: 'rgba(146,255,99,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 8, alignSelf: 'flex-end' }}>
+                <Zap size={11} style={{ color: '#92ff63' }} />
               </div>
             )}
             <div style={{
               maxWidth: '78%',
-              padding: '10px 14px',
-              borderRadius: m.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-              fontSize: '0.84rem',
+              padding: '9px 13px',
+              borderRadius: m.role === 'user' ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
+              fontSize: '0.82rem',
               lineHeight: 1.6,
               whiteSpace: 'pre-wrap',
-              background: m.role === 'user' ? 'var(--accent)' : 'var(--surface-2)',
-              color: m.role === 'user' ? '#0a0a0a' : 'var(--text)',
-              border: m.role === 'assistant' ? '1px solid var(--border)' : 'none',
-              fontWeight: m.role === 'user' ? 500 : 400,
+              background: m.role === 'user' ? '#92ff63' : 'rgba(255,255,255,0.1)',
+              color: m.role === 'user' ? '#0a0a0a' : 'rgba(255,255,255,0.9)',
+              border: m.role === 'assistant' ? '1px solid rgba(255,255,255,0.1)' : 'none',
+              fontWeight: m.role === 'user' ? 600 : 400,
+              backdropFilter: m.role === 'assistant' ? 'blur(8px)' : 'none',
             }}>
               {m.content}
             </div>
@@ -120,12 +121,12 @@ export default function AIChat({ onParsed }: AIChatProps) {
         ))}
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <div style={{ width: 26, height: 26, borderRadius: 8, background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
-              <Zap size={12} style={{ color: 'var(--accent)' }} />
+            <div style={{ width: 24, height: 24, borderRadius: 7, background: 'rgba(146,255,99,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+              <Zap size={11} style={{ color: '#92ff63' }} />
             </div>
-            <div style={{ display: 'flex', gap: 5, alignItems: 'center', padding: '10px 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '14px 14px 14px 4px' }}>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center', padding: '9px 13px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px 12px 12px 4px' }}>
               {[0, 1, 2].map((n) => (
-                <span key={n} style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--muted)', display: 'block', animation: `bounce 1.2s ${n * 0.2}s infinite` }} />
+                <span key={n} style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'block', animation: `bounce 1.2s ${n * 0.2}s infinite` }} />
               ))}
             </div>
           </div>
@@ -135,32 +136,33 @@ export default function AIChat({ onParsed }: AIChatProps) {
 
       {/* Suggestions */}
       {messages.length === 1 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
           {SUGGESTIONS.map((s) => (
             <button
               key={s}
               onClick={() => handleSend(s)}
               style={{
-                fontSize: '0.72rem',
-                padding: '5px 12px',
+                fontSize: '0.70rem',
+                padding: '5px 11px',
                 borderRadius: 100,
-                border: '1px solid var(--border)',
-                background: 'var(--surface)',
-                color: 'var(--muted-2)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                background: 'rgba(255,255,255,0.07)',
+                color: 'rgba(255,255,255,0.6)',
                 cursor: 'pointer',
-                transition: 'color 0.15s, border-color 0.15s, background 0.15s',
+                transition: 'all 0.15s',
+                fontFamily: 'inherit',
               }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLElement
-                el.style.color = 'var(--accent)'
-                el.style.borderColor = 'rgba(146,255,99,0.3)'
-                el.style.background = 'var(--accent-softer)'
+                el.style.color = '#92ff63'
+                el.style.borderColor = 'rgba(146,255,99,0.35)'
+                el.style.background = 'rgba(146,255,99,0.08)'
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLElement
-                el.style.color = 'var(--muted-2)'
-                el.style.borderColor = 'var(--border)'
-                el.style.background = 'var(--surface)'
+                el.style.color = 'rgba(255,255,255,0.6)'
+                el.style.borderColor = 'rgba(255,255,255,0.15)'
+                el.style.background = 'rgba(255,255,255,0.07)'
               }}
             >
               {s.slice(0, 40)}…
@@ -173,22 +175,22 @@ export default function AIChat({ onParsed }: AIChatProps) {
       <div style={{
         display: 'flex',
         gap: 8,
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
+        background: 'rgba(255,255,255,0.08)',
+        border: '1px solid rgba(255,255,255,0.15)',
         borderRadius: 12,
         padding: '6px 8px',
         transition: 'border-color 0.15s',
       }}
-        onFocusCapture={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)' }}
-        onBlurCapture={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}
+        onFocusCapture={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#92ff63' }}
+        onBlurCapture={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.15)' }}
       >
         <input type="file" ref={fileRef} style={{ display: 'none' }} accept="image/*" onChange={handleFile} />
         <button
           onClick={() => fileRef.current?.click()}
-          style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'color 0.15s' }}
+          style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'color 0.15s' }}
           title="Bifoga bild"
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--accent)' }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--muted)' }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#92ff63' }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)' }}
         >
           <Paperclip size={15} />
         </button>
@@ -199,15 +201,15 @@ export default function AIChat({ onParsed }: AIChatProps) {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
           placeholder="Skriv vad du vill skicka..."
-          style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '0.875rem', color: 'var(--text)', padding: '6px 4px' }}
+          style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '0.875rem', color: '#ffffff', padding: '6px 4px' }}
         />
         <button
           onClick={() => handleSend()}
           disabled={loading || !input.trim()}
           style={{
             width: 36, height: 36, borderRadius: 8, border: 'none',
-            background: input.trim() ? 'var(--accent)' : 'var(--surface-3)',
-            color: input.trim() ? '#fff' : 'var(--muted)',
+            background: input.trim() ? '#92ff63' : 'rgba(255,255,255,0.08)',
+            color: input.trim() ? '#0a0a0a' : 'rgba(255,255,255,0.3)',
             cursor: input.trim() ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             transition: 'background 0.15s, color 0.15s',
