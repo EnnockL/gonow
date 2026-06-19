@@ -1410,6 +1410,20 @@ export default function ProfilPage() {
             {activeTab === 'orders' && (
               <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                 <SectionTitle title="Mina bokningar" subtitle="Här ska kundens status alltid vara tydlig: väntar, accepterad, på väg eller levererad." />
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0,1fr))', gap: 12, marginBottom: 16 }}>
+                  {[
+                    { label: 'Aktiva', value: orders.filter(o => !['cancelled', 'confirmed'].includes(o.status)).length, hint: 'kräver uppföljning' },
+                    { label: 'Väntar betalning', value: orders.filter(o => o.status === 'pending').length, hint: 'redo för checkout' },
+                    { label: 'På väg', value: orders.filter(o => ['picked_up', 'in_transit'].includes(o.status)).length, hint: 'leveranser i drift' },
+                    { label: 'Klara', value: orders.filter(o => ['delivered', 'confirmed'].includes(o.status)).length, hint: 'levererat / bekräftat' },
+                  ].map((item) => (
+                    <div key={item.label} style={{ padding: isMobile ? 14 : 16, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                      <p style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>{item.label}</p>
+                      <p style={{ fontSize: isMobile ? '1.2rem' : '1.4rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em', marginBottom: 4 }}>{item.value}</p>
+                      <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>{item.hint}</p>
+                    </div>
+                  ))}
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {orders.filter(o => showHistory || o.status !== 'cancelled').length === 0 && (
                     <div style={{ padding: 28, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center', color: 'var(--muted)' }}>
@@ -1510,6 +1524,18 @@ export default function ProfilPage() {
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20 }}>
                 <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                   <SectionTitle title="Mina skickade förfrågningar" subtitle="Det här är den viktigaste kundvyn att bygga klart vidare på." />
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, minmax(0,1fr))', gap: 10, marginBottom: 14 }}>
+                    {[
+                      { label: 'Skickade', value: myRequests.length },
+                      { label: 'Accepterade', value: myRequests.filter(item => item.status === 'accepted').length },
+                      { label: 'Väntar svar', value: myRequests.filter(item => item.status === 'pending').length },
+                    ].map((item) => (
+                      <div key={item.label} style={{ padding: 14, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                        <p style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>{item.label}</p>
+                        <p style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em' }}>{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {myRequests.length === 0 ? (
                       <p style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>Inga skickade förfrågningar än.</p>
@@ -1569,6 +1595,21 @@ export default function ProfilPage() {
 
                 <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                   <SectionTitle title="Inkommande till mina resor" subtitle="Här ska bärare kunna acceptera flera, men alltid med tydlig kapacitet." />
+                  <div style={{ marginBottom: 14, padding: '14px 16px', borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0,1fr))', gap: 10 }}>
+                      {[
+                        { label: 'Inkommande', value: incoming.length },
+                        { label: 'Nya', value: incoming.filter(item => item.status === 'pending').length },
+                        { label: 'Accepterade', value: incoming.filter(item => item.status === 'accepted').length },
+                        { label: 'Mina resor', value: myTrips.length },
+                      ].map((item) => (
+                        <div key={item.label}>
+                          <p style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>{item.label}</p>
+                          <p style={{ fontSize: '1.08rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em' }}>{item.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                   {respondError && (
                     <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#dc2626', fontSize: '0.82rem' }}>
                       {respondError}
@@ -1651,9 +1692,44 @@ export default function ProfilPage() {
             )}
 
             {activeTab === 'profile' && (
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.05fr 0.95fr', gap: 20 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div style={{ ...panelStyle(true, isDark, isMobile), padding: isMobile ? 18 : 24, position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', right: -70, top: -80, width: 220, height: 220, borderRadius: '50%', background: 'var(--enterprise-panel-glow)', pointerEvents: 'none' }} />
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.05fr 0.95fr', gap: 18, position: 'relative' }}>
+                    <div>
+                      <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--muted)', marginBottom: 8 }}>Mina sidor</p>
+                      <h2 style={{ fontSize: isMobile ? '1.2rem' : '1.45rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em', marginBottom: 8 }}>
+                        Ett konto som återanvänder allt över hela flödet
+                      </h2>
+                      <p style={{ fontSize: '0.82rem', lineHeight: 1.7, color: 'var(--muted)', maxWidth: 640 }}>
+                        Fyll kontakt, roll och fordonsdata en gång här, så ska bokningar, resor, acceptflöden och framtida payout-logik kunna använda samma källa utan dubbelarbete.
+                      </p>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10 }}>
+                      {[
+                        { label: 'Profil', value: `${completion}%`, hint: 'ifylld' },
+                        { label: 'Roll', value: meta.role_intent === 'both' ? 'Båda' : meta.role_intent === 'carrier' ? 'Förare' : 'Kund', hint: 'nuvarande' },
+                        { label: 'Säten', value: String(meta.vehicle_seats_total || 0), hint: 'totalt i bil' },
+                      ].map((item) => (
+                        <div key={item.label} style={{ padding: 14, borderRadius: 16, background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(0,0,0,0.08)' }}>
+                          <p style={{ fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>{item.label}</p>
+                          <p style={{ fontSize: isMobile ? '1rem' : '1.15rem', fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{item.value}</p>
+                          <p style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{item.hint}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.05fr 0.95fr', gap: 20 }}>
                 <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                   <SectionTitle title="Profil och onboarding" subtitle="Fyll allt en gång här så ska resten av appen kunna återanvända uppgifterna." />
+                  <div style={{ marginBottom: 16, padding: '14px 16px', borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                    <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>Kontobas</p>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.65 }}>
+                      Kontaktuppgifter här ska återanvändas automatiskt i bokningar, supportärenden och statusuppdateringar.
+                    </p>
+                  </div>
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>Namn</span>
@@ -1712,7 +1788,7 @@ export default function ProfilPage() {
                     <textarea value={meta.bio} onChange={(e) => setMeta({ ...meta, bio: e.target.value })} rows={4} style={{ width: '100%', padding: '11px 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontFamily: 'inherit', resize: 'vertical' }} />
                   </label>
 
-                  <div style={{ marginTop: 16 }}>
+                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
                     <p style={{ fontSize: '0.74rem', color: 'var(--muted)', marginBottom: 8 }}>Roll i plattformen</p>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       {([
@@ -1750,6 +1826,12 @@ export default function ProfilPage() {
 
                 <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                   <SectionTitle title="Förarprofil och bil" subtitle="Den här informationen används när du registrerar nya resor, så att du slipper fylla om allt." />
+                  <div style={{ marginBottom: 16, padding: '14px 16px', borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                    <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>Fordonskort</p>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.65 }}>
+                      När detta är ifyllt kan `/kor` förifylla bil, kapacitet och lediga säten. Det gör hela operationsflödet tydligare och snabbare.
+                    </p>
+                  </div>
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>Märke</span>
@@ -1782,12 +1864,27 @@ export default function ProfilPage() {
                     </div>
                   </div>
                 </div>
+                </div>
               </div>
             )}
 
             {activeTab === 'carriers' && (
               <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                 <SectionTitle title="Utforska förare" subtitle="En inloggad premium-vy där användaren kan jämföra bärare på rating, aktivitet och kapacitet." />
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0,1fr))', gap: 12, marginBottom: 18 }}>
+                  {[
+                    { label: 'Förare', value: carriers.length, hint: 'visas nu' },
+                    { label: 'Verifierade', value: carriers.filter(c => c.bankidVerified).length, hint: 'kvalitet / tillit' },
+                    { label: 'Snittrating', value: carriers.length ? (carriers.reduce((sum, c) => sum + c.rating, 0) / carriers.length).toFixed(1) : '0.0', hint: 'över katalogen' },
+                    { label: 'Aktiva säten', value: carriers.reduce((sum, c) => sum + c.activeSeats, 0), hint: 'samlad kapacitet' },
+                  ].map((item) => (
+                    <div key={item.label} style={{ padding: 16, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                      <p style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>{item.label}</p>
+                      <p style={{ fontSize: isMobile ? '1.1rem' : '1.35rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em', marginBottom: 4 }}>{item.value}</p>
+                      <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>{item.hint}</p>
+                    </div>
+                  ))}
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0,1fr))', gap: 14 }}>
                   {carriers.map((carrier) => (
                     <div key={carrier.id} style={{ padding: 20, borderRadius: 20, background: 'var(--service-card-bg)', border: '1px solid var(--service-card-border)', boxShadow: 'var(--service-card-shadow)' }}>

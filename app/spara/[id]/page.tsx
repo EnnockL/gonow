@@ -2,30 +2,40 @@
 
 import { use, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { CheckCircle2, Circle, Loader2, MapPin, Package, User } from 'lucide-react'
+import {
+  CheckCircle2,
+  Circle,
+  Clock3,
+  Loader2,
+  MapPin,
+  Package,
+  ShieldCheck,
+  Truck,
+  User,
+} from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { Order, OrderStatus } from '@/lib/types'
 
 const STEPS: { status: OrderStatus; label: string; desc: string }[] = [
-  { status: 'pending',    label: 'Accepterad',  desc: 'Bärare har accepterat uppdraget' },
-  { status: 'matched',    label: 'Betald',       desc: 'Betalning bekräftad' },
-  { status: 'picked_up',  label: 'Upphämtad',   desc: 'Paketet är hämtat av bäraren' },
-  { status: 'in_transit', label: 'På väg',       desc: 'Leveransen är i transit' },
-  { status: 'delivered',  label: 'Levererad',    desc: 'Framme hos mottagaren' },
-  { status: 'confirmed',  label: 'Bekräftad',    desc: 'Mottagaren har bekräftat leveransen' },
+  { status: 'pending', label: 'Accepterad', desc: 'Bararen har accepterat uppdraget' },
+  { status: 'matched', label: 'Betald', desc: 'Betalning bekraftad' },
+  { status: 'picked_up', label: 'Upphamtad', desc: 'Paketet ar hamtat av bararen' },
+  { status: 'in_transit', label: 'Pa vag', desc: 'Leveransen ar i transit' },
+  { status: 'delivered', label: 'Levererad', desc: 'Framme hos mottagaren' },
+  { status: 'confirmed', label: 'Bekraftad', desc: 'Mottagaren har bekräftat leveransen' },
 ]
 
 const STATUS_ORDER: OrderStatus[] = ['pending', 'matched', 'picked_up', 'in_transit', 'delivered', 'confirmed']
 
 const STATUS_COLOR: Partial<Record<OrderStatus, { bg: string; color: string; dot: string }>> = {
-  pending:    { bg: 'rgba(245,158,11,0.08)',  color: '#b45309', dot: '#f59e0b' },
-  matched:    { bg: 'rgba(34,197,94,0.08)',   color: '#15803d', dot: '#22c55e' },
-  picked_up:  { bg: 'rgba(124,58,237,0.08)',  color: '#7c3aed', dot: '#7c3aed' },
-  in_transit: { bg: 'rgba(14,165,233,0.08)',  color: '#0369a1', dot: '#0ea5e9' },
-  delivered:  { bg: 'rgba(34,197,94,0.08)',   color: '#15803d', dot: '#22c55e' },
-  confirmed:  { bg: 'rgba(34,197,94,0.08)',   color: '#15803d', dot: '#22c55e' },
-  cancelled:  { bg: 'rgba(239,68,68,0.08)',   color: '#dc2626', dot: '#ef4444' },
-  disputed:   { bg: 'rgba(239,68,68,0.08)',   color: '#dc2626', dot: '#ef4444' },
+  pending: { bg: 'rgba(245,158,11,0.08)', color: '#b45309', dot: '#f59e0b' },
+  matched: { bg: 'rgba(34,197,94,0.08)', color: '#15803d', dot: '#22c55e' },
+  picked_up: { bg: 'rgba(124,58,237,0.08)', color: '#7c3aed', dot: '#7c3aed' },
+  in_transit: { bg: 'rgba(14,165,233,0.08)', color: '#0369a1', dot: '#0ea5e9' },
+  delivered: { bg: 'rgba(34,197,94,0.08)', color: '#15803d', dot: '#22c55e' },
+  confirmed: { bg: 'rgba(34,197,94,0.08)', color: '#15803d', dot: '#22c55e' },
+  cancelled: { bg: 'rgba(239,68,68,0.08)', color: '#dc2626', dot: '#ef4444' },
+  disputed: { bg: 'rgba(239,68,68,0.08)', color: '#dc2626', dot: '#ef4444' },
 }
 
 function timeAgo(ts: string) {
@@ -33,7 +43,28 @@ function timeAgo(ts: string) {
   if (diff < 60) return 'just nu'
   if (diff < 3600) return `${Math.floor(diff / 60)} min sedan`
   if (diff < 86400) return `${Math.floor(diff / 3600)} tim sedan`
-  return `${Math.floor(diff / 86400)} dag(ar) sedan`
+  return `${Math.floor(diff / 86400)} dagar sedan`
+}
+
+function nextStepCopy(status: OrderStatus) {
+  switch (status) {
+    case 'pending':
+      return 'Vantar pa att kunden slutför betalningen innan uppdraget går vidare.'
+    case 'matched':
+      return 'Betalningen ar klar. Nu kan bararen starta uppdraget.'
+    case 'picked_up':
+      return 'Paketet ar upphamtat och redo att markeras som pa vag.'
+    case 'in_transit':
+      return 'Leveransen ar aktiv. Har kommer senare ETA och GPS att kunna visas.'
+    case 'delivered':
+      return 'Invantar att mottagaren bekräftar leveransen sa att utbetalningen kan frigöras.'
+    case 'confirmed':
+      return 'Flodet ar helt klart. Den har sidan fungerar nu som ett kvitto over hela leveransen.'
+    case 'cancelled':
+      return 'Ordern ar avbruten och kommer inte att fortsatta till payout.'
+    default:
+      return 'Status uppdateras lopande har.'
+  }
 }
 
 export default function SparaPage({ params }: { params: Promise<{ id: string }> }) {
@@ -47,14 +78,21 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<string>(new Date().toISOString())
+  const [isMobile, setIsMobile] = useState(false)
   const paymentState = searchParams.get('payment')
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 900)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     const supabase = createClient()
     let mounted = true
 
     async function fetchOrder() {
-      // Use API route (service client) to bypass RLS — works for both sender and carrier
       const res = await fetch(`/api/orders/${id}`).catch(() => null)
       if (!mounted) return
       if (res?.ok) {
@@ -72,11 +110,10 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
 
     fetchOrder()
 
-    // Realtime updates
     const channel = supabase
       .channel(`order:${id}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${id}` }, (payload: { new: Partial<Order> }) => {
-        setOrder((prev) => prev ? { ...prev, ...payload.new } : null)
+        setOrder((prev) => (prev ? { ...prev, ...payload.new } : null))
         setLastUpdated(new Date().toISOString())
       })
       .subscribe()
@@ -100,85 +137,174 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
         body: JSON.stringify({ status: 'confirmed' }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Kunde inte bekräfta leveransen.')
-      setOrder((prev) => prev ? { ...prev, ...data.order } : prev)
+      if (!res.ok) throw new Error(data.error || 'Kunde inte bekrafta leveransen.')
+      setOrder((prev) => (prev ? { ...prev, ...data.order } : prev))
     } catch (err) {
-      setConfirmError(err instanceof Error ? err.message : 'Kunde inte bekräfta.')
+      setConfirmError(err instanceof Error ? err.message : 'Kunde inte bekrafta.')
     } finally {
       setConfirming(false)
     }
   }
 
-  if (loading) return (
-    <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center' }}>
-      <Loader2 size={28} style={{ animation: 'spin 1s linear infinite', color: 'var(--accent)' }} />
-    </div>
-  )
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center' }}>
+        <Loader2 size={28} style={{ animation: 'spin 1s linear infinite', color: 'var(--accent)' }} />
+      </div>
+    )
+  }
 
-  if (!order) return (
-    <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: 'var(--muted)' }}>Order hittades inte.</p>
-    </div>
-  )
+  if (!order) {
+    return (
+      <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: 'var(--muted)' }}>Order hittades inte.</p>
+      </div>
+    )
+  }
 
   const currentIdx = STATUS_ORDER.indexOf(order.status)
   const statusStyle = STATUS_COLOR[order.status] ?? STATUS_COLOR.pending!
-  const currentStep = STEPS.find(s => s.status === order.status)
+  const currentStep = STEPS.find((step) => step.status === order.status)
+  const routeLabel = order.trips ? `${order.trips.from_city} → ${order.trips.to_city}` : `${order.pickup_address} → ${order.dropoff_address}`
+  const facts = [
+    {
+      label: 'Status',
+      value: currentStep?.label ?? order.status,
+      hint: currentStep?.desc ?? 'Uppdateras i realtid',
+      icon: <Truck size={16} color="var(--accent)" />,
+    },
+    {
+      label: 'Belopp',
+      value: `${order.price} kr`,
+      hint: order.weight_kg ? `${order.weight_kg} kg paket` : 'Fast pris for detta uppdrag',
+      icon: <Package size={16} color="var(--accent)" />,
+    },
+    {
+      label: 'Barare',
+      value: carrier?.name ?? 'Tilldelad',
+      hint: order.trips?.departure_at
+        ? `Avgang ${new Date(order.trips.departure_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}`
+        : 'Resa registrerad i systemet',
+      icon: <ShieldCheck size={16} color="var(--accent)" />,
+    },
+    {
+      label: 'Senast uppdaterad',
+      value: timeAgo(lastUpdated),
+      hint: 'Poll och realtime pa samma vy',
+      icon: <Clock3 size={16} color="var(--accent)" />,
+    },
+  ]
 
   return (
-    <div style={{ minHeight: '100vh', padding: '96px 24px 60px', background: 'var(--bg)' }}>
+    <div style={{ minHeight: '100vh', padding: isMobile ? '82px 16px 36px' : '96px 24px 60px', background: 'var(--bg)' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-
-        {/* Header */}
-        <div style={{ marginBottom: 24 }}>
+        <div style={{ marginBottom: 20 }}>
           <p style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 4 }}>
-            Spårning · #{id.slice(0, 8).toUpperCase()}
+            Spara · #{id.slice(0, 8).toUpperCase()}
           </p>
-          <h1 style={{ fontSize: '1.7rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>
-            {order.pickup_address} → {order.dropoff_address}
+          <h1 style={{ fontSize: isMobile ? '1.35rem' : '1.72rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.03em' }}>
+            Folj leveransen steg for steg
           </h1>
-          <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 6 }}>
-            Uppdateras automatiskt · senast {timeAgo(lastUpdated)}
+          <p style={{ fontSize: isMobile ? '0.82rem' : '0.76rem', color: 'var(--muted)', marginTop: 8, lineHeight: 1.65, maxWidth: 760 }}>
+            {routeLabel}. Den har vyn ar byggd som en gemensam sanningskalla for kund, barare och support.
           </p>
         </div>
 
-        {/* Payment banners */}
         {paymentState === 'success' && (
           <div style={{ marginBottom: 16, padding: '14px 18px', borderRadius: 14, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)' }}>
             <p style={{ fontWeight: 700, color: '#15803d', marginBottom: 4 }}>Betalningen gick igenom</p>
-            <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Bäraren kan nu starta uppdraget.</p>
+            <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Bararen kan nu starta uppdraget.</p>
           </div>
         )}
+
         {paymentState === 'cancelled' && (
           <div style={{ marginBottom: 16, padding: '14px 18px', borderRadius: 14, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}>
-            <p style={{ fontWeight: 700, color: '#b45309', marginBottom: 4 }}>Betalningen avbröts</p>
-            <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Gå till Mina sidor och starta betalningen igen.</p>
+            <p style={{ fontWeight: 700, color: '#b45309', marginBottom: 4 }}>Betalningen avbrots</p>
+            <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Ga till Mina sidor och starta betalningen igen.</p>
           </div>
         )}
 
-        {/* Two-column grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 20, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0,1fr))', gap: 12, marginBottom: 18 }}>
+          {facts.map((fact) => (
+            <div
+              key={fact.label}
+              style={{
+                padding: isMobile ? 14 : '16px 18px',
+                borderRadius: isMobile ? 18 : 20,
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                boxShadow: '0 10px 24px rgba(0,0,0,0.04)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+                <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', margin: 0 }}>{fact.label}</p>
+                {fact.icon}
+              </div>
+              <p style={{ fontSize: isMobile ? '0.95rem' : '1.04rem', fontWeight: 800, color: 'var(--text)', margin: 0, lineHeight: 1.2 }}>{fact.value}</p>
+              <p style={{ fontSize: '0.74rem', color: 'var(--muted)', marginTop: 6, lineHeight: 1.45 }}>{fact.hint}</p>
+            </div>
+          ))}
+        </div>
 
-          {/* LEFT COLUMN */}
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 380px', gap: 20, alignItems: 'start' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-            {/* Live status */}
             <div style={{ padding: '20px 24px', borderRadius: 18, background: statusStyle.bg, border: `1.5px solid ${statusStyle.dot}44`, display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ width: 14, height: 14, borderRadius: '50%', background: statusStyle.dot, flexShrink: 0, boxShadow: `0 0 0 5px ${statusStyle.dot}33`, animation: ['delivered','confirmed','cancelled'].includes(order.status) ? 'none' : 'pulse 2s infinite' }} />
+              <div
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: '50%',
+                  background: statusStyle.dot,
+                  flexShrink: 0,
+                  boxShadow: `0 0 0 5px ${statusStyle.dot}33`,
+                  animation: ['delivered', 'confirmed', 'cancelled'].includes(order.status) ? 'none' : 'pulse 2s infinite',
+                }}
+              />
               <div>
-                <p style={{ fontWeight: 800, fontSize: '1.15rem', color: statusStyle.color, margin: 0 }}>{currentStep?.label ?? order.status}</p>
+                <p style={{ fontWeight: 800, fontSize: '1.1rem', color: statusStyle.color, margin: 0 }}>{currentStep?.label ?? order.status}</p>
                 <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 3 }}>{currentStep?.desc}</p>
               </div>
             </div>
 
-            {/* Map placeholder */}
-            <div style={{ height: 280, borderRadius: 18, background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-              <MapPin size={36} color="var(--accent)" />
-              <p style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text)', margin: 0 }}>Live-karta</p>
-              <p style={{ fontSize: '0.75rem', color: 'var(--muted)', margin: 0 }}>Aktiveras när bäraren startar resan</p>
+            <div style={{ padding: isMobile ? '18px 16px' : '20px 22px', borderRadius: isMobile ? 18 : 20, background: 'var(--surface)', border: '1px solid var(--border)', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.05fr 0.95fr', gap: 14 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ padding: '14px 16px', borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Rutt</p>
+                  <p style={{ fontSize: '0.94rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>{routeLabel}</p>
+                  <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginTop: 6 }}>{order.pickup_address} → {order.dropoff_address}</p>
+                </div>
+                <div style={{ padding: '14px 16px', borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Nasta steg</p>
+                  <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>{nextStepCopy(order.status)}</p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {[
+                  { label: 'Avsandare', name: sender?.name, phone: undefined },
+                  { label: 'Barare', name: carrier?.name, phone: undefined },
+                  { label: 'Mottagare', name: recipient?.name, phone: recipient?.phone },
+                ].map(({ label, name, phone }) => (
+                  <div key={label} style={{ padding: '14px 16px', borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                    <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>{label}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: phone ? 4 : 0 }}>
+                      <User size={14} color="var(--muted)" />
+                      <p style={{ fontSize: '0.88rem', fontWeight: 700, color: name ? 'var(--text)' : 'var(--muted)', margin: 0 }}>{name ?? 'Inte tillganglig an'}</p>
+                    </div>
+                    {phone ? <p style={{ fontSize: '0.76rem', color: 'var(--muted)', margin: 0 }}>{phone}</p> : null}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Timeline */}
+            <div style={{ height: isMobile ? 220 : 280, borderRadius: isMobile ? 20 : 18, background: 'linear-gradient(180deg, rgba(146,255,99,0.08), rgba(0,0,0,0.02))', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at top right, rgba(146,255,99,0.14), transparent 40%)', pointerEvents: 'none' }} />
+              <MapPin size={36} color="var(--accent)" />
+              <p style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Live-karta och positionsflode</p>
+              <p style={{ fontSize: '0.76rem', color: 'var(--muted)', margin: 0, textAlign: 'center', maxWidth: 360 }}>
+                Aktiveras nar bararen startar resan. Har finns plats for GPS-push, ETA och kontrollpunkter.
+              </p>
+            </div>
+
             <div style={{ padding: '22px 24px', borderRadius: 18, background: 'var(--surface)', border: '1px solid var(--border)' }}>
               <p style={{ fontWeight: 700, color: 'var(--text)', marginBottom: 22, fontSize: '0.92rem' }}>Leveranshistorik</p>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -191,7 +317,13 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
                     <div key={step.status} style={{ display: 'flex', gap: 14 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <div style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: done ? '#22c55e' : active ? 'var(--accent)' : 'var(--surface-2)', border: `2px solid ${done ? '#22c55e' : active ? 'var(--accent)' : 'var(--border)'}` }}>
-                          {done ? <CheckCircle2 size={14} color="#fff" /> : active ? <Loader2 size={13} color="#fff" style={{ animation: 'spin 1s linear infinite' }} /> : <Circle size={13} color="var(--border)" />}
+                          {done ? (
+                            <CheckCircle2 size={14} color="#fff" />
+                          ) : active ? (
+                            <Loader2 size={13} color="#fff" style={{ animation: 'spin 1s linear infinite' }} />
+                          ) : (
+                            <Circle size={13} color="var(--border)" />
+                          )}
                         </div>
                         {!isLast && <div style={{ width: 2, flex: 1, minHeight: 26, background: done ? '#22c55e' : 'var(--border)', margin: '4px 0' }} />}
                       </div>
@@ -206,10 +338,7 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
             </div>
           </div>
 
-          {/* RIGHT COLUMN */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-            {/* Order info */}
             <div style={{ padding: '20px 22px', borderRadius: 18, background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <p style={{ fontWeight: 700, color: 'var(--text)', fontSize: '0.92rem', margin: 0 }}>Orderdetaljer</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -230,35 +359,22 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
                   <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: 0 }}>Pris</p>
                   <p style={{ fontWeight: 700, color: 'var(--text)', fontSize: '0.95rem', margin: 0 }}>{order.price} kr</p>
                 </div>
-                <div style={{ paddingTop: 10, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {[
-                    { label: 'Avsändare', name: sender?.name, phone: undefined },
-                    { label: 'Bärare', name: carrier?.name, phone: undefined },
-                    { label: 'Mottagare', name: recipient?.name, phone: recipient?.phone },
-                  ].map(({ label, name, phone }) => (
-                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: 0 }}>{label}</p>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <User size={13} color="var(--muted)" />
-                          <p style={{ fontWeight: 600, color: name ? 'var(--text)' : 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>{name ?? '–'}</p>
-                        </div>
-                        {phone && <p style={{ fontSize: '0.72rem', color: 'var(--muted)', margin: 0 }}>{phone}</p>}
-                      </div>
-                    </div>
-                  ))}
+                <div style={{ paddingTop: 10, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', margin: 0 }}>Driftnotis</p>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6, margin: 0 }}>
+                    Spårningssidan ar byggd for att fungera som den tydliga sanningskallan mellan kund, barare och framtida supportflode.
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Confirm / confirmed / cancelled */}
             {order.status === 'delivered' && (
               <div style={{ padding: '20px 22px', borderRadius: 18, background: 'rgba(34,197,94,0.06)', border: '1.5px solid rgba(34,197,94,0.25)' }}>
-                <p style={{ fontWeight: 700, color: '#15803d', marginBottom: 6, fontSize: '0.95rem' }}>Paketet är levererat!</p>
-                <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 16 }}>Bekräfta att du tagit emot paketet för att frigöra bärarens betalning.</p>
-                {confirmError && <p style={{ fontSize: '0.78rem', color: '#dc2626', marginBottom: 10 }}>{confirmError}</p>}
+                <p style={{ fontWeight: 700, color: '#15803d', marginBottom: 6, fontSize: '0.95rem' }}>Paketet ar levererat</p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 16 }}>Bekrafta att du tagit emot paketet for att frigora bararens betalning.</p>
+                {confirmError ? <p style={{ fontSize: '0.78rem', color: '#dc2626', marginBottom: 10 }}>{confirmError}</p> : null}
                 <button onClick={handleConfirm} disabled={confirming} style={{ width: '100%', padding: '13px 18px', borderRadius: 12, border: 'none', background: '#15803d', color: '#fff', fontFamily: 'inherit', fontWeight: 800, fontSize: '0.9rem', cursor: confirming ? 'not-allowed' : 'pointer', opacity: confirming ? 0.7 : 1 }}>
-                  {confirming ? 'Bekräftar...' : 'Bekräfta leverans'}
+                  {confirming ? 'Bekraftar...' : 'Bekrafta leverans'}
                 </button>
               </div>
             )}
@@ -267,8 +383,8 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
               <div style={{ padding: '18px 22px', borderRadius: 18, background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', gap: 12 }}>
                 <CheckCircle2 size={22} color="#15803d" />
                 <div>
-                  <p style={{ fontWeight: 700, color: '#15803d', margin: 0 }}>Leverans bekräftad</p>
-                  <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginTop: 2 }}>Bärarens betalning frigörs nu.</p>
+                  <p style={{ fontWeight: 700, color: '#15803d', margin: 0 }}>Leverans bekraftad</p>
+                  <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginTop: 2 }}>Bararens betalning frigors nu.</p>
                 </div>
               </div>
             )}
@@ -286,6 +402,11 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
         @keyframes pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.4; }
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>
