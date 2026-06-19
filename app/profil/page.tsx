@@ -1,8 +1,9 @@
 'use client'
 
+
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import {
   ArrowRight, Car, CheckCircle2, Clock, CreditCard, Loader2, LogOut,
   Mail, MapPin, Package, Phone, Shield, Star, UserRound, Users, Wallet,
@@ -197,12 +198,14 @@ const VALID_TABS: TabKey[] = ['overview', 'assignments', 'orders', 'requests', '
 
 export default function ProfilPage() {
   const { userId, profile, loading: authLoading } = useAuth()
-  const searchParams = useSearchParams()
   const router = useRouter()
-  const initialTab = (searchParams.get('tab') as TabKey | null)
-  const [activeTab, setActiveTab] = useState<TabKey>(
-    initialTab && VALID_TABS.includes(initialTab) ? initialTab : 'overview'
-  )
+  const [activeTab, setActiveTab] = useState<TabKey>('overview')
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const tab = params.get('tab') as TabKey | null
+    if (tab && VALID_TABS.includes(tab)) setActiveTab(tab)
+  }, [])
 
   function handleTabChange(tab: TabKey) {
     setActiveTab(tab)
