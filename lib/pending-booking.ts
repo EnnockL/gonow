@@ -13,6 +13,7 @@ export interface PendingBookingDraft {
   recipient_phone: string
   recipient_email: string
   status: 'pending'
+  price_est?: number
 }
 
 const PENDING_BOOKING_KEY = 'gonow_pending_booking_v1'

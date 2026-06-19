@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Globe, MessageCircle, Rss } from 'lucide-react'
@@ -54,6 +54,14 @@ const CITIES = ['Stockholm', 'Göteborg', 'Malmö', 'Uppsala', 'Sundsvall', 'Ör
 export default function Footer() {
   const [email, setEmail] = useState('')
   const [state, setState] = useState<'idle' | 'loading' | 'done'>('idle')
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   async function handleSub(e: React.FormEvent) {
     e.preventDefault()
@@ -67,19 +75,19 @@ export default function Footer() {
 
   return (
     <footer style={{ background: 'var(--footer-bg)', borderTop: '1px solid var(--footer-border)' }}>
-
-      {/* ── Newsletter strip ── */}
-      <div style={{ borderBottom: '1px solid var(--footer-divider)', padding: '60px 24px' }}>
-        <div style={{ maxWidth: 1260, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
+      <div style={{ borderBottom: '1px solid var(--footer-divider)', padding: isMobile ? '40px 20px' : '60px 24px' }}>
+        <div style={{ maxWidth: 1260, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 28 : 64, alignItems: 'center' }}>
           <div>
             <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--footer-kicker)', textTransform: 'uppercase', marginBottom: 14 }}>
               Tidigt tillträde
             </p>
             <h3 style={{ fontSize: 'clamp(1.5rem, 2.5vw, 2rem)', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: 10 }}>
-              Få tillgång innan<br />allmän lansering.
+              Få tillgång innan
+              <br />
+              allmän lansering.
             </h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--muted)', lineHeight: 1.7, maxWidth: 380 }}>
-              Gå med på väntelistan — vi meddelar dig direkt när Gonow lanserar i din stad. Inga spam.
+              Gå med på väntelistan, vi meddelar dig direkt när Gonow lanserar i din stad. Inga spam.
             </p>
           </div>
 
@@ -95,7 +103,7 @@ export default function Footer() {
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSub} style={{ display: 'flex', gap: 8 }}>
+              <form onSubmit={handleSub} style={{ display: 'flex', gap: 8, flexDirection: isMobile ? 'column' : 'row' }}>
                 <input
                   type="email"
                   required
@@ -133,6 +141,7 @@ export default function Footer() {
                     fontFamily: 'inherit',
                     transition: 'opacity 0.15s',
                     opacity: state === 'loading' ? 0.6 : 1,
+                    width: isMobile ? '100%' : 'auto',
                   }}
                 >
                   {state === 'loading' ? '...' : 'Anmäl mig →'}
@@ -143,25 +152,12 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* ── Main link columns ── */}
-      <div style={{ padding: '64px 24px 56px' }}>
+      <div style={{ padding: isMobile ? '40px 20px 36px' : '64px 24px 56px' }}>
         <div style={{ maxWidth: 1260, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: 32 }}>
-
-            {/* Brand column */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 1fr 1fr 1fr', gap: isMobile ? 24 : 32 }}>
             <div style={{ background: 'var(--footer-panel-bg)', border: '1px solid var(--footer-divider)', borderRadius: 20, padding: 24 }}>
               <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 9, marginBottom: 18, textDecoration: 'none' }}>
-                <div style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 11,
-                  background: '#0a0a0a',
-                  border: '1.5px solid rgba(146, 255, 99, 0.45)',
-                  boxShadow: '0 0 18px rgba(146,255,99,0.18)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
+                <div style={{ width: 36, height: 36, borderRadius: 11, background: '#0a0a0a', border: '1.5px solid rgba(146, 255, 99, 0.45)', boxShadow: '0 0 18px rgba(146,255,99,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Image src="/logo-mark.png" alt="Gonow logo" width={66} height={66} style={{ width: 66, height: 66, minWidth: 66, minHeight: 66, objectFit: 'contain', flexShrink: 0, display: 'block' }} />
                 </div>
                 <span style={{ fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-0.025em', color: 'var(--text)' }}>Gonow</span>
@@ -171,24 +167,17 @@ export default function Footer() {
                 P2P-logistik i Sverige. Vi kopplar samman avsändare och resenärer som ändå åker samma väg.
               </p>
 
-              {/* Cities */}
               <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 10 }}>
                 Tillgängligt i
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 28 }}>
                 {CITIES.map((c) => (
-                  <span key={c} style={{
-                    fontSize: '0.7rem', color: 'var(--muted)',
-                    background: 'var(--footer-chip-bg)',
-                    padding: '3px 10px', borderRadius: 100,
-                    border: '1px solid var(--footer-divider)',
-                  }}>
+                  <span key={c} style={{ fontSize: '0.7rem', color: 'var(--muted)', background: 'var(--footer-chip-bg)', padding: '3px 10px', borderRadius: 100, border: '1px solid var(--footer-divider)' }}>
                     {c}
                   </span>
                 ))}
               </div>
 
-              {/* Social icons */}
               <div style={{ display: 'flex', gap: 8 }}>
                 {[
                   { Icon: Globe, label: 'Webb' },
@@ -200,9 +189,13 @@ export default function Footer() {
                     href="#"
                     aria-label={label}
                     style={{
-                      width: 36, height: 36, borderRadius: 9,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 9,
                       border: '1px solid var(--footer-divider)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       color: 'var(--muted)',
                       transition: 'color 0.15s, border-color 0.15s, background 0.15s',
                       textDecoration: 'none',
@@ -226,7 +219,6 @@ export default function Footer() {
               </div>
             </div>
 
-            {/* Link columns */}
             {COLS.map((col) => (
               <div key={col.title}>
                 <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 18 }}>
@@ -251,20 +243,17 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* ── Bottom strip ── */}
       <div style={{ borderTop: '1px solid var(--footer-divider)', padding: '18px 24px' }}>
-        <div style={{ maxWidth: 1260, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ maxWidth: 1260, margin: '0 auto', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
-              © 2026 Gonow AB
-            </span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>© 2026 Gonow AB</span>
             <span style={{ fontSize: '0.72rem', color: 'var(--muted)', opacity: 0.5 }}>·</span>
             <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Org.nr 556XXX-XXXX</span>
             <span style={{ fontSize: '0.72rem', color: 'var(--muted)', opacity: 0.5 }}>·</span>
             <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Sverige</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.68rem', color: 'var(--muted)', border: '1px solid var(--footer-divider)', background: 'var(--footer-chip-hover)', padding: '4px 12px', borderRadius: 100 }}>
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--success)', display: 'inline-block' }} />
               BankID-verifierat
@@ -275,7 +264,6 @@ export default function Footer() {
           </div>
         </div>
       </div>
-
     </footer>
   )
 }

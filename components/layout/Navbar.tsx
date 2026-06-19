@@ -67,12 +67,12 @@ const links = [
 const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)'
 
 export default function Navbar() {
-  const [open, setOpen]         = useState(false)
+  const [open, setOpen]           = useState(false)
   const [isDesktop, setIsDesktop] = useState(true)
-  const [theme, setTheme]       = useState<'light' | 'dark'>('light')
-  const [scrolled, setScrolled] = useState(false)
-  const [visible, setVisible]   = useState(true)
-  const [showAuth, setShowAuth] = useState(false)
+  const [theme, setTheme]         = useState<'light' | 'dark'>('light')
+  const [scrolled, setScrolled]   = useState(false)
+  const [visible, setVisible]     = useState(true)
+  const [showAuth, setShowAuth]   = useState(false)
   const lastY = useRef(0)
   const path        = usePathname()
   const searchParams = useSearchParams()
@@ -105,6 +105,7 @@ export default function Navbar() {
     }
     onResize()
     onScroll()
+
     const saved = (() => { try { return localStorage.getItem('theme') } catch { return null } })()
     const isDark = saved === 'dark'
     setTheme(isDark ? 'dark' : 'light')
@@ -143,7 +144,9 @@ export default function Navbar() {
   return (
     <nav style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
-      padding: scrolled ? '12px 20px' : '10px 20px',
+      padding: isDesktop
+        ? (scrolled ? '12px 20px' : '10px 20px')
+        : (scrolled ? '8px 12px' : '8px 12px'),
       transform: visible ? 'translateY(0)' : 'translateY(-120%)',
       transition: `padding 0.45s ${EASE}, transform 0.4s ${EASE}`,
     }}>
@@ -156,8 +159,10 @@ export default function Navbar() {
         backdropFilter: 'blur(22px)',
         WebkitBackdropFilter: 'blur(22px)',
         boxShadow: scrolled ? pillShadow : barShadow,
-        padding: scrolled ? '0 18px' : '0 32px',
-        height: scrolled ? 52 : 72,
+        padding: isDesktop
+          ? (scrolled ? '0 18px' : '0 32px')
+          : (scrolled ? '0 14px' : '0 14px'),
+        height: isDesktop ? (scrolled ? 52 : 72) : 60,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -168,9 +173,9 @@ export default function Navbar() {
         {/* Logo */}
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, textDecoration: 'none' }}>
           <div style={{
-            width: scrolled ? 28 : 36,
-            height: scrolled ? 28 : 36,
-            borderRadius: scrolled ? 8 : 11,
+            width: isDesktop ? (scrolled ? 28 : 36) : 34,
+            height: isDesktop ? (scrolled ? 28 : 36) : 34,
+            borderRadius: isDesktop ? (scrolled ? 8 : 11) : 10,
             background: '#0a0a0a',
             border: '1.5px solid rgba(146,255,99,0.45)',
             boxShadow: '0 0 14px rgba(146,255,99,0.15)',
@@ -183,7 +188,7 @@ export default function Navbar() {
           </div>
           <span style={{
             fontWeight: 700,
-            fontSize: scrolled ? '0.9rem' : '1rem',
+            fontSize: isDesktop ? (scrolled ? '0.9rem' : '1rem') : '0.96rem',
             letterSpacing: '-0.025em',
             color: 'var(--text)',
             transition: `font-size 0.45s ${EASE}`,
@@ -311,7 +316,7 @@ export default function Navbar() {
         <button style={{
           display: isDesktop ? 'none' : 'flex',
           color: 'var(--muted)', background: 'none',
-          border: 'none', cursor: 'pointer', padding: 4, alignItems: 'center',
+          border: 'none', cursor: 'pointer', padding: 6, alignItems: 'center',
         }} onClick={() => setOpen(!open)}>
           {open ? <X size={20} /> : <Menu size={20} />}
         </button>
@@ -320,11 +325,11 @@ export default function Navbar() {
       {/* Mobile menu - floats as card below pill */}
       {open && !isDesktop && (
         <div style={{
-          margin: '8px 20px 0',
+          margin: '8px 12px 0',
           background: pillBg,
           boxShadow: pillShadow,
-          borderRadius: 20,
-          padding: '14px 18px 18px',
+          borderRadius: 18,
+          padding: '12px 14px 16px',
           backdropFilter: 'blur(22px)',
           WebkitBackdropFilter: 'blur(22px)',
         }}>

@@ -185,37 +185,21 @@ export async function saveBooking(
   }
 
   try {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('booking_requests')
-      .insert({
-        id: entry.id,
-        trip_id: entry.trip_id,
-        sender_id: entry.sender_id ?? null,
-        service_type: entry.service_type,
-        weight_kg: entry.weight_kg,
-        description: entry.description,
-        pickup_address: entry.pickup_address,
-        dropoff_address: entry.dropoff_address,
-        sender_name: entry.sender_name,
-        sender_phone: entry.sender_phone,
-        sender_email: entry.sender_email || null,
-        recipient_name: entry.recipient_name,
-        recipient_phone: entry.recipient_phone,
-        recipient_email: entry.recipient_email || null,
-        status: entry.status,
-        price_est: entry.price_est ?? null,
-      })
-      .select('*')
-      .single()
-
-    if (!error && data) {
-      lsUpsert(data as BookingRequest)
+    const res = await fetch('/api/booking-requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (res.ok && json.booking) {
+      const saved = json.booking as BookingRequest
+      lsUpsert(saved)
       dispatch()
-      return data as BookingRequest
+      return saved
     }
-  } catch {
-    // Fall back to local cache when Supabase is unavailable.
+    console.error('[saveBooking] API error:', json.error)
+  } catch (err) {
+    console.error('[saveBooking] fetch failed:', err)
   }
 
   try {

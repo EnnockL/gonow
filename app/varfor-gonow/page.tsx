@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Quote } from 'lucide-react'
 
@@ -26,13 +27,13 @@ const SECTIONS = [
     quotes: [
       'Vi byggde inte en budfirma. Vi byggde ett sätt att hjälpa varandra.',
       'Förr knackade man på grannens dörr. Nu finns appen för det.',
-      'Sverige är fortfarande vänligt — vi hade bara glömt hur man frågar.',
+      'Sverige är fortfarande vänligt, vi hade bara glömt hur man frågar.',
       'Bakom varje leverans finns en människa som redan var på väg.',
       'Du känner inte Jonas än. Men han kör redan till Kiruna imorgon.',
       'Det är inte en kurir. Det är en granne som hjälper till.',
       'En leverans. En liten mänsklig kontakt. Det räcker långt.',
       'Ensamheten minskar en resa i taget.',
-      'Äldre, glesbygd, pendlare — alla förtjänar att inte vara ensamma på vägen.',
+      'Äldre, glesbygd, pendlare, alla förtjänar att inte vara ensamma på vägen.',
       'Vi litar på varandra igen. BankID. Betyg. Riktiga människor.',
     ],
   },
@@ -74,7 +75,7 @@ const SECTIONS = [
       'Din bil. Din rutt. Din extra inkomst.',
       'Fyll dina tomma säten med pengar, inte luft.',
       '1 200 kr extra på en resa du redan planerat.',
-      'Bensinen betalar sig själv — och lite till.',
+      'Bensinen betalar sig själv och lite till.',
       'Gör din vardagliga resa till en inkomstkälla.',
       'Du behöver inte hitta nya kunder. Du behöver bara fortsätta köra som vanligt.',
     ],
@@ -90,18 +91,6 @@ const SECTIONS = [
       'Försäkring ingår. Alltid. Utan krångel.',
       'Ingen anonym kurir. Bara verifierade människor som redan var på väg.',
       'Trygghet är inte en avgift. Det är grunden.',
-    ],
-  },
-  {
-    id: 'norrland',
-    label: 'Norrland & glesbygd',
-    color: '#92ff63',
-    quotes: [
-      'PostNord glömde Norrland. Vi gjorde det inte.',
-      'Avstånd ska inte betyda ensamhet.',
-      '900+ orter i Sverige saknar bra kollektivtrafik. Vi fyller hålen.',
-      'Stockholm till Kiruna känns inte så långt när någon redan kör dit.',
-      'Glesbygden förtjänar samma snabbhet som storstaden.',
     ],
   },
 ]
@@ -138,135 +127,164 @@ const CTAS = [
 ]
 
 export default function VarforGonow() {
-  return (
-    <div style={{ background: 'var(--bg)', minHeight: '100vh', paddingTop: 96 }}>
+  const [isMobile, setIsMobile] = useState(false)
 
-      {/* Header */}
-      <div style={{ maxWidth: 1260, margin: '0 auto', padding: '64px 24px 80px' }}>
-        <Link href="/" style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          fontSize: '0.8rem', color: 'var(--muted)', textDecoration: 'none',
-          marginBottom: 40, transition: 'color 0.15s',
-        }}>
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    onResize()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  return (
+    <div style={{ background: 'var(--bg)', minHeight: '100vh', paddingTop: isMobile ? 72 : 96 }}>
+      <div style={{ maxWidth: 1260, margin: '0 auto', padding: isMobile ? '32px 16px 40px' : '64px 24px 80px' }}>
+        <Link
+          href="/"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: '0.8rem',
+            color: 'var(--muted)',
+            textDecoration: 'none',
+            marginBottom: isMobile ? 24 : 40,
+          }}
+        >
           <ArrowLeft size={14} /> Tillbaka
         </Link>
 
         <p className="label" style={{ marginBottom: 14 }}>Vår filosofi</p>
-        <h1 style={{
-          fontSize: 'clamp(2.5rem, 6vw, 5rem)',
-          fontWeight: 700,
-          letterSpacing: '-0.04em',
-          color: 'var(--text)',
-          lineHeight: 1.0,
-          marginBottom: 20,
-          maxWidth: 700,
-        }}>
-          Gonow —<br />
+        <h1
+          style={{
+            fontSize: 'clamp(2.2rem, 9vw, 5rem)',
+            fontWeight: 700,
+            letterSpacing: '-0.04em',
+            color: 'var(--text)',
+            lineHeight: 1,
+            marginBottom: 16,
+            maxWidth: 700,
+          }}
+        >
+          Gonow
+          <br />
           <span className="gradient-text">Budskap & copy</span>
         </h1>
-        <p style={{ fontSize: '1.05rem', color: 'var(--muted)', lineHeight: 1.75, maxWidth: 560 }}>
+        <p style={{ fontSize: isMobile ? '0.95rem' : '1.05rem', color: 'var(--muted)', lineHeight: 1.75, maxWidth: 560 }}>
           Samling av alla budskap för landningssida, sociala medier och marknadsföring.
           Klicka på ett citat för att kopiera det.
         </p>
       </div>
 
-      {/* Quote sections */}
-      <div style={{ maxWidth: 1260, margin: '0 auto', padding: '0 24px 80px' }}>
+      <div style={{ maxWidth: 1260, margin: '0 auto', padding: isMobile ? '0 16px 56px' : '0 24px 80px' }}>
         {SECTIONS.map((section) => (
-          <div key={section.id} style={{ marginBottom: 72 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+          <div key={section.id} style={{ marginBottom: isMobile ? 40 : 72 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: isMobile ? 18 : 28 }}>
               <div style={{ width: 4, height: 24, borderRadius: 2, background: section.color, flexShrink: 0 }} />
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
+              <h2 style={{ fontSize: isMobile ? '1rem' : '1.1rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
                 {section.label}
               </h2>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', gap: isMobile ? 10 : 12 }}>
               {section.quotes.map((quote) => (
-                <QuoteCard key={quote} quote={quote} />
+                <QuoteCard key={quote} quote={quote} isMobile={isMobile} />
               ))}
             </div>
           </div>
         ))}
 
-        {/* Slogans */}
-        <div style={{ marginBottom: 72 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+        <div style={{ marginBottom: isMobile ? 40 : 72 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: isMobile ? 18 : 28 }}>
             <div style={{ width: 4, height: 24, borderRadius: 2, background: 'var(--accent)', flexShrink: 0 }} />
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
+            <h2 style={{ fontSize: isMobile ? '1rem' : '1.1rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
               Korta slogans & taglines
             </h2>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            {SLOGANS.map((s) => (
-              <QuoteChip key={s} text={s} />
+            {SLOGANS.map((text) => (
+              <QuoteChip key={text} text={text} isMobile={isMobile} />
             ))}
           </div>
         </div>
 
-        {/* Stats */}
-        <div style={{ marginBottom: 72 }}>
+        <div style={{ marginBottom: isMobile ? 40 : 72 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
             <div style={{ width: 4, height: 24, borderRadius: 2, background: '#fbbf24', flexShrink: 0 }} />
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
+            <h2 style={{ fontSize: isMobile ? '1rem' : '1.1rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
               Statistik-påståenden
             </h2>
           </div>
           <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 20, paddingLeft: 16 }}>
-            ⚠️ Verifiera mot officiella källor (SCB, Trafikanalys, Transportstyrelsen) innan publicering.
+            Verifiera mot officiella källor innan publicering.
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10 }}>
-            {STATS.map((s) => (
-              <div key={s} style={{
-                padding: '14px 18px', borderRadius: 12,
-                background: 'rgba(251,191,36,0.08)',
-                border: '1px solid rgba(251,191,36,0.22)',
-                fontSize: '0.85rem', color: 'var(--text)', lineHeight: 1.5,
-              }}>
-                {s}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10 }}>
+            {STATS.map((text) => (
+              <div
+                key={text}
+                style={{
+                  padding: isMobile ? '14px 16px' : '14px 18px',
+                  borderRadius: 12,
+                  background: 'rgba(251,191,36,0.08)',
+                  border: '1px solid rgba(251,191,36,0.22)',
+                  fontSize: '0.85rem',
+                  color: 'var(--text)',
+                  lineHeight: 1.5,
+                }}
+              >
+                {text}
               </div>
             ))}
           </div>
         </div>
 
-        {/* CTAs */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: isMobile ? 18 : 24 }}>
             <div style={{ width: 4, height: 24, borderRadius: 2, background: 'var(--secondary-strong)', flexShrink: 0 }} />
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
+            <h2 style={{ fontSize: isMobile ? '1rem' : '1.1rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
               Call-to-actions
             </h2>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            {CTAS.map((c) => (
-              <div key={c} style={{
-                display: 'inline-flex', alignItems: 'center',
-                padding: '10px 20px', borderRadius: 999,
-                background: 'var(--accent)',
-                fontSize: '0.85rem', fontWeight: 600, color: '#0a0a0a',
-              }}>
-                {c}
+            {CTAS.map((text) => (
+              <div
+                key={text}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: isMobile ? '10px 16px' : '10px 20px',
+                  borderRadius: 999,
+                  background: 'var(--accent)',
+                  fontSize: isMobile ? '0.8rem' : '0.85rem',
+                  fontWeight: 600,
+                  color: '#0a0a0a',
+                }}
+              >
+                {text}
               </div>
             ))}
           </div>
         </div>
       </div>
-
     </div>
   )
 }
 
-function QuoteCard({ quote }: { quote: string }) {
+function QuoteCard({ quote, isMobile }: { quote: string; isMobile: boolean }) {
   return (
     <div
       title="Klicka för att kopiera"
-      onClick={() => { try { navigator.clipboard.writeText(quote) } catch {} }}
+      onClick={() => {
+        try {
+          navigator.clipboard.writeText(quote)
+        } catch {}
+      }}
       style={{
-        padding: '20px 22px', borderRadius: 16,
+        padding: isMobile ? '16px' : '20px 22px',
+        borderRadius: isMobile ? 14 : 16,
         background: 'var(--surface)',
         border: '1px solid var(--border)',
         cursor: 'pointer',
         transition: 'border-color 0.15s, background 0.15s',
-        position: 'relative',
       }}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLElement
@@ -280,28 +298,38 @@ function QuoteCard({ quote }: { quote: string }) {
       }}
     >
       <Quote size={14} style={{ color: 'var(--secondary-strong)', marginBottom: 8, opacity: 0.7 }} />
-      <p style={{ fontSize: '0.88rem', color: 'var(--text)', lineHeight: 1.6, fontStyle: 'italic' }}>
+      <p style={{ fontSize: isMobile ? '0.84rem' : '0.88rem', color: 'var(--text)', lineHeight: 1.6, fontStyle: 'italic' }}>
         {quote}
       </p>
     </div>
   )
 }
 
-function QuoteChip({ text }: { text: string }) {
+function QuoteChip({ text, isMobile }: { text: string; isMobile: boolean }) {
   return (
     <div
-      onClick={() => { try { navigator.clipboard.writeText(text) } catch {} }}
+      onClick={() => {
+        try {
+          navigator.clipboard.writeText(text)
+        } catch {}
+      }}
       style={{
-        display: 'inline-flex', alignItems: 'center',
-        padding: '9px 18px', borderRadius: 999,
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: isMobile ? '8px 14px' : '9px 18px',
+        borderRadius: 999,
         background: 'var(--surface)',
         border: '1px solid var(--border)',
-        fontSize: '0.85rem', color: 'var(--text)',
+        fontSize: isMobile ? '0.8rem' : '0.85rem',
+        color: 'var(--text)',
         cursor: 'pointer',
-        transition: 'border-color 0.15s',
       }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(146,255,99,0.5)' }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}
+      onMouseEnter={(e) => {
+        ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(146,255,99,0.5)'
+      }}
+      onMouseLeave={(e) => {
+        ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'
+      }}
     >
       {text}
     </div>

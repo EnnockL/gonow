@@ -1,25 +1,34 @@
-import { ArrowRight, ShieldCheck, Zap, Shield, TrendingUp } from 'lucide-react'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { ArrowRight, ShieldCheck, Zap, Shield } from 'lucide-react'
 
 export default function StatsBar() {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    onResize()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   return (
-    <section
-      style={{
-        background: 'var(--surface)',
-      }}
-    >
-      <div style={{ maxWidth: 1260, margin: '0 auto', padding: '0 24px' }}>
+    <section style={{ background: 'var(--surface)' }}>
+      <div style={{ maxWidth: 1260, margin: '0 auto', padding: isMobile ? '0 16px' : '0 24px' }}>
         <div
+          className="mobile-stack"
           style={{
             display: 'grid',
-            gridTemplateColumns: '1.08fr 1fr',
-            gap: 20,
+            gridTemplateColumns: isMobile ? '1fr' : '1.08fr 1fr',
+            gap: isMobile ? 14 : 20,
             alignItems: 'stretch',
           }}
         >
           <div
             style={{
-              minHeight: 420,
-              borderRadius: 28,
+              minHeight: isMobile ? 360 : 420,
+              borderRadius: isMobile ? 22 : 28,
               overflow: 'hidden',
               position: 'relative',
               border: '1px solid var(--stats-panel-border)',
@@ -35,8 +44,7 @@ export default function StatsBar() {
               style={{
                 position: 'absolute',
                 inset: 0,
-                background:
-                  'linear-gradient(90deg, rgba(34,197,94,0.22) 0%, transparent 28%, transparent 100%)',
+                background: 'linear-gradient(90deg, rgba(34,197,94,0.22) 0%, transparent 28%, transparent 100%)',
               }}
             />
             <div
@@ -47,13 +55,13 @@ export default function StatsBar() {
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                padding: 28,
+                padding: isMobile ? 20 : 28,
               }}
             >
               <div>
                 <p
                   style={{
-                    fontSize: '0.86rem',
+                    fontSize: isMobile ? '0.76rem' : '0.86rem',
                     fontWeight: 700,
                     letterSpacing: '0.04em',
                     textTransform: 'uppercase',
@@ -65,12 +73,12 @@ export default function StatsBar() {
                 </p>
                 <h2
                   style={{
-                    fontSize: 'clamp(2.4rem, 4.6vw, 4rem)',
+                    fontSize: 'clamp(2.2rem, 8vw, 4rem)',
                     lineHeight: 0.96,
                     letterSpacing: '-0.05em',
                     color: '#ffffff',
                     fontWeight: 700,
-                    maxWidth: 460,
+                    maxWidth: isMobile ? 280 : 460,
                   }}
                 >
                   60% billigare
@@ -84,15 +92,15 @@ export default function StatsBar() {
                   display: 'flex',
                   alignItems: 'flex-end',
                   justifyContent: 'space-between',
-                  gap: 20,
+                  gap: 16,
                   flexWrap: 'wrap',
                 }}
               >
                 <div style={{ maxWidth: 300 }}>
-                  <p style={{ fontSize: '0.98rem', color: 'rgba(255,255,255,0.88)', fontWeight: 600, marginBottom: 8 }}>
+                  <p style={{ fontSize: isMobile ? '0.9rem' : '0.98rem', color: 'rgba(255,255,255,0.88)', fontWeight: 600, marginBottom: 8 }}>
                     P2P-logistik som använder resor som redan sker.
                   </p>
-                  <p style={{ fontSize: '0.82rem', lineHeight: 1.6, color: 'rgba(255,255,255,0.68)' }}>
+                  <p style={{ fontSize: isMobile ? '0.78rem' : '0.82rem', lineHeight: 1.6, color: 'rgba(255,255,255,0.68)' }}>
                     Lägre pris, kortare väntan och bättre kapacitetsutnyttjande i samma nätverk.
                   </p>
                 </div>
@@ -102,11 +110,11 @@ export default function StatsBar() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 10,
-                    padding: '14px 18px',
+                    padding: isMobile ? '12px 16px' : '14px 18px',
                     borderRadius: 999,
                     background: '#92ff63',
                     color: '#0a0a0a',
-                    fontSize: '0.92rem',
+                    fontSize: isMobile ? '0.84rem' : '0.92rem',
                     fontWeight: 700,
                     boxShadow: '0 14px 30px rgba(146,255,99,0.18)',
                   }}
@@ -117,11 +125,11 @@ export default function StatsBar() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: 20 }}>
+          <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: isMobile ? 14 : 20 }}>
             <div
               style={{
-                minHeight: 200,
-                borderRadius: 28,
+                minHeight: isMobile ? 180 : 200,
+                borderRadius: isMobile ? 22 : 28,
                 overflow: 'hidden',
                 position: 'relative',
                 border: '1px solid rgba(54, 255, 164, 0.16)',
@@ -134,8 +142,7 @@ export default function StatsBar() {
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  background:
-                    'repeating-linear-gradient(90deg, transparent 0 26px, rgba(120,255,164,0.06) 26px 27px)',
+                  background: 'repeating-linear-gradient(90deg, transparent 0 26px, rgba(120,255,164,0.06) 26px 27px)',
                   opacity: 0.55,
                 }}
               />
@@ -144,7 +151,7 @@ export default function StatsBar() {
                   position: 'relative',
                   zIndex: 1,
                   height: '100%',
-                  padding: 28,
+                  padding: isMobile ? 20 : 28,
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
@@ -153,7 +160,7 @@ export default function StatsBar() {
                 <div>
                   <p
                     style={{
-                      fontSize: '0.86rem',
+                      fontSize: isMobile ? '0.76rem' : '0.86rem',
                       fontWeight: 700,
                       letterSpacing: '0.04em',
                       textTransform: 'uppercase',
@@ -165,7 +172,7 @@ export default function StatsBar() {
                   </p>
                   <h3
                     style={{
-                      fontSize: 'clamp(2rem, 3.2vw, 3.2rem)',
+                      fontSize: 'clamp(2rem, 8vw, 3.2rem)',
                       lineHeight: 0.95,
                       letterSpacing: '-0.05em',
                       color: '#ffffff',
@@ -182,16 +189,7 @@ export default function StatsBar() {
                   </p>
                 </div>
 
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    color: '#92ff63',
-                    fontSize: '0.84rem',
-                    fontWeight: 700,
-                  }}
-                >
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: '#92ff63', fontSize: '0.84rem', fontWeight: 700 }}>
                   <Zap size={16} />
                   Samma dag i fler flöden
                 </div>
@@ -200,14 +198,13 @@ export default function StatsBar() {
 
             <div
               style={{
-                minHeight: 200,
-                borderRadius: 28,
+                minHeight: isMobile ? 180 : 200,
+                borderRadius: isMobile ? 22 : 28,
                 overflow: 'hidden',
                 position: 'relative',
                 border: '1px solid var(--stats-panel-border)',
                 boxShadow: 'var(--stats-panel-shadow)',
-                background:
-                  'linear-gradient(135deg, rgba(13,17,24,0.98) 0%, rgba(18,26,36,0.98) 100%)',
+                background: 'linear-gradient(135deg, rgba(13,17,24,0.98) 0%, rgba(18,26,36,0.98) 100%)',
               }}
             >
               <div
@@ -220,14 +217,15 @@ export default function StatsBar() {
                 }}
               />
               <div
+                className="mobile-2col"
                 style={{
                   position: 'relative',
                   zIndex: 1,
                   height: '100%',
-                  padding: 28,
+                  padding: isMobile ? 20 : 28,
                   display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 20,
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                  gap: isMobile ? 18 : 20,
                   alignItems: 'end',
                 }}
               >

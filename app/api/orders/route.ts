@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
   const query = supabase
     .from('orders')
-    .select('*, trips(from_city, to_city, departure_at)')
+    .select('*, trips(from_city, to_city, departure_at), booking_requests(sender_name, sender_phone, recipient_name, recipient_phone, recipient_email)')
     .order('created_at', { ascending: false })
 
   if (userId) {
@@ -33,7 +33,37 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ orders: data })
+
+  const orders = (data ?? []) as Record<string, unknown>[]
+
+  // Batch fetch all relevant user IDs (senders + receivers/carriers)
+  const allUserIds = [...new Set([
+    ...orders.map(o => o.sender_id as string),
+    ...orders.map(o => (o.receiver_id || o.carrier_id) as string),
+  ].filter(Boolean))]
+  const { data: allUsers } = allUserIds.length
+    ? await supabase.from('users').select('id, name, phone').in('id', allUserIds)
+    : { data: [] }
+  const userMap = new Map((allUsers ?? []).map((u: Record<string, string>) => [u.id, u]))
+
+  // Batch fetch booking_request contact info
+  const brIds = [...new Set(orders.map(o => o.booking_request_id as string).filter(Boolean))]
+  const { data: brRows } = brIds.length
+    ? await supabase.from('booking_requests').select('id, sender_name, sender_phone, recipient_name, recipient_phone').in('id', brIds)
+    : { data: [] }
+  const brMap = new Map((brRows ?? []).map((b: Record<string, string>) => [b.id, b]))
+
+  const enriched = orders.map(o => {
+    const carrierId = (o.receiver_id || o.carrier_id) as string | undefined
+    return {
+      ...o,
+      _sender: userMap.get(o.sender_id as string) ?? null,
+      _carrier: carrierId ? userMap.get(carrierId) ?? null : null,
+      _booking_request: o.booking_request_id ? brMap.get(o.booking_request_id as string) ?? null : null,
+    }
+  })
+
+  return NextResponse.json({ orders: enriched })
 }
 
 export async function POST(req: NextRequest) {

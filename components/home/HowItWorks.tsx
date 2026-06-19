@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { MessageSquare, Route, MapPin } from 'lucide-react'
 
 const steps = [
@@ -24,6 +25,15 @@ const steps = [
 ]
 
 export default function HowItWorks() {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    onResize()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   return (
     <section
       className="section"
@@ -38,12 +48,12 @@ export default function HowItWorks() {
           style={{
             background: 'var(--service-card-bg)',
             border: '1px solid var(--service-card-border)',
-            borderRadius: 32,
+            borderRadius: isMobile ? 24 : 32,
             boxShadow: 'var(--service-card-shadow)',
-            padding: '56px 24px 28px',
+            padding: isMobile ? '32px 16px 16px' : '56px 24px 28px',
           }}
         >
-          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+          <div style={{ textAlign: 'center', marginBottom: isMobile ? 28 : 56 }}>
             <p className="label" style={{ marginBottom: 10, color: 'var(--secondary-strong)' }}>
               Hur det fungerar
             </p>
@@ -59,16 +69,16 @@ export default function HowItWorks() {
             </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
+          <div className="mobile-stack" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 10 : 2 }}>
             {steps.map((step, index) => (
               <div
                 key={step.num}
                 style={{
-                  padding: '32px 28px',
+                  padding: isMobile ? '22px 18px' : '32px 28px',
                   background: 'linear-gradient(180deg, #b9ff97 0%, #92ff63 100%)',
                   border: '1px solid rgba(10,10,10,0.08)',
-                  borderRadius: 16,
-                  marginLeft: index > 0 ? -1 : 0,
+                  borderRadius: isMobile ? 18 : 16,
+                  marginLeft: !isMobile && index > 0 ? -1 : 0,
                   position: 'relative',
                   zIndex: 0,
                   transition: 'z-index 0s, background 0.15s, border-color 0.15s',
@@ -91,8 +101,8 @@ export default function HowItWorks() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
                   <div
                     style={{
-                      width: 44,
-                      height: 44,
+                      width: isMobile ? 40 : 44,
+                      height: isMobile ? 40 : 44,
                       borderRadius: 12,
                       background: 'rgba(255,255,255,0.28)',
                       display: 'flex',
@@ -101,7 +111,7 @@ export default function HowItWorks() {
                       flexShrink: 0,
                     }}
                   >
-                    <step.icon size={20} style={{ color: '#0a0a0a' }} />
+                    <step.icon size={isMobile ? 18 : 20} style={{ color: '#0a0a0a' }} />
                   </div>
                   <span
                     style={{
@@ -117,7 +127,7 @@ export default function HowItWorks() {
                 </div>
                 <h3
                   style={{
-                    fontSize: '1rem',
+                    fontSize: isMobile ? '0.94rem' : '1rem',
                     fontWeight: 600,
                     color: '#0a0a0a',
                     marginBottom: 10,
@@ -126,7 +136,9 @@ export default function HowItWorks() {
                 >
                   {step.title}
                 </h3>
-                <p style={{ fontSize: '0.83rem', lineHeight: 1.65, color: 'rgba(10,10,10,0.72)' }}>{step.desc}</p>
+                <p style={{ fontSize: isMobile ? '0.8rem' : '0.83rem', lineHeight: 1.65, color: 'rgba(10,10,10,0.72)' }}>
+                  {step.desc}
+                </p>
               </div>
             ))}
           </div>

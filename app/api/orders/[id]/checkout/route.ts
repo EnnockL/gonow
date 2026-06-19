@@ -175,11 +175,13 @@ export async function POST(
   }
 
   const origin = new URL(req.url).origin
-  const amount = Math.max(1, Math.round(Number(order.price ?? 0) * 100))
+  const amount = Math.max(300, Math.round(Number(order.price ?? 0) * 100))
   const payment = await ensurePaymentRecord(supabase, order)
   await updateOrderForCheckout(supabase, order.id, payment?.id)
 
-  const session = await stripe.checkout.sessions.create({
+  let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>
+  try {
+    session = await stripe.checkout.sessions.create({
     mode: 'payment',
     success_url: `${origin}/spara/${order.id}?payment=success`,
     cancel_url: `${origin}/profil?payment=cancelled`,
@@ -217,6 +219,11 @@ export async function POST(
       },
     ],
   })
+  } catch (stripeErr) {
+    const msg = stripeErr instanceof Error ? stripeErr.message : String(stripeErr)
+    console.error('[checkout] stripe error:', msg)
+    return NextResponse.json({ error: `Betalning kunde inte skapas: ${msg}` }, { status: 500 })
+  }
 
   await updatePaymentCheckoutState(supabase, payment?.id, {
     provider: 'stripe',

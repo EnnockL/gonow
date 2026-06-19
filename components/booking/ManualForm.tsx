@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ChevronDown, ChevronUp, Package, MapPin, Scale, Calendar, FileText, ArrowRight } from 'lucide-react'
 import { AIParseResult, OrderType } from '@/lib/types'
 
@@ -39,6 +39,7 @@ const field: React.CSSProperties = {
 }
 
 export default function ManualForm({ onParsed }: ManualFormProps) {
+  const [isMobile, setIsMobile] = useState(false)
   const [open, setOpen] = useState(false)
   const [type, setType] = useState<OrderType>('package')
   const [from, setFrom] = useState('')
@@ -48,6 +49,13 @@ export default function ManualForm({ onParsed }: ManualFormProps) {
   const [customWeight, setCustomWeight] = useState('')
   const [urgency, setUrgency] = useState<'today' | 'tomorrow' | 'flexible'>('flexible')
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -106,7 +114,7 @@ export default function ManualForm({ onParsed }: ManualFormProps) {
             <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               <Package size={10} style={{ display: 'inline', marginRight: 5 }} />Typ av tjänst
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
               {TYPE_OPTIONS.map(opt => (
                 <button
                   key={opt.value}
@@ -155,7 +163,7 @@ export default function ManualForm({ onParsed }: ManualFormProps) {
             <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               <Scale size={10} style={{ display: 'inline', marginRight: 5 }} />Vikt
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: 6 }}>
               {WEIGHT_OPTIONS.map(opt => (
                 <button
                   key={opt.value}
@@ -209,7 +217,7 @@ export default function ManualForm({ onParsed }: ManualFormProps) {
             <label style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 8 }}>
               <Calendar size={10} style={{ display: 'inline', marginRight: 5 }} />Leveranstid
             </label>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexDirection: isMobile ? 'column' : 'row' }}>
               {([['today','Idag'],['tomorrow','Imorgon'],['flexible','Flexibelt']] as const).map(([v, l]) => (
                 <button
                   key={v}

@@ -39,6 +39,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 export default function TripRegistration() {
   const { userId, profile } = useAuth()
+  const [isMobile, setIsMobile] = useState(false)
   const [form, setForm] = useState({
     from_city: '', to_city: '', departure_at: '', vehicle_type: 'car',
     seats_available: 0, weight_capacity_kg: 20,
@@ -77,6 +78,13 @@ export default function TripRegistration() {
   function onAddrBlur() {
     if (form.from_city && form.to_city) calcRoute(form.from_city, form.to_city)
   }
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     if (!profile) return
@@ -191,7 +199,7 @@ export default function TripRegistration() {
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
       {/* Route */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
         <Field label="Från">
           <div style={{ position: 'relative' }}>
             <MapPin size={12} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
@@ -251,7 +259,7 @@ export default function TripRegistration() {
 
       {/* Vehicle */}
       <Field label="Fordon">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 8 }}>
           {vehicles.map(v => (
             <button key={v.value} type="button" onClick={() => set('vehicle_type', v.value)} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '10px 4px',
@@ -267,7 +275,7 @@ export default function TripRegistration() {
         </div>
       </Field>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1.1fr 0.8fr 0.9fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1.1fr 1.1fr 0.8fr 0.9fr', gap: 12 }}>
         <Field label="Märke">
           <input
             type="text"
@@ -315,7 +323,7 @@ export default function TripRegistration() {
       </div>
 
       {/* Kapacitet + pris */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
         {[
           { label: 'Totala säten i bilen', key: 'vehicle_seats_total', min: 1, max: 8 },
           { label: 'Lediga platser', key: 'seats_available', min: 0, max: 8 },
@@ -408,7 +416,7 @@ export default function TripRegistration() {
 
       {/* Earnings preview */}
       {route && (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: 10 }}>
           <div>
             <p style={{ fontSize: '0.72rem', color: 'var(--muted)', marginBottom: 4 }}>Uppskattad utbetalning</p>
             <p style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--success)', letterSpacing: '-0.03em' }}>

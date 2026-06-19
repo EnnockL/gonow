@@ -127,7 +127,11 @@ html.dark {
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+  max-width: 100%;
+}
 
 body {
   background: var(--page-gradient);
@@ -136,6 +140,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  max-width: 100%;
 }
 
 /* Scrollbar */
@@ -243,6 +248,67 @@ input[type="range"] {
 
 .section { padding: 96px 24px; }
 .section-sm { padding: 64px 24px; }
+
+@media (max-width: 767px) {
+  .section { padding: 60px 20px !important; }
+  .section-sm { padding: 40px 20px !important; }
+  .mobile-stack { grid-template-columns: 1fr !important; gap: 32px !important; }
+  .mobile-2col  { grid-template-columns: 1fr 1fr !important; gap: 16px !important; }
+  .mobile-pad   { padding: 40px 20px !important; }
+  .mobile-hide  { display: none !important; }
+  .mobile-full-bleed {
+    margin-left: -16px !important;
+    margin-right: -16px !important;
+    border-radius: 0 !important;
+  }
+  .mobile-scroll-x {
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-scroll-x::-webkit-scrollbar { display: none; }
+  .mobile-card-tight { padding: 18px !important; border-radius: 18px !important; }
+  .mobile-text-wrap {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  .mobile-no-sticky { position: static !important; top: auto !important; }
+  .mobile-panel {
+    border-radius: 20px !important;
+    padding: 18px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06) !important;
+  }
+  .mobile-app-tabs {
+    gap: 0 !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  .mobile-app-tabs > * {
+    scroll-snap-align: start;
+  }
+}
+
+@media (max-width: 560px) {
+  .mobile-2col  { grid-template-columns: 1fr !important; gap: 12px !important; }
+  .card { padding: 20px !important; border-radius: 18px !important; }
+  .card-sm { padding: 14px !important; border-radius: 14px !important; }
+  .btn-primary,
+  .btn-outline {
+    min-height: 46px;
+  }
+  .label {
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+  }
+  .mobile-full-bleed {
+    margin-left: -12px !important;
+    margin-right: -12px !important;
+  }
+}
 
 .label {
   font-size: 0.7rem;

@@ -23,6 +23,10 @@ export interface User {
   rating_avg: number
   rating_count: number
   created_at: string
+  age?: number | null
+  city?: string | null
+  gender?: string | null
+  bio?: string | null
 }
 
 export interface Trip {

@@ -11,6 +11,7 @@ interface TravelerCardProps {
   trip: Trip & { users?: { name: string; rating_avg: number; rating_count: number; avatar_url?: string } }
   price: number
   onSelect: () => void
+  onViewProfile?: () => void
   selected?: boolean
   bookingMeta?: {
     acceptedPassengers: number
@@ -21,7 +22,7 @@ interface TravelerCardProps {
   }
 }
 
-export default function TravelerCard({ trip, price, onSelect, selected, bookingMeta }: TravelerCardProps) {
+export default function TravelerCard({ trip, price, onSelect, onViewProfile, selected, bookingMeta }: TravelerCardProps) {
   const carrier = trip.users
   const initials = carrier?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'GN'
   const rating = carrier?.rating_avg?.toFixed(1) || '5.0'
@@ -76,24 +77,46 @@ export default function TravelerCard({ trip, price, onSelect, selected, bookingM
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-        <div style={{
-          width: 52, height: 52, borderRadius: 16, flexShrink: 0,
-          background: selected
-            ? 'linear-gradient(135deg, rgba(146,255,99,0.3), rgba(146,255,99,0.15))'
-            : 'linear-gradient(135deg, rgba(146,255,99,0.18), rgba(146,255,99,0.08))',
-          border: `1.5px solid ${selected ? 'rgba(146,255,99,0.5)' : 'rgba(146,255,99,0.2)'}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '1rem', fontWeight: 800, color: '#92ff63',
-          letterSpacing: '-0.02em',
-        }}>
+        <button
+          onClick={e => { e.stopPropagation(); onViewProfile?.() }}
+          title="Se profil"
+          style={{
+            width: 52, height: 52, borderRadius: 16, flexShrink: 0,
+            background: selected
+              ? 'linear-gradient(135deg, rgba(146,255,99,0.3), rgba(146,255,99,0.15))'
+              : 'linear-gradient(135deg, rgba(146,255,99,0.18), rgba(146,255,99,0.08))',
+            border: `1.5px solid ${selected ? 'rgba(146,255,99,0.5)' : 'rgba(146,255,99,0.2)'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1rem', fontWeight: 800, color: '#92ff63',
+            letterSpacing: '-0.02em', cursor: onViewProfile ? 'pointer' : 'default',
+            transition: 'transform 0.12s ease',
+            padding: 0,
+          }}
+          onMouseEnter={e => { if (onViewProfile) (e.currentTarget as HTMLElement).style.transform = 'scale(1.07)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
+        >
           {initials}
-        </div>
+        </button>
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <p style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>
-              {carrier?.name || 'Anonym bärare'}
-            </p>
+            <div>
+              <p style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', margin: 0, letterSpacing: '-0.01em' }}>
+                {carrier?.name || 'Anonym bärare'}
+              </p>
+              {onViewProfile && (
+                <button
+                  onClick={e => { e.stopPropagation(); onViewProfile() }}
+                  style={{
+                    background: 'none', border: 'none', padding: 0,
+                    fontSize: '0.7rem', color: 'var(--muted)', cursor: 'pointer',
+                    fontFamily: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2,
+                  }}
+                >
+                  Se profil
+                </button>
+              )}
+            </div>
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
               <p style={{ fontSize: '1.35rem', fontWeight: 900, color: '#92ff63', margin: 0, letterSpacing: '-0.03em', lineHeight: 1 }}>
                 {price} kr

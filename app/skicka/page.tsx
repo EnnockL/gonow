@@ -10,6 +10,7 @@ import AuthModal from '@/components/auth/AuthModal'
 import AIChat from '@/components/booking/AIChat'
 import TripBookingModal, { type TripInfo } from '@/components/booking/TripBookingModal'
 import TravelerCard from '@/components/booking/TravelerCard'
+import CarrierProfileModal from '@/components/carrier/CarrierProfileModal'
 import { useAuth } from '@/hooks/useAuth'
 import { useRoutePrice } from '@/lib/hooks/useRoutePrice'
 import { loadAllBookings, saveBooking, type BookingRequest } from '@/lib/bookings'
@@ -82,7 +83,10 @@ function toTripInfo(trip: MatchTrip, bookings: BookingRequest[], userId?: string
     from: trip.from_city,
     to: trip.to_city,
     carrier: trip.users?.name || 'Bärare',
+    carrier_id: trip.carrier_id,
     price: estimateTripPrice(trip),
+    pricePerKg: trip.price_per_kg ?? undefined,
+    pricePerSeat: trip.price_per_seat ?? undefined,
     vehicleType: trip.vehicle_type,
     vehicleMake: trip.vehicle_make,
     vehicleModel: trip.vehicle_model,
@@ -126,6 +130,7 @@ function SkickaPageContent() {
   const [submitError, setSubmitError]     = useState<string | null>(null)
   const [createdBookingId, setCreatedBookingId] = useState<string | null>(null)
   const [payingOrderId, setPayingOrderId] = useState<string | null>(null)
+  const [viewProfileCarrierId, setViewProfileCarrierId] = useState<string | null>(null)
   const { result: routePrice, calculate } = useRoutePrice()
 
   // Tab mode — derived directly from URL, always in sync
@@ -392,6 +397,10 @@ function SkickaPageContent() {
           initialType="package"
         />
       )}
+      <CarrierProfileModal
+        carrierId={viewProfileCarrierId}
+        onClose={() => setViewProfileCarrierId(null)}
+      />
 
       <div className="sk-wrap">
 
@@ -576,12 +585,12 @@ function SkickaPageContent() {
                           <span className="sk-vr-arrow">→</span>
                           <span className="sk-vr-to">{t.to_city.split(',')[0]}</span>
                           {activeTripMeta[t.id]?.myBookingStatus && (
-                            <span style={{ fontSize: '0.66rem', color: activeTripMeta[t.id].myBookingStatus === 'accepted' ? '#86efac' : '#93c5fd', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '0.66rem', color: activeTripMeta[t.id].myBookingStatus === 'accepted' ? '#86efac' : '#93c5fd', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
                               {activeTripMeta[t.id].myBookingStatus === 'accepted' ? 'accepterad' : 'väntar'}
                             </span>
                           )}
                           {typeof activeTripMeta[t.id]?.seatsLeft === 'number' && (
-                            <span style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.45)', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
                               {activeTripMeta[t.id].seatsLeft} säten kvar
                             </span>
                           )}
@@ -824,6 +833,7 @@ function SkickaPageContent() {
                         trip={trip}
                         price={routePrice ? routePrice.price : parsed.estimated_price_sek}
                         onSelect={() => setSelectedTrip(trip)}
+                        onViewProfile={trip.carrier_id ? () => setViewProfileCarrierId(trip.carrier_id!) : undefined}
                         selected={selectedTrip?.id === trip.id}
                         bookingMeta={tripMeta[trip.id]}
                       />
@@ -1048,7 +1058,7 @@ function SkickaPageContent() {
                   </span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 16 }}>
                   <div style={{ padding: 14, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
                     <p style={{ fontSize: '0.7rem', color: 'var(--muted)', marginBottom: 5 }}>Förare</p>
                     <strong style={{ color: 'var(--text)' }}>{createdBookingTrip.users?.name || 'Bärare'}</strong>
@@ -1692,8 +1702,16 @@ function SkickaPageContent() {
         /* responsive simple form */
         @media (max-width: 700px) {
           .sk-simple-inner { grid-template-columns: 1fr; }
-          .sk-simple-visual { display: none; }
-          .sk-simple-left { padding: 22px 20px; }
+          .sk-simple-visual {
+            display: flex;
+            margin: 0 18px 18px;
+            border-radius: 18px;
+            min-height: 0;
+          }
+          .sk-simple-left {
+            padding: 22px 20px 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+          }
         }
 
         /* ── AI card — BCG two-column ── */
@@ -2148,13 +2166,164 @@ function SkickaPageContent() {
         }
 
         @media (max-width: 700px) {
+          .sk-shell {
+            padding-top: 68px;
+            padding-bottom: 44px;
+          }
+          .sk-wrap {
+            padding: 18px 16px 40px;
+          }
+          .sk-chat-grid,
+          .sk-layout,
+          .sk-simple-inner {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+          .sk-stepper {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            gap: 10px;
+            padding: 14px 14px 6px;
+            scrollbar-width: none;
+            border-radius: 18px;
+          }
+          .sk-stepper::-webkit-scrollbar { display: none; }
+          .sk-step {
+            flex: 0 0 auto;
+            min-width: 68px;
+          }
+          .sk-tab-row {
+            position: static;
+            top: auto;
+            left: auto;
+            transform: none;
+            width: 100%;
+            justify-content: stretch;
+            margin-bottom: 18px;
+          }
+          .sk-tab {
+            flex: 1 1 0;
+            text-align: center;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(0,0,0,0.42);
+          }
+          .sk-tab-active {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+          }
           .sk-stats { grid-template-columns: repeat(3, 1fr); gap: 8px; }
-          .sk-stepper { flex-wrap: wrap; gap: 10px; }
           .sk-step-line { display: none; }
-          .sk-step { flex: none; min-width: 0; }
           .sk-step-text { display: none; }
           .sk-card-top { flex-direction: column; }
           .sk-live-carrier { display: none; }
+          .sk-ai-card,
+          .sk-aside-card,
+          .sk-booking-card,
+          .sk-card {
+            border-radius: 18px !important;
+          }
+          .sk-ai-card,
+          .sk-booking-card,
+          .sk-aside-card,
+          .sk-card,
+          .sk-empty-card {
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+          }
+          .sk-simple-left,
+          .sk-ai-left,
+          .sk-ai-right {
+            padding-left: 18px !important;
+            padding-right: 18px !important;
+          }
+          .sk-simple-left {
+            gap: 14px;
+          }
+          .sk-simple-title {
+            font-size: clamp(1.8rem, 8vw, 2.5rem);
+            line-height: 1.02;
+          }
+          .sk-visual-head {
+            padding: 12px 14px;
+          }
+          .sk-visual-counter {
+            padding: 14px 0 8px;
+          }
+          .sk-visual-count {
+            font-size: 2.3rem;
+          }
+          .sk-visual-routes {
+            padding: 0 12px;
+          }
+          .sk-visual-stats {
+            padding: 0 12px 12px;
+          }
+          .sk-live-row {
+            align-items: flex-start;
+            padding: 14px 14px;
+            gap: 12px;
+          }
+          .sk-live-price-col p {
+            font-size: 0.95rem;
+          }
+          .sk-live-footer {
+            padding: 16px 14px;
+            font-size: 0.82rem;
+          }
+          .sk-route-form {
+            gap: 10px !important;
+          }
+          .sk-rf-inputs {
+            min-width: 0;
+          }
+          .sk-rf-input {
+            font-size: 16px !important;
+          }
+          .sk-simple-title,
+          .sk-card-title,
+          .sk-confirm-title {
+            overflow-wrap: anywhere;
+          }
+          .sk-weight-row {
+            overflow-x: auto;
+            flex-wrap: nowrap !important;
+            padding-bottom: 2px;
+            scrollbar-width: none;
+          }
+          .sk-weight-row::-webkit-scrollbar { display: none; }
+          .sk-weight-chip {
+            flex: 0 0 auto;
+          }
+          .sk-visual-route {
+            grid-template-columns: 1fr auto !important;
+          }
+          .sk-brow {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+          }
+          .sk-brow strong {
+            text-align: left;
+          }
+          .sk-contact-block {
+            gap: 12px;
+          }
+          .sk-find-btn,
+          .sk-submit-btn {
+            width: 100%;
+            justify-content: center;
+          }
+          .sk-state-center {
+            padding: 60px 16px;
+          }
+          .sk-confirm-sub {
+            font-size: 0.84rem;
+          }
+          .sk-booking-card[style*='sticky'] {
+            position: static !important;
+            top: auto !important;
+          }
         }
       `}</style>
     </div>

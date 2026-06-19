@@ -40,6 +40,14 @@ export default function Hero() {
   const [liveTrips, setLiveTrips] = useState(DEMO_TRIPS)
   const [booking, setBooking] = useState<TripInfo | null>(null)
   const [showAllTrips, setShowAllTrips] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     async function refresh() {
@@ -57,13 +65,14 @@ export default function Hero() {
     <section
       className="dot-grid"
       style={{
-        minHeight: '100vh',
+        minHeight: isMobile ? 'auto' : '100vh',
         display: 'flex',
         alignItems: 'center',
-        padding: '0 24px',
-        paddingTop: 72,
+        padding: isMobile ? '0 16px' : '0 24px',
+        paddingTop: isMobile ? 64 : 72,
         position: 'relative',
         overflow: 'hidden',
+        maxWidth: '100vw',
       }}
     >
       <div
@@ -78,15 +87,15 @@ export default function Hero() {
         }}
       />
 
-      <div style={{ maxWidth: 1260, margin: '0 auto', width: '100%', padding: '80px 0 60px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.02fr 0.98fr', gap: 64, alignItems: 'center' }}>
+      <div style={{ maxWidth: 1260, margin: '0 auto', width: '100%', padding: isMobile ? '28px 0 24px' : '80px 0 60px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.02fr 0.98fr', gap: isMobile ? 32 : 64, alignItems: 'center' }}>
           <div>
             <div
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 7,
-                marginBottom: 28,
+                marginBottom: isMobile ? 18 : 28,
                 padding: '6px 14px',
                 borderRadius: 100,
                 border: '1px solid var(--secondary-soft)',
@@ -115,7 +124,7 @@ export default function Hero() {
                 letterSpacing: '-0.04em',
                 lineHeight: 1.04,
                 color: 'var(--text)',
-                marginBottom: 24,
+                marginBottom: isMobile ? 18 : 24,
               }}
             >
               Någon kör redan
@@ -128,7 +137,7 @@ export default function Hero() {
                 fontSize: 'clamp(1rem, 1.5vw, 1.1rem)',
                 lineHeight: 1.7,
                 color: 'var(--muted)',
-                marginBottom: 40,
+                marginBottom: isMobile ? 28 : 40,
                 maxWidth: 500,
               }}
             >
@@ -136,7 +145,7 @@ export default function Hero() {
               <strong style={{ color: 'var(--muted-2)', fontWeight: 500 }}> 60% billigare än DHL.</strong>
             </p>
 
-            <div style={{ display: 'flex', gap: 12, marginBottom: 52, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 12, marginBottom: isMobile ? 28 : 52, flexWrap: 'wrap' }}>
               <Link
                 href="/skicka"
                 style={{
@@ -145,7 +154,9 @@ export default function Hero() {
                   gap: 8,
                   background: 'var(--accent)',
                   color: '#0a0a0a',
-                  padding: '14px 28px',
+                  padding: isMobile ? '14px 18px' : '14px 28px',
+                  width: isMobile ? '100%' : 'auto',
+                  justifyContent: 'center',
                   borderRadius: 10,
                   fontSize: '0.9rem',
                   fontWeight: 700,
@@ -169,7 +180,9 @@ export default function Hero() {
                   gap: 8,
                   background: 'transparent',
                   color: 'var(--text)',
-                  padding: '13px 28px',
+                  padding: isMobile ? '13px 18px' : '13px 28px',
+                  width: isMobile ? '100%' : 'auto',
+                  justifyContent: 'center',
                   borderRadius: 10,
                   border: '1px solid var(--border-strong)',
                   fontSize: '0.9rem',
@@ -188,7 +201,7 @@ export default function Hero() {
               </Link>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 0, flexWrap: 'wrap' }}>
               {[
                 { icon: Shield, color: 'var(--success)', text: 'BankID-verifierat' },
                 { icon: Star, color: 'var(--warning)', text: '4.8 snittbetyg', fill: true },
@@ -201,7 +214,7 @@ export default function Hero() {
                         width: 1,
                         height: 14,
                         background: 'var(--border)',
-                        margin: '0 16px',
+                        margin: isMobile ? '0 6px' : '0 16px',
                         display: 'inline-block',
                       }}
                     />
@@ -219,7 +232,7 @@ export default function Hero() {
             <div
               style={{
                 position: 'relative',
-                minHeight: 640,
+                minHeight: isMobile ? 520 : 640,
                 borderRadius: 28,
                 overflow: 'hidden',
                 border: '1px solid var(--service-card-border)',
@@ -256,7 +269,7 @@ export default function Hero() {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  padding: 28,
+                  padding: isMobile ? 18 : 28,
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20 }}>
@@ -279,8 +292,8 @@ export default function Hero() {
 
                   <div
                     style={{
-                      maxWidth: 180,
-                      padding: '12px 14px',
+                      maxWidth: isMobile ? 150 : 180,
+                      padding: isMobile ? '10px 12px' : '12px 14px',
                       borderRadius: 18,
                       background: 'rgba(10,10,10,0.38)',
                       border: '1px solid rgba(255,255,255,0.12)',
@@ -300,7 +313,7 @@ export default function Hero() {
                 <div
                   style={{
                     alignSelf: 'flex-end',
-                    width: 'min(100%, 420px)',
+                    width: isMobile ? '100%' : 'min(100%, 420px)',
                     borderRadius: 24,
                     border: '1px solid rgba(255,255,255,0.14)',
                     background: 'rgba(10,10,10,0.55)',
@@ -312,7 +325,7 @@ export default function Hero() {
                 >
                   <div
                     style={{
-                      padding: '16px 20px',
+                      padding: isMobile ? '14px 16px' : '16px 20px',
                       borderBottom: '1px solid rgba(255,255,255,0.08)',
                       display: 'flex',
                       alignItems: 'center',
@@ -344,7 +357,7 @@ export default function Hero() {
                       key={i}
                       onClick={() => setBooking({ id: trip.id, from: trip.from, to: trip.to, carrier: trip.carrier, price: trip.price })}
                       style={{
-                        padding: '16px 20px',
+                        padding: isMobile ? '14px 16px' : '16px 20px',
                         borderBottom: i < liveTrips.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
                         display: 'flex',
                         alignItems: 'center',
@@ -363,8 +376,8 @@ export default function Hero() {
                           <MapPin size={8} style={{ color: '#86efac' }} />
                         </div>
                         <div style={{ minWidth: 0 }}>
-                          <p style={{ fontSize: '0.85rem', fontWeight: 600, color: '#ffffff', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 5 }}>
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{trip.from}</span>
+                          <p style={{ fontSize: isMobile ? '0.8rem' : '0.85rem', fontWeight: 600, color: '#ffffff', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: isMobile ? 'normal' : 'nowrap' }}>{trip.from}</span>
                             {trip.isReal && (
                               <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(146,255,99,0.2)', color: '#92ff63', border: '1px solid rgba(146,255,99,0.3)', flexShrink: 0 }}>DIN</span>
                             )}
@@ -374,7 +387,7 @@ export default function Hero() {
                       </div>
 
                       <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                        <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.92)', fontWeight: 500 }}>{trip.carrier}</p>
+                        <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.92)', fontWeight: 500 }}>{trip.carrier}</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 3, justifyContent: 'center' }}>
                           {trip.rating !== null ? (
                             <>
@@ -388,7 +401,7 @@ export default function Hero() {
                       </div>
 
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <p style={{ fontSize: '1rem', fontWeight: 700, color: '#ffffff', lineHeight: 1 }}>{trip.price} kr</p>
+                        <p style={{ fontSize: isMobile ? '0.92rem' : '1rem', fontWeight: 700, color: '#ffffff', lineHeight: 1 }}>{trip.price} kr</p>
                         <p style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.68)' }}>om {trip.eta}</p>
                       </div>
                     </div>
@@ -417,9 +430,10 @@ export default function Hero() {
 
             <div
               style={{
-                position: 'absolute',
-                bottom: -18,
-                left: -20,
+                position: isMobile ? 'relative' : 'absolute',
+                bottom: isMobile ? 'auto' : -18,
+                left: isMobile ? 'auto' : -20,
+                marginTop: isMobile ? 14 : 0,
                 background: 'var(--surface)',
                 border: '1px solid var(--service-card-border)',
                 borderRadius: 14,

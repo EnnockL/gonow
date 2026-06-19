@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowRight, Car, CheckCircle2, Clock, CreditCard, Loader2, LogOut,
   Mail, MapPin, Package, Phone, Shield, Star, UserRound, Users, Wallet,
@@ -22,8 +23,9 @@ import {
 } from '@/lib/profile-meta'
 import { SIM_TRIPS } from '@/lib/simulation/data'
 import { calculateGonowScore, completionRateFromOrders, getNextLevelRequirements } from '@/lib/gonow-score'
-import { GonowScoreCard } from '@/components/GonowScoreBadge'
+import { GonowScoreCard, GonowScoreBadgeCompact } from '@/components/GonowScoreBadge'
 import { loadSignupEmail } from '@/lib/pending-booking'
+import CarrierProfileModal from '@/components/carrier/CarrierProfileModal'
 
 type TabKey = 'overview' | 'assignments' | 'orders' | 'requests' | 'profile' | 'carriers'
 type BookingRequestWithTrip = BookingRequest & {
@@ -83,6 +85,7 @@ const TABS: { key: TabKey; label: string }[] = [
 ]
 
 const ASSIGNMENT_STEPS: { status: OrderStatus; label: string; color: string }[] = [
+  { status: 'pending',    label: 'Accepterad',  color: '#f59e0b' },
   { status: 'matched',    label: 'Betald',      color: '#15803d' },
   { status: 'picked_up',  label: 'Upphämtad',   color: '#7c3aed' },
   { status: 'in_transit', label: 'På väg',       color: '#0f766e' },
@@ -90,6 +93,7 @@ const ASSIGNMENT_STEPS: { status: OrderStatus; label: string; color: string }[] 
 ]
 
 const NEXT_ACTION: Record<string, { label: string; next: OrderStatus; border: string; bg: string; color: string }> = {
+  pending:    { label: 'Starta uppdrag',    next: 'matched',    border: 'rgba(34,197,94,0.3)',   bg: 'rgba(34,197,94,0.08)',   color: '#15803d' },
   matched:    { label: 'Markera upphämtad', next: 'picked_up',  border: 'rgba(124,58,237,0.3)',  bg: 'rgba(124,58,237,0.08)',  color: '#7c3aed' },
   picked_up:  { label: 'Markera på väg',    next: 'in_transit', border: 'rgba(20,184,166,0.3)',  bg: 'rgba(20,184,166,0.08)',  color: '#0f766e' },
   in_transit: { label: 'Markera levererad', next: 'delivered',  border: 'rgba(34,197,94,0.3)',   bg: 'rgba(34,197,94,0.08)',   color: '#15803d' },
@@ -113,12 +117,20 @@ const BOOKING_STATUS: Record<string, { label: string; color: string; bg: string 
   cancelled: { label: 'Avbruten', color: '#64748b', bg: 'rgba(148,163,184,0.14)' },
 }
 
-function panelStyle(glow = false): React.CSSProperties {
+function panelStyle(glow = false, isDark = false, mobile = false): React.CSSProperties {
+  if (!isDark) {
+    return {
+      background: '#ffffff',
+      border: '1px solid rgba(0,0,0,0.08)',
+      borderRadius: mobile ? 16 : 24,
+      boxShadow: mobile ? 'none' : '0 2px 12px rgba(0,0,0,0.06)',
+    }
+  }
   return {
     background: glow ? 'var(--enterprise-panel-bg)' : 'var(--surface)',
     border: '1px solid var(--enterprise-panel-border)',
-    borderRadius: 24,
-    boxShadow: 'var(--shadow-md)',
+    borderRadius: mobile ? 16 : 24,
+    boxShadow: mobile ? 'none' : 'var(--shadow-md)',
   }
 }
 
@@ -131,9 +143,9 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle?: string })
   )
 }
 
-function statCard(label: string, value: string, hint: string, icon: React.ReactNode): React.ReactNode {
+function statCard(label: string, value: string, hint: string, icon: React.ReactNode, isDark = false, mobile = false): React.ReactNode {
   return (
-    <div style={{ ...panelStyle(), padding: 20 }}>
+    <div style={{ ...panelStyle(false, isDark, mobile), padding: 20 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
           <p style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>{label}</p>
@@ -181,18 +193,37 @@ function groupCarriers(trips: (Trip & { users?: { name: string; rating_avg: numb
   })
 }
 
+const VALID_TABS: TabKey[] = ['overview', 'assignments', 'orders', 'requests', 'profile', 'carriers']
+
 export default function ProfilPage() {
   const { userId, profile, loading: authLoading } = useAuth()
-  const [activeTab, setActiveTab] = useState<TabKey>('overview')
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const initialTab = (searchParams.get('tab') as TabKey | null)
+  const [activeTab, setActiveTab] = useState<TabKey>(
+    initialTab && VALID_TABS.includes(initialTab) ? initialTab : 'overview'
+  )
+
+  function handleTabChange(tab: TabKey) {
+    setActiveTab(tab)
+    router.replace(`/profil?tab=${tab}`, { scroll: false })
+  }
   const [showAuth, setShowAuth] = useState(false)
   const [pendingEmail, setPendingEmail] = useState('')
   const [isDark, setIsDark] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   useEffect(() => {
     const check = () => setIsDark(document.documentElement.classList.contains('dark'))
     check()
     const obs = new MutationObserver(check)
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
     return () => obs.disconnect()
+  }, [])
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
   }, [])
   const [user, setUser] = useState<User | null>(null)
   const [meta, setMeta] = useState<UserProfileMeta>(getDefaultProfileMeta())
@@ -212,6 +243,11 @@ export default function ProfilPage() {
   const [payoutingId, setPayoutingId] = useState<string | null>(null)
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null)
   const [respondingId, setRespondingId] = useState<string | null>(null)
+  const [respondError, setRespondError] = useState<string | null>(null)
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
+  const [statusError, setStatusError] = useState<{ id: string; msg: string } | null>(null)
+  const [viewProfileUserId, setViewProfileUserId] = useState<string | null>(null)
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -353,8 +389,11 @@ export default function ProfilPage() {
     () => new Map(payouts.map((payout) => [payout.order_id, payout])),
     [payouts]
   )
-  const activeAssignments  = orders.filter(o =>
-    getOrderCarrierId(o) === userId && ['matched', 'picked_up', 'in_transit'].includes(o.status)
+  const activeAssignments = orders.filter(o =>
+    getOrderCarrierId(o) === userId && (
+      ['matched', 'picked_up', 'in_transit'].includes(o.status) ||
+      (o.status === 'pending' && o.confirmed_at)
+    )
   )
   const completedTrips = orders.filter(o =>
     getOrderCarrierId(o) === userId && (o.status === 'delivered' || o.status === 'confirmed')
@@ -524,19 +563,26 @@ export default function ProfilPage() {
     try {
       saveUserProfileMeta(userId, meta)
 
-      const supabase = createClient()
-      const payload = {
-        name: user.name,
-        phone: user.phone || null,
-        role: meta.role_intent === 'both' ? 'carrier' : meta.role_intent === 'carrier' ? 'carrier' : user.role,
-      }
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          name: user.name,
+          phone: user.phone || null,
+          role: meta.role_intent === 'both' ? 'carrier' : meta.role_intent === 'carrier' ? 'carrier' : user.role,
+          city: user.city || null,
+          age: user.age || null,
+          gender: (user as any).gender || null,
+          bio: meta.bio || null,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
 
-      const { error } = await supabase.from('users').update(payload).eq('id', userId)
-      if (error) throw error
-
-      setSaveMessage('Profil sparad. Dina standarduppgifter används nu i nya flöden.')
+      setSaveMessage('Profil sparad.')
     } catch {
-      setSaveMessage('Profil sparad lokalt i webbläsaren. Databasen kunde inte uppdateras just nu.')
+      setSaveMessage('Profil sparad lokalt. Databasen kunde inte uppdateras just nu.')
     } finally {
       setSaving(false)
     }
@@ -552,7 +598,7 @@ export default function ProfilPage() {
     setPaymentError(null)
     try {
       const res = await fetch(`/api/orders/${orderId}/checkout`, { method: 'POST' })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Kunde inte starta betalning.')
 
       if (data.mock) {
@@ -593,45 +639,50 @@ export default function ProfilPage() {
 
   async function handleRespond(id: string, status: 'accepted' | 'declined') {
     setRespondingId(id)
+    setRespondError(null)
     try {
       await updateBookingStatus(id, status)
       const nextBookings = await loadAllBookings().catch(() => [])
       setIncoming(nextBookings.filter((booking) => myTrips.some((trip) => trip.id === booking.trip_id)) as BookingRequestWithTrip[])
       setMyRequests(nextBookings.filter((booking) => booking.sender_id === userId) as BookingRequestWithTrip[])
-      setSaveMessage(status === 'accepted' ? 'Bokningen accepterades.' : 'Bokningen avböjdes.')
     } catch (error) {
-      setSaveMessage(error instanceof Error ? error.message : 'Kunde inte uppdatera bokningen.')
+      setRespondError(error instanceof Error ? error.message : 'Kunde inte uppdatera bokningen.')
     } finally {
       setRespondingId(null)
     }
   }
 
+  async function handleCancelOrder(orderId: string) {
+    if (!confirm('Är du säker på att du vill avboka detta uppdrag?')) return
+    setCancellingOrderId(orderId)
+    try {
+      const res = await fetch(`/api/orders/${orderId}/cancel`, { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Kunde inte avboka uppdraget.')
+      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'cancelled' as OrderStatus } : o))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Kunde inte avboka uppdraget.')
+    } finally {
+      setCancellingOrderId(null)
+    }
+  }
+
   async function handleOrderStatusUpdate(orderId: string, status: OrderStatus) {
     setUpdatingOrderId(orderId)
-    setSaveMessage(null)
+    setStatusError(null)
     try {
       const res = await fetch(`/api/orders/${orderId}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         throw new Error(data.error || 'Kunde inte uppdatera orderstatus.')
       }
-
       setOrders((current) => current.map((order) => (order.id === orderId ? { ...order, ...data.order } : order)))
-      setSaveMessage(
-        status === 'picked_up'
-          ? 'Order markerad som upphämtad.'
-          : status === 'in_transit'
-            ? 'Order markerad som på väg.'
-            : status === 'delivered'
-              ? 'Order markerad som levererad.'
-              : 'Order uppdaterad.'
-      )
     } catch (error) {
-      setSaveMessage(error instanceof Error ? error.message : 'Kunde inte uppdatera orderstatus.')
+      setStatusError({ id: orderId, msg: error instanceof Error ? error.message : 'Kunde inte uppdatera orderstatus.' })
     } finally {
       setUpdatingOrderId(null)
     }
@@ -723,7 +774,7 @@ export default function ProfilPage() {
           />
         )}
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '100px 24px' }}>
-          <div style={{ ...panelStyle(), maxWidth: 460, width: '100%', padding: 36, textAlign: 'center' }}>
+          <div style={{ ...panelStyle(false, isDark, isMobile), maxWidth: 460, width: '100%', padding: 36, textAlign: 'center' }}>
             <div style={{ width: 56, height: 56, borderRadius: 18, background: 'var(--accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', color: 'var(--accent)' }}>
               <Shield size={24} />
             </div>
@@ -756,112 +807,134 @@ export default function ProfilPage() {
   const initials = user.name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
 
   return (
-    <div style={{ minHeight: '100vh', paddingTop: 88, paddingBottom: 88, background: isDark ? 'linear-gradient(180deg, transparent 0%, rgba(146,255,99,0.04) 100%)' : 'linear-gradient(180deg, rgba(146,255,99,0.30) 0%, rgba(146,255,99,0.14) 22%, #f8fff4 40%)' }}>
-      <div style={{ maxWidth: 1260, margin: '0 auto', padding: '0 24px' }}>
-        {/* Profile stepper header */}
-        <div style={{
-          display: 'flex', alignItems: 'center',
-          padding: '48px 22px', marginBottom: 24,
-          border: '1px solid rgba(0,0,0,0.08)', borderRadius: 20,
-          background: isDark ? 'rgba(255,255,255,0.05)' : '#f5f5f5',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-          gap: 0,
-        }}>
-          {/* Avatar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, marginRight: 16 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.82rem', fontWeight: 700, background: '#0a0a0a', color: '#ffffff', border: '1px solid rgba(0,0,0,0.2)' }}>
-              {initials}
-            </div>
-            <div>
-              <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{user.name}</p>
-              <p style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>Mina sidor</p>
-            </div>
+    <div style={{ minHeight: '100vh', paddingTop: isMobile ? 56 : 88, paddingBottom: isMobile ? 32 : 88, background: isMobile ? (isDark ? '#0a0a0a' : '#f2f2f7') : (isDark ? 'linear-gradient(180deg, transparent 0%, rgba(146,255,99,0.04) 100%)' : '#f8f8f8'), overflowX: 'hidden' }}>
+
+      {/* ── MOBILE: compact app header ── */}
+      {isMobile && (
+        <div style={{ background: isDark ? '#111' : '#fff', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 21 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 13, background: '#0a0a0a', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.9rem', flexShrink: 0, letterSpacing: '-0.02em' }}>
+            {initials}
           </div>
-
-          <div style={{ width: 1, height: 32, background: 'var(--border)', marginRight: 16, flexShrink: 0 }} />
-
-          {/* Three brand steps */}
-          {[
-            { num: '01', label: 'Ditt konto.',    desc: 'Profil & uppgifter'     },
-            { num: '02', label: 'Ditt nätverk.',  desc: 'Resor & förare'         },
-            { num: '03', label: 'Din kontroll.',  desc: 'Bokningar & uppdrag'    },
-          ].map((step, i, arr) => (
-            <div key={step.num} style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 700, border: '1px solid rgba(0,0,0,0.15)', background: '#0a0a0a', color: '#ffffff' }}>
-                  {step.num}
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{step.label}</p>
-                  <p style={{ fontSize: '0.7rem', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{step.desc}</p>
-                </div>
-              </div>
-              {i < arr.length - 1 && (
-                <div style={{ width: 28, height: 2, background: 'var(--border)', flexShrink: 0, margin: '0 6px', borderRadius: 2 }} />
-              )}
-            </div>
-          ))}
-
-          {/* Logout */}
-          <div style={{ width: 1, height: 32, background: 'var(--border)', margin: '0 16px', flexShrink: 0 }} />
-          <button onClick={handleSignOut} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}>
-            <LogOut size={13} /> Logga ut
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', marginBottom: 3, letterSpacing: '-0.02em' }}>{user.name}</p>
+            {gonowScore && <GonowScoreBadgeCompact result={gonowScore} />}
+          </div>
+          <button onClick={handleSignOut} style={{ width: 36, height: 36, borderRadius: 10, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', cursor: 'pointer', flexShrink: 0 }}>
+            <LogOut size={16} />
           </button>
         </div>
+      )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '240px minmax(0,1fr)', gap: 24, alignItems: 'start' }}>
-          <aside style={{ ...panelStyle(), padding: 16, position: 'sticky', top: 96 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {TABS.map((tab) => {
-                const badge = tab.key === 'assignments' ? activeAssignments.length
-                            : tab.key === 'requests'    ? pendingIncoming
-                            : 0
-                return (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key)}
-                    style={{
-                      textAlign: 'left',
-                      padding: '12px 14px',
-                      borderRadius: 14,
-                      border: '1px solid transparent',
-                      background: activeTab === tab.key ? 'var(--accent-soft)' : 'transparent',
-                      color: activeTab === tab.key ? 'var(--text)' : 'var(--muted)',
-                      fontWeight: activeTab === tab.key ? 700 : 500,
-                      cursor: 'pointer',
-                      fontFamily: 'inherit',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 8,
-                    }}
-                  >
-                    {tab.label}
-                    {badge > 0 && (
-                      <span style={{ fontSize: '0.65rem', fontWeight: 800, minWidth: 18, height: 18, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', background: 'var(--accent)', color: '#0a0a0a' }}>
-                        {badge}
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
+      {/* ── MOBILE: sticky underline tab bar ── */}
+      {isMobile && (
+        <div className="mobile-app-tabs" style={{ position: 'sticky', top: 66, zIndex: 20, background: isDark ? '#111' : '#fff', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`, display: 'flex', overflowX: 'auto', scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'], scrollSnapType: 'x proximity' }}>
+          {TABS.map((tab) => {
+            const badge = tab.key === 'assignments' ? activeAssignments.length : tab.key === 'requests' ? pendingIncoming : 0
+            const isActive = activeTab === tab.key
+            return (
+              <button key={tab.key} onClick={() => handleTabChange(tab.key)} style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '15px 15px 12px', border: 'none', borderBottom: `2.5px solid ${isActive ? '#92ff63' : 'transparent'}`, background: 'none', color: isActive ? 'var(--text)' : 'var(--muted)', fontWeight: isActive ? 700 : 500, fontSize: '0.81rem', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'color 0.15s', marginBottom: -1 }}>
+                {tab.label}
+                {badge > 0 && <span style={{ fontSize: '0.58rem', fontWeight: 800, minWidth: 15, height: 15, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', background: '#92ff63', color: '#0a0a0a' }}>{badge}</span>}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ── DESKTOP: maxWidth wrapper ── */}
+      <div style={isMobile ? undefined : { maxWidth: 1260, margin: '0 auto', padding: '0 24px' }}>
+
+        {/* ── DESKTOP ONLY: stepper header ── */}
+        {!isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', padding: '16px 22px', marginBottom: 24, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 20, background: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', gap: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, marginRight: 'auto' }}>
+              <div style={{ width: 36, height: 36, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.82rem', fontWeight: 700, background: '#0a0a0a', color: '#ffffff', border: '1px solid rgba(0,0,0,0.2)' }}>{initials}</div>
+              <div>
+                <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{user.name}</p>
+                <p style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>Mina sidor</p>
+              </div>
             </div>
-          </aside>
+            <div style={{ width: 1, height: 32, background: 'var(--border)', margin: '0 16px', flexShrink: 0 }} />
+            {[{ num: '01', label: 'Ditt konto.', desc: 'Profil & uppgifter' }, { num: '02', label: 'Ditt nätverk.', desc: 'Resor & förare' }, { num: '03', label: 'Din kontroll.', desc: 'Bokningar & uppdrag' }].map((step, i, arr) => (
+              <div key={step.num} style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 700, border: '1px solid rgba(0,0,0,0.15)', background: '#0a0a0a', color: '#ffffff' }}>{step.num}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{step.label}</p>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{step.desc}</p>
+                  </div>
+                </div>
+                {i < arr.length - 1 && <div style={{ width: 28, height: 2, background: 'var(--border)', flexShrink: 0, margin: '0 6px', borderRadius: 2 }} />}
+              </div>
+            ))}
+            <div style={{ width: 1, height: 32, background: 'var(--border)', margin: '0 16px', flexShrink: 0 }} />
+            <button onClick={handleSignOut} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 600, flexShrink: 0 }}>
+              <LogOut size={13} /> Logga ut
+            </button>
+          </div>
+        )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {/* ── Grid: sidebar (desktop) + content ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '240px minmax(0,1fr)', gap: 24, alignItems: 'start' }}>
+
+          {/* Desktop sidebar only */}
+          {!isMobile && (
+            <aside style={{ ...panelStyle(false, isDark, isMobile), padding: 16, position: 'sticky', top: 96 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {TABS.map((tab) => {
+                  const badge = tab.key === 'assignments' ? activeAssignments.length : tab.key === 'requests' ? pendingIncoming : 0
+                  return (
+                    <button key={tab.key} onClick={() => handleTabChange(tab.key)} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 14, border: '1px solid transparent', background: activeTab === tab.key ? 'var(--accent-soft)' : 'transparent', color: activeTab === tab.key ? 'var(--text)' : 'var(--muted)', fontWeight: activeTab === tab.key ? 700 : 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      {tab.label}
+                      {badge > 0 && <span style={{ fontSize: '0.65rem', fontWeight: 800, minWidth: 18, height: 18, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', background: 'var(--accent)', color: '#0a0a0a' }}>{badge}</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            </aside>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 24, minWidth: 0, padding: isMobile ? '18px 14px 32px' : 0 }}>
+            {isMobile && (
+              <div style={{ ...panelStyle(true, isDark, isMobile), padding: '18px 16px', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', right: -48, top: -48, width: 140, height: 140, borderRadius: '50%', background: 'var(--enterprise-panel-glow)', pointerEvents: 'none' }} />
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+                  <div>
+                    <p style={{ fontSize: '0.7rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Min panel</p>
+                    <p style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1.1 }}>{user.name}</p>
+                    <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginTop: 6 }}>Allt viktigt samlat på ett ställe: bokningar, uppdrag, saldo och förare.</p>
+                  </div>
+                  <div style={{ minWidth: 52, height: 52, padding: '0 12px', borderRadius: 16, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', fontSize: '0.95rem', fontWeight: 800 }}>
+                    {completion}%
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10 }}>
+                  {[
+                    { label: 'Förfrågningar', value: pendingRequests },
+                    { label: 'Resor', value: activeCarrierTrips },
+                    { label: 'Saldo', value: `${driverWallet.available} kr` },
+                  ].map((item) => (
+                    <div key={item.label} style={{ padding: '12px 10px', borderRadius: 16, background: 'var(--surface)', border: '1px solid var(--enterprise-panel-border)' }}>
+                      <p style={{ fontSize: '0.68rem', color: 'var(--muted)', marginBottom: 4, lineHeight: 1.2 }}>{item.label}</p>
+                      <p style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em' }}>{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {paymentError && (
-              <div style={{ ...panelStyle(), padding: '14px 16px', borderColor: 'rgba(239,68,68,0.22)', color: '#dc2626', background: 'rgba(239,68,68,0.05)' }}>
+              <div style={{ ...panelStyle(false, isDark, isMobile), padding: '14px 16px', borderColor: 'rgba(239,68,68,0.22)', color: '#dc2626', background: 'rgba(239,68,68,0.05)' }}>
                 {paymentError}
               </div>
             )}
 
             {activeTab === 'overview' && (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 14 }}>
-                  {statCard('Profil', `${completion}%`, 'Onboarding och sparade standarduppgifter', <UserRound size={18} />)}
-                  {statCard('Aktiva resor', `${activeCarrierTrips}`, 'Registrerade rutter i din panel', <Car size={18} />)}
-                  {statCard('Väntande svar', `${pendingRequests}`, 'Dina skickade förfrågningar', <Clock size={18} />)}
-                  {statCard('Accepterade', `${acceptedRequests}`, 'Redo att betalas eller genomföras', <CheckCircle2 size={18} />)}
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0,1fr))' : 'repeat(4, minmax(0,1fr))', gap: 14 }}>
+                  {statCard('Profil', `${completion}%`, 'Onboarding och sparade standarduppgifter', <UserRound size={18} />, isDark, isMobile)}
+                  {statCard('Aktiva resor', `${activeCarrierTrips}`, 'Registrerade rutter i din panel', <Car size={18} />, isDark, isMobile)}
+                  {statCard('Väntande svar', `${pendingRequests}`, 'Dina skickade förfrågningar', <Clock size={18} />, isDark, isMobile)}
+                  {statCard('Accepterade', `${acceptedRequests}`, 'Redo att betalas eller genomföras', <CheckCircle2 size={18} />, isDark, isMobile)}
                 </div>
 
                 {gonowScore && user && (
@@ -872,11 +945,13 @@ export default function ProfilPage() {
                     bankidVerified={user.bankid_verified ?? false}
                     completedTrips={completedTrips}
                     nextRequirements={gonowNextReqs}
+                    isDark={isDark}
+                    mobile={isMobile}
                   />
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 20 }}>
-                  <div style={{ ...panelStyle(true), padding: 24, position: 'relative', overflow: 'hidden' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.15fr 0.85fr', gap: 20 }}>
+                  <div style={{ ...panelStyle(true, isDark, isMobile), padding: 24, position: 'relative', overflow: 'hidden' }}>
                     <div style={{ position: 'absolute', right: -70, top: -70, width: 220, height: 220, borderRadius: '50%', background: 'var(--enterprise-panel-glow)', pointerEvents: 'none' }} />
                     <SectionTitle
                       title="F\u00f6rarsaldo"
@@ -895,7 +970,7 @@ export default function ProfilPage() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 12, marginBottom: 16 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0,1fr))', gap: 12, marginBottom: 16 }}>
                       <div style={{ padding: 16, borderRadius: 18, background: 'var(--surface)', border: '1px solid var(--enterprise-panel-border)' }}>
                         <p style={{ fontSize: '0.72rem', color: 'var(--muted)', marginBottom: 6 }}>P\u00e5 hold</p>
                         <p style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{driverWallet.hold} kr</p>
@@ -918,17 +993,17 @@ export default function ProfilPage() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 4 }}>
+                    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between', gap: 12, paddingTop: 4 }}>
                       <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6 }}>
                         Enterprise-t\u00e4nket h\u00e4r \u00e4r att f\u00f6raren alltid ska kunna skilja p\u00e5 intj\u00e4nat, l\u00e5st och utbetalt.
                       </p>
-                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: isMobile ? 'stretch' : 'flex-end' }}>
                         {payoutReadyOrders[0] && (
-                          <button onClick={() => handleStartPayout(payoutReadyOrders[0].id)} className="btn-primary" style={{ padding: '11px 16px', whiteSpace: 'nowrap' }}>
+                          <button onClick={() => handleStartPayout(payoutReadyOrders[0].id)} className="btn-primary" style={{ padding: '11px 16px', whiteSpace: 'nowrap', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}>
                             {payoutingId === payoutReadyOrders[0].id ? 'Startar payout...' : 'Skicka payout'}
                           </button>
                         )}
-                        <button onClick={() => setActiveTab('assignments')} className="btn-primary" style={{ padding: '11px 16px', whiteSpace: 'nowrap' }}>
+                        <button onClick={() => handleTabChange('assignments')} className="btn-primary" style={{ padding: '11px 16px', whiteSpace: 'nowrap', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}>
                           Se driftstatus
                         </button>
                       </div>
@@ -972,7 +1047,7 @@ export default function ProfilPage() {
                     )}
                   </div>
 
-                  <div style={{ ...panelStyle(), padding: 24 }}>
+                  <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                     <SectionTitle title="Operationsl\u00e4ge" subtitle="Vad du b\u00f6r g\u00f6ra n\u00e4st f\u00f6r att h\u00e5lla fl\u00f6det snabbt och tydligt." />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       <div style={{ padding: 16, borderRadius: 18, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
@@ -997,13 +1072,13 @@ export default function ProfilPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 20 }}>
-                  <div style={{ ...panelStyle(), padding: 24 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.1fr 0.9fr', gap: 20 }}>
+                  <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                     <SectionTitle
                       title="Varför detta är rätt grund"
                       subtitle="Vi flyttar kärnupplevelsen till ett ställe där användaren slipper fylla om samma saker i varje nytt flöde."
                     />
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
                       {[
                         'Bokningar och resor i samma panel',
                         'Profilen återanvänds i skicka, lift och kör',
@@ -1017,13 +1092,13 @@ export default function ProfilPage() {
                     </div>
                   </div>
 
-                  <div style={{ ...panelStyle(), padding: 24 }}>
+                  <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                     <SectionTitle title="Snabböversikt" subtitle="Det som redan finns sparat och det som bör fyllas i härnäst." />
                     {(activeCustomerOrder || acceptedRequestNeedingPayment) && (
                       <div style={{ padding: 16, borderRadius: 18, background: 'var(--surface-2)', border: '1px solid var(--border)', marginBottom: 16 }}>
                         <p style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>Aktiv kundresa</p>
                         <p style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
-                          {activeCustomerOrder?.description || acceptedRequestNeedingPayment?.description || 'Bokning pÃ¥gÃ¥r'}
+                          {activeCustomerOrder?.description || acceptedRequestNeedingPayment?.description || 'Bokning pågår'}
                         </p>
                         <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: 12 }}>
                           {activeCustomerOrder
@@ -1038,11 +1113,11 @@ export default function ProfilPage() {
                           )}
                           {activeCustomerOrder && activeCustomerOrder.status !== 'pending' && (
                             <Link href={`/spara/${activeCustomerOrder.id}`} className="btn-primary" style={{ padding: '11px 16px', display: 'inline-flex', gap: 8 }}>
-                              SpÃ¥ra resa <ArrowRight size={14} />
+                              Spåra resa <ArrowRight size={14} />
                             </Link>
                           )}
-                          <button onClick={() => setActiveTab('requests')} style={{ padding: '11px 16px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
-                            Se fÃ¶rfrÃ¥gningar
+                          <button onClick={() => handleTabChange('requests')} style={{ padding: '11px 16px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+                            Se förfrågningar
                           </button>
                         </div>
                       </div>
@@ -1067,7 +1142,7 @@ export default function ProfilPage() {
                         </strong>
                       </div>
                       <div style={{ paddingTop: 6 }}>
-                        <button onClick={() => setActiveTab('profile')} className="btn-primary" style={{ padding: '11px 16px', display: 'inline-flex', gap: 8 }}>
+                        <button onClick={() => handleTabChange('profile')} className="btn-primary" style={{ padding: '11px 16px', display: 'inline-flex', gap: 8 }}>
                           Fyll profiluppgifter <ArrowRight size={14} />
                         </button>
                       </div>
@@ -1079,17 +1154,17 @@ export default function ProfilPage() {
 
             {activeTab === 'assignments' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                <div style={{ ...panelStyle(true), padding: 24, position: 'relative', overflow: 'hidden' }}>
+                <div style={{ ...panelStyle(true, isDark, isMobile), padding: 24, position: 'relative', overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', right: -80, top: -80, width: 240, height: 240, borderRadius: '50%', background: 'var(--enterprise-panel-glow)', pointerEvents: 'none' }} />
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 12 }}>
-                    {statCard('Tillgängligt', `${driverWallet.available} kr`, 'Levererat och redo för payout', <Wallet size={18} />)}
-                    {statCard('På hold', `${driverWallet.hold} kr`, 'Låst tills uppdraget är klart', <Shield size={18} />)}
-                    {statCard('I payout', `${driverWallet.processing} kr`, 'Väntar överföring', <CreditCard size={18} />)}
-                    {statCard('Utbetalt', `${driverWallet.paid} kr`, 'Historiskt utbetalt till förare', <CheckCircle2 size={18} />)}
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0,1fr))' : 'repeat(4, minmax(0,1fr))', gap: 12 }}>
+                    {statCard('Tillgängligt', `${driverWallet.available} kr`, 'Levererat och redo för payout', <Wallet size={18} />, isDark, isMobile)}
+                    {statCard('På hold', `${driverWallet.hold} kr`, 'Låst tills uppdraget är klart', <Shield size={18} />, isDark, isMobile)}
+                    {statCard('I payout', `${driverWallet.processing} kr`, 'Väntar överföring', <CreditCard size={18} />, isDark, isMobile)}
+                    {statCard('Utbetalt', `${driverWallet.paid} kr`, 'Historiskt utbetalt till förare', <CheckCircle2 size={18} />, isDark, isMobile)}
                   </div>
                 </div>
 
-                <div style={{ ...panelStyle(), padding: 24 }}>
+                <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                   <SectionTitle
                     title="Aktiva uppdrag"
                     subtitle="Dina pågående leveranser — upphämtning, på väg och klara att bekräftas."
@@ -1106,22 +1181,28 @@ export default function ProfilPage() {
                       {activeAssignments.map((order) => {
                         const nextAction = NEXT_ACTION[order.status]
                         const stepIndex = ASSIGNMENT_STEPS.findIndex(s => s.status === order.status)
-                        // Try to get sender contact from linked booking request
+                        // Use nested booking_requests join data (from API), fallback to bookingById map
                         const linkedBooking = order.booking_request_id ? bookingById.get(order.booking_request_id) : undefined
-                        const senderName = linkedBooking?.sender_name || 'Kund'
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const br = (order as any)._booking_request as { sender_name?: string; sender_phone?: string; recipient_name?: string; recipient_phone?: string } | null
+                        const senderUser = (order as any)._sender as { name?: string; phone?: string } | null
+                        const senderName = br?.sender_name || linkedBooking?.sender_name || senderUser?.name || 'Kund'
+                        const senderPhone = br?.sender_phone || linkedBooking?.sender_phone || senderUser?.phone
+                        const recipientName = br?.recipient_name || linkedBooking?.recipient_name
+                        const recipientPhone = br?.recipient_phone || linkedBooking?.recipient_phone
 
                         return (
                           <div key={order.id} style={{ padding: 22, borderRadius: 20, background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 18 }}>
                             {/* Top row: route + status badge */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
                               <div style={{ minWidth: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
                                   <MapPin size={14} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-                                  <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)' }}>
                                     {order.pickup_address || 'Upphämtning'}
                                   </span>
                                   <span style={{ color: 'var(--muted)', flexShrink: 0 }}>→</span>
-                                  <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)' }}>
                                     {order.dropoff_address || 'Avlämning'}
                                   </span>
                                 </div>
@@ -1171,27 +1252,51 @@ export default function ProfilPage() {
                               })}
                             </div>
 
-                            {/* Sender info + payout */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: 'var(--muted)' }}>
-                                  <Users size={13} style={{ flexShrink: 0 }} />
-                                  <span style={{ fontWeight: 600, color: 'var(--text)' }}>{senderName}</span>
+                            {/* Sender + recipient info + payout */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {/* Sender */}
+                                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: 'var(--muted)' }}>
+                                    <Users size={13} style={{ flexShrink: 0 }} />
+                                    <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Avsändare:</span>
+                                    {order.sender_id ? (
+                                      <button onClick={() => setViewProfileUserId(order.sender_id!)} style={{ background: 'none', border: 'none', padding: 0, fontWeight: 600, color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.8rem', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                                        {senderName}
+                                      </button>
+                                    ) : (
+                                      <span style={{ fontWeight: 600, color: 'var(--text)' }}>{senderName}</span>
+                                    )}
+                                  </div>
+                                  {senderPhone && (
+                                    <a href={`tel:${senderPhone}`} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: '#15803d', textDecoration: 'none', fontWeight: 600 }}>
+                                      <Phone size={12} style={{ flexShrink: 0 }} />
+                                      {senderPhone}
+                                    </a>
+                                  )}
                                 </div>
-                                {linkedBooking?.sender_phone && (
-                                  <a href={`tel:${linkedBooking.sender_phone}`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
-                                    <Phone size={13} style={{ flexShrink: 0 }} />
-                                    {linkedBooking.sender_phone}
-                                  </a>
+                                {/* Recipient */}
+                                {recipientName && (
+                                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', padding: '8px 12px', borderRadius: 10, background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem' }}>
+                                      <UserRound size={13} color="#15803d" style={{ flexShrink: 0 }} />
+                                      <span style={{ fontSize: '0.72rem', color: '#15803d' }}>Mottagare:</span>
+                                      <span style={{ fontWeight: 700, color: '#15803d' }}>{recipientName}</span>
+                                    </div>
+                                    {recipientPhone && (
+                                      <a href={`tel:${recipientPhone}`} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: '#15803d', textDecoration: 'none', fontWeight: 700 }}>
+                                        <Phone size={12} style={{ flexShrink: 0 }} />
+                                        {recipientPhone}
+                                      </a>
+                                    )}
+                                  </div>
                                 )}
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <div style={{ textAlign: 'right' }}>
-                                  <p style={{ fontSize: '0.62rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Utbetalning</p>
-                                  <p style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent)', letterSpacing: '-0.02em', lineHeight: 1 }}>
-                                    {order.carrier_payout ?? order.price} kr
-                                  </p>
-                                </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <p style={{ fontSize: '0.62rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Utbetalning</p>
+                                <p style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                                  {order.carrier_payout ?? order.price} kr
+                                </p>
                               </div>
                             </div>
 
@@ -1214,10 +1319,26 @@ export default function ProfilPage() {
                               </button>
                             )}
 
+                            {statusError?.id === order.id && (
+                              <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', color: '#dc2626', fontSize: '0.8rem', fontWeight: 600 }}>
+                                {statusError.msg}
+                              </div>
+                            )}
+
                             {order.status === 'delivered' && (
                               <div style={{ padding: '12px 16px', borderRadius: 12, background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)', fontSize: '0.8rem', color: '#15803d', textAlign: 'center', fontWeight: 600 }}>
                                 Levererat — inväntar kundens bekräftelse
                               </div>
+                            )}
+
+                            {['pending', 'matched'].includes(order.status) && (
+                              <button
+                                onClick={() => handleCancelOrder(order.id)}
+                                disabled={cancellingOrderId === order.id}
+                                style={{ width: '100%', padding: '10px 18px', borderRadius: 12, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.06)', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, fontSize: '0.82rem', opacity: cancellingOrderId === order.id ? 0.6 : 1 }}
+                              >
+                                {cancellingOrderId === order.id ? 'Avbokar...' : 'Avboka uppdrag'}
+                              </button>
                             )}
                           </div>
                         )
@@ -1228,7 +1349,7 @@ export default function ProfilPage() {
 
                 {/* Ongoing payouts — mark as paid */}
                 {payouts.filter(p => p.status === 'processing' || p.status === 'pending').length > 0 && (
-                  <div style={{ ...panelStyle(), padding: 24 }}>
+                  <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                     <SectionTitle
                       title="Pågående utbetalningar"
                       subtitle="Dessa payouts är startade. Markera dem som klara när pengarna har gått ut."
@@ -1275,7 +1396,7 @@ export default function ProfilPage() {
 
                 {/* Quick link to all orders */}
                 <button
-                  onClick={() => setActiveTab('orders')}
+                  onClick={() => handleTabChange('orders')}
                   style={{ padding: '12px 16px', borderRadius: 14, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, fontSize: '0.82rem' }}
                 >
                   Visa alla bokningar →
@@ -1284,23 +1405,37 @@ export default function ProfilPage() {
             )}
 
             {activeTab === 'orders' && (
-              <div style={{ ...panelStyle(), padding: 24 }}>
+              <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                 <SectionTitle title="Mina bokningar" subtitle="Här ska kundens status alltid vara tydlig: väntar, accepterad, på väg eller levererad." />
-                {orders.length === 0 ? (
-                  <div style={{ padding: 28, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center', color: 'var(--muted)' }}>
-                    Inga ordrar ännu. Börja med att boka från en aktiv resa eller låt AI:n matcha dig.
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {orders.map((order) => {
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {orders.filter(o => showHistory || o.status !== 'cancelled').length === 0 && (
+                    <div style={{ padding: 28, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center', color: 'var(--muted)' }}>
+                      Inga aktiva bokningar. Börja med att boka från en aktiv resa eller låt AI:n matcha dig.
+                    </div>
+                  )}
+                  {orders.filter(o => showHistory || o.status !== 'cancelled').map((order) => {
                       const status = ORDER_STATUS[order.status] || ORDER_STATUS.pending
                       const canPay = order.sender_id === userId && order.status === 'pending'
                       const isCarrierOrder = getOrderCarrierId(order) === userId
                       return (
-                        <div key={order.id} style={{ padding: 18, borderRadius: 18, background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center' }}>
+                        <div key={order.id} style={{ padding: isMobile ? 16 : 18, borderRadius: isMobile ? 20 : 18, background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', gap: isMobile ? 12 : 16, alignItems: isMobile ? 'flex-start' : 'center' }}>
                           <div style={{ minWidth: 0 }}>
                             <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>{order.description || 'Bokning'}</p>
                             <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6 }}>{order.pickup_address} → {order.dropoff_address}</p>
+                            {(() => {
+                              const carrierId = getOrderCarrierId(order)
+                              const carrierUser = (order as any)._carrier as { name?: string } | null
+                              const carrierName = carrierUser?.name || (order as any).carrier_name || null
+                              return carrierId && carrierId !== userId ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
+                                  <Shield size={11} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+                                  <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Bärare:</span>
+                                  <button onClick={() => setViewProfileUserId(carrierId)} style={{ background: 'none', border: 'none', padding: 0, fontSize: '0.76rem', fontWeight: 600, color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                                    {carrierName || 'Visa profil'}
+                                  </button>
+                                </div>
+                              ) : null
+                            })()}
                             {isCarrierOrder && (
                               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
                                 {order.status === 'matched' && (
@@ -1321,28 +1456,56 @@ export default function ProfilPage() {
                               </div>
                             )}
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: 10, flexShrink: 0, width: isMobile ? '100%' : 'auto' }}>
                             <span style={{ padding: '5px 10px', borderRadius: 999, fontSize: '0.72rem', color: status.color, background: status.bg }}>{status.label}</span>
-                            <strong style={{ color: 'var(--text)' }}>{order.price} kr</strong>
+                            <strong style={{ color: 'var(--text)', fontSize: isMobile ? '1rem' : undefined }}>{order.price} kr</strong>
                             {canPay ? (
-                              <button onClick={() => handlePay(order.id)} className="btn-primary" style={{ padding: '10px 14px' }}>
+                              <button onClick={() => handlePay(order.id)} className="btn-primary" style={{ padding: '10px 14px', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}>
                                 {payingId === order.id ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Startar...</> : <><CreditCard size={13} /> Betala</>}
                               </button>
+                            ) : order.status === 'delivered' && order.sender_id === userId ? (
+                              <button
+                                onClick={() => handleOrderStatusUpdate(order.id, 'confirmed')}
+                                className="btn-primary"
+                                style={{ padding: '10px 14px', background: '#15803d', borderColor: '#15803d', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}
+                              >
+                                {updatingOrderId === order.id ? 'Sparar...' : 'Bekräfta leverans'}
+                              </button>
                             ) : (
-                              <Link href={`/spara/${order.id}`} style={{ color: 'var(--accent)', textDecoration: 'none' }}>Spåra</Link>
+                              <Link href={`/spara/${order.id}`} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 14px', borderRadius: 10, border: '1px solid #92ff63', color: '#92ff63', background: '#0a0a0a', fontWeight: 700, fontSize: '0.78rem', textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap', width: isMobile ? '100%' : 'auto' }}>
+                                <MapPin size={12} /> Spåra
+                              </Link>
+                            )}
+                            {['pending', 'matched'].includes(order.status) && !isCarrierOrder && (
+                              <button
+                                onClick={() => handleCancelOrder(order.id)}
+                                disabled={cancellingOrderId === order.id}
+                                style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.06)', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.75rem', fontWeight: 600, opacity: cancellingOrderId === order.id ? 0.6 : 1, width: isMobile ? '100%' : 'auto' }}
+                              >
+                                {cancellingOrderId === order.id ? 'Avbokar...' : 'Avboka'}
+                              </button>
                             )}
                           </div>
                         </div>
                       )
                     })}
+                    {orders.some(o => o.status === 'cancelled') && (
+                      <button
+                        onClick={() => setShowHistory(h => !h)}
+                        style={{ padding: '10px 16px', borderRadius: 12, border: '1px dashed var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.8rem', fontWeight: 600, textAlign: 'center' }}
+                      >
+                        {showHistory
+                          ? 'Dölj historik'
+                          : `Visa historik (${orders.filter(o => o.status === 'cancelled').length} avbrutna)`}
+                      </button>
+                    )}
                   </div>
-                )}
               </div>
             )}
 
             {activeTab === 'requests' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                <div style={{ ...panelStyle(), padding: 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20 }}>
+                <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                   <SectionTitle title="Mina skickade förfrågningar" subtitle="Det här är den viktigaste kundvyn att bygga klart vidare på." />
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {myRequests.length === 0 ? (
@@ -1353,31 +1516,31 @@ export default function ProfilPage() {
                       const canPayRequestOrder = linkedOrder?.sender_id === userId && linkedOrder.status === 'pending'
                       const fallbackPayOrderId = item.order_id || linkedOrder?.id || item.id
                       return (
-                        <div key={item.id} style={{ padding: 16, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                        <div key={item.id} style={{ padding: 16, borderRadius: isMobile ? 18 : 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
                             <strong style={{ color: 'var(--text)', fontSize: '0.84rem' }}>{item.pickup_address} → {item.dropoff_address}</strong>
                             <span style={{ padding: '4px 8px', borderRadius: 999, fontSize: '0.68rem', color: status.color, background: status.bg }}>{status.label}</span>
                           </div>
                           <p style={{ fontSize: '0.76rem', color: 'var(--muted)' }}>{item.description || 'Ingen extra beskrivning'}</p>
                           {item.trips && (
                             <p style={{ fontSize: '0.74rem', color: 'var(--muted)', marginTop: 8 }}>
-                              Rutt: {item.trips.from_city} â†’ {item.trips.to_city}
+                              Rutt: {item.trips.from_city} {'\u2192'} {item.trips.to_city}
                             </p>
                           )}
-                          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
+                          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
                             {canPayRequestOrder && (
-                              <button onClick={() => handlePay(linkedOrder.id)} className="btn-primary" style={{ padding: '10px 14px' }}>
+                              <button onClick={() => handlePay(linkedOrder.id)} className="btn-primary" style={{ padding: '10px 14px', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}>
                                 {payingId === linkedOrder.id ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Startar...</> : <><CreditCard size={13} /> Betala nu</>}
                               </button>
                             )}
                             {!canPayRequestOrder && item.status === 'accepted' && fallbackPayOrderId && (
-                              <button onClick={() => handlePay(fallbackPayOrderId)} className="btn-primary" style={{ padding: '10px 14px' }}>
+                              <button onClick={() => handlePay(fallbackPayOrderId)} className="btn-primary" style={{ padding: '10px 14px', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}>
                                 {payingId === fallbackPayOrderId ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Startar...</> : <><CreditCard size={13} /> Betala nu</>}
                               </button>
                             )}
                             {linkedOrder && linkedOrder.status !== 'pending' && (
-                              <Link href={`/spara/${linkedOrder.id}`} style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 700 }}>
-                                Spåra order
+                              <Link href={`/spara/${linkedOrder.id}`} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--accent)', color: '#0a0a0a', background: 'var(--accent)', fontWeight: 700, fontSize: '0.78rem', textDecoration: 'none', cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}>
+                                <MapPin size={12} /> Spåra order
                               </Link>
                             )}
                             {item.status === 'accepted' && !linkedOrder && (
@@ -1389,7 +1552,7 @@ export default function ProfilPage() {
                               <button
                                 onClick={() => handleCancel(item.id)}
                                 disabled={cancellingId === item.id}
-                                style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.07)', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 600, opacity: cancellingId === item.id ? 0.6 : 1 }}
+                                style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.07)', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 600, opacity: cancellingId === item.id ? 0.6 : 1, width: isMobile ? '100%' : 'auto' }}
                               >
                                 {cancellingId === item.id ? 'Avbryter...' : 'Avbryt förfrågan'}
                               </button>
@@ -1401,25 +1564,73 @@ export default function ProfilPage() {
                   </div>
                 </div>
 
-                <div style={{ ...panelStyle(), padding: 24 }}>
+                <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                   <SectionTitle title="Inkommande till mina resor" subtitle="Här ska bärare kunna acceptera flera, men alltid med tydlig kapacitet." />
+                  {respondError && (
+                    <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#dc2626', fontSize: '0.82rem' }}>
+                      {respondError}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {incoming.length === 0 ? (
                       <p style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>Inga inkommande förfrågningar ännu.</p>
                     ) : incoming.map((item) => {
                       const status = BOOKING_STATUS[item.status] || BOOKING_STATUS.pending
                       const pending = item.status === 'pending'
+                      const senderInitials = item.sender_name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '?'
                       return (
-                        <div key={item.id} style={{ padding: 16, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-                            <strong style={{ color: 'var(--text)', fontSize: '0.84rem' }}>{item.sender_name}</strong>
-                            <span style={{ padding: '4px 8px', borderRadius: 999, fontSize: '0.68rem', color: status.color, background: status.bg }}>{status.label}</span>
+                        <div key={item.id} style={{ padding: 16, borderRadius: isMobile ? 18 : 16, background: 'var(--surface-2)', border: `1px solid ${pending ? 'rgba(146,255,99,0.2)' : 'var(--border)'}` }}>
+                          {/* Sender row */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                            <button
+                              onClick={() => item.sender_id && setViewProfileUserId(item.sender_id)}
+                              disabled={!item.sender_id}
+                              title="Se profil"
+                              style={{
+                                width: 42, height: 42, borderRadius: 12, flexShrink: 0,
+                                background: 'linear-gradient(135deg, rgba(146,255,99,0.2), rgba(146,255,99,0.08))',
+                                border: '1.5px solid rgba(146,255,99,0.3)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '0.82rem', fontWeight: 800, color: '#15803d',
+                                cursor: item.sender_id ? 'pointer' : 'default',
+                                transition: 'transform 0.12s ease', padding: 0,
+                              }}
+                              onMouseEnter={e => { if (item.sender_id) (e.currentTarget as HTMLElement).style.transform = 'scale(1.08)' }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
+                            >
+                              {senderInitials}
+                            </button>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                                <div>
+                                  <strong style={{ color: 'var(--text)', fontSize: '0.88rem', display: 'block' }}>{item.sender_name || 'Avsändare'}</strong>
+                                  {item.sender_id && (
+                                    <button onClick={() => setViewProfileUserId(item.sender_id!)} style={{ background: 'none', border: 'none', padding: 0, fontSize: '0.68rem', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                                      Se profil
+                                    </button>
+                                  )}
+                                </div>
+                                <span style={{ padding: '4px 8px', borderRadius: 999, fontSize: '0.68rem', color: status.color, background: status.bg, flexShrink: 0 }}>{status.label}</span>
+                              </div>
+                            </div>
                           </div>
-                          <p style={{ fontSize: '0.76rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: 10 }}>
-                            {item.pickup_address} → {item.dropoff_address}
-                          </p>
+
+                          {/* Route + details */}
+                          <div style={{ padding: '10px 12px', borderRadius: 10, background: 'rgba(0,0,0,0.03)', border: '1px solid var(--border)', marginBottom: 10 }}>
+                            <p style={{ fontSize: '0.76rem', color: 'var(--text)', fontWeight: 600, marginBottom: 3 }}>
+                              {item.pickup_address} → {item.dropoff_address}
+                            </p>
+                            {item.description && <p style={{ fontSize: '0.72rem', color: 'var(--muted)', margin: 0 }}>{item.description}</p>}
+                            {item.weight_kg > 0 && <p style={{ fontSize: '0.72rem', color: 'var(--muted)', margin: '3px 0 0' }}>{item.weight_kg} kg</p>}
+                            {item.sender_phone && (
+                              <a href={`tel:${item.sender_phone}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 5, fontSize: '0.72rem', color: '#15803d', textDecoration: 'none', fontWeight: 600 }}>
+                                <Phone size={11} /> {item.sender_phone}
+                              </a>
+                            )}
+                          </div>
+
                           {pending && (
-                            <div style={{ display: 'flex', gap: 8 }}>
+                            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 8 }}>
                               <button onClick={() => handleRespond(item.id, 'accepted')} style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)', color: '#15803d', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>
                                 {respondingId === item.id ? 'Sparar...' : 'Acceptera'}
                               </button>
@@ -1437,10 +1648,10 @@ export default function ProfilPage() {
             )}
 
             {activeTab === 'profile' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 0.95fr', gap: 20 }}>
-                <div style={{ ...panelStyle(), padding: 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.05fr 0.95fr', gap: 20 }}>
+                <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                   <SectionTitle title="Profil och onboarding" subtitle="Fyll allt en gång här så ska resten av appen kunna återanvända uppgifterna." />
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>Namn</span>
                       <input value={user.name} onChange={(e) => setUser({ ...user, name: e.target.value })} style={{ width: '100%', padding: '11px 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontFamily: 'inherit' }} />
@@ -1455,7 +1666,36 @@ export default function ProfilPage() {
                     </label>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>Stad</span>
-                      <input value={meta.city} onChange={(e) => setMeta({ ...meta, city: e.target.value })} style={{ width: '100%', padding: '11px 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontFamily: 'inherit' }} />
+                      <input value={user.city || ''} onChange={(e) => setUser({ ...user, city: e.target.value })} style={{ width: '100%', padding: '11px 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontFamily: 'inherit' }} placeholder="T.ex. Stockholm" />
+                    </label>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>Ålder</span>
+                      <input type="number" min={18} max={99} value={user.age || ''} onChange={(e) => setUser({ ...user, age: e.target.value ? parseInt(e.target.value) : null })} style={{ width: '100%', padding: '11px 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontFamily: 'inherit' }} placeholder="T.ex. 28" />
+                    </label>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 6, gridColumn: '1 / -1' }}>
+                      <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>Kön</span>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {[['man', 'Man'], ['kvinna', 'Kvinna'], ['annat', 'Vill ej säga']].map(([val, label]) => {
+                          const selected = ((user as any).gender || '') === val
+                          return (
+                            <button
+                              key={val}
+                              type="button"
+                              onClick={() => setUser({ ...user, gender: val } as any)}
+                              style={{
+                                padding: '9px 16px', borderRadius: 999, cursor: 'pointer',
+                                fontFamily: 'inherit', fontWeight: 600, fontSize: '0.82rem',
+                                border: `1px solid ${selected ? 'rgba(146,255,99,0.4)' : 'var(--border)'}`,
+                                background: selected ? 'var(--accent-soft)' : 'var(--surface-2)',
+                                color: selected ? 'var(--text)' : 'var(--muted)',
+                                transition: 'all 0.15s',
+                              }}
+                            >
+                              {label}
+                            </button>
+                          )
+                        })}
+                      </div>
                     </label>
                   </div>
 
@@ -1505,9 +1745,9 @@ export default function ProfilPage() {
                   </div>
                 </div>
 
-                <div style={{ ...panelStyle(), padding: 24 }}>
+                <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                   <SectionTitle title="Förarprofil och bil" subtitle="Den här informationen används när du registrerar nya resor, så att du slipper fylla om allt." />
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>Märke</span>
                       <input value={meta.vehicle_make} onChange={(e) => setMeta({ ...meta, vehicle_make: e.target.value })} style={{ width: '100%', padding: '11px 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontFamily: 'inherit' }} />
@@ -1543,9 +1783,9 @@ export default function ProfilPage() {
             )}
 
             {activeTab === 'carriers' && (
-              <div style={{ ...panelStyle(), padding: 24 }}>
+              <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                 <SectionTitle title="Utforska förare" subtitle="En inloggad premium-vy där användaren kan jämföra bärare på rating, aktivitet och kapacitet." />
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 14 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0,1fr))', gap: 14 }}>
                   {carriers.map((carrier) => (
                     <div key={carrier.id} style={{ padding: 20, borderRadius: 20, background: 'var(--service-card-bg)', border: '1px solid var(--service-card-border)', boxShadow: 'var(--service-card-shadow)' }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
@@ -1558,7 +1798,7 @@ export default function ProfilPage() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
                         <div style={{ padding: 12, borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--border)' }}>
                           <p style={{ fontSize: '0.72rem', color: 'var(--muted)', marginBottom: 4 }}>Rating</p>
                           <strong style={{ color: 'var(--text)' }}>{carrier.rating.toFixed(1)}</strong>
@@ -1578,7 +1818,7 @@ export default function ProfilPage() {
                           <Star size={12} style={{ color: '#f59e0b', fill: '#f59e0b' }} />
                           {carrier.ratingCount} omdömen · {carrier.vehicleType}
                         </div>
-                        <button onClick={() => setActiveTab('orders')} style={{ border: 'none', background: 'none', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        <button onClick={() => handleTabChange('orders')} style={{ border: 'none', background: 'none', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                           Utforska
                         </button>
                       </div>
@@ -1590,6 +1830,10 @@ export default function ProfilPage() {
           </div>
         </div>
       </div>
+      <CarrierProfileModal
+        carrierId={viewProfileUserId}
+        onClose={() => setViewProfileUserId(null)}
+      />
     </div>
   )
 }

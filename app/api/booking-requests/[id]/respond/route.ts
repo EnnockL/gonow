@@ -62,6 +62,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  try {
   const { id } = await params
   const body = await req.json().catch(() => ({}))
   const status = body?.status as ResponseStatus | undefined
@@ -79,6 +80,8 @@ export async function POST(
     .eq('id', id)
     .single()
 
+  console.log('[respond] booking lookup:', { found: !!booking, err: bookingError?.message, sender_id: booking?.sender_id, trip_id: booking?.trip_id })
+
   if (!bookingError && booking) {
     if (booking.status !== 'pending') {
       return NextResponse.json(
@@ -90,21 +93,16 @@ export async function POST(
     const respondedAt = new Date().toISOString()
 
     if (status === 'declined') {
-      const { data: declinedBooking, error: declineError } = await supabase
-        .from('booking_requests')
-        .update({
-          status,
-          carrier_note: carrierNote,
-          responded_at: respondedAt,
-        })
-        .eq('id', id)
-        .select('*')
-        .single()
+      const { error: declineError } = await supabase.rpc('decline_booking_request', {
+        p_booking_request_id: id,
+        p_carrier_note: carrierNote ?? null,
+      })
 
       if (declineError) {
         return NextResponse.json({ error: declineError.message }, { status: 500 })
       }
 
+      const { data: declinedBooking } = await supabase.from('booking_requests').select('*').eq('id', id).single()
       return NextResponse.json({ booking: declinedBooking })
     }
 
@@ -115,23 +113,16 @@ export async function POST(
       )
     }
 
-    const { data: trip, error: tripError } = await supabase
-      .from('trips')
-      .select('*')
-      .eq('id', booking.trip_id)
-      .single()
-
-    if (tripError || !trip) {
-      return NextResponse.json({ error: 'Resan bakom bokningen hittades inte' }, { status: 404 })
-    }
-
-    const { data: tripBookings, error: tripBookingsError } = await supabase
+    const { data: tripBookings } = await supabase
       .from('booking_requests')
       .select('*')
       .eq('trip_id', booking.trip_id)
 
-    if (tripBookingsError) {
-      return NextResponse.json({ error: tripBookingsError.message }, { status: 500 })
+    const { data: trip, error: tripError } = await supabase
+      .from('trips').select('*').eq('id', booking.trip_id).single()
+
+    if (tripError || !trip) {
+      return NextResponse.json({ error: 'Resan bakom bokningen hittades inte' }, { status: 404 })
     }
 
     const capacityCheck = canAcceptBooking(trip, (tripBookings ?? []) as typeof booking[], booking)
@@ -142,65 +133,21 @@ export async function POST(
       )
     }
 
-    const priceEstimate = Number(booking.price_est ?? 0)
-    const seatPrice = Number(trip.price_per_seat ?? 0)
-    const kiloPrice = Number(trip.price_per_kg ?? 0)
-    const weight = Number(booking.weight_kg ?? 0)
+    const { data: result, error: rpcError } = await supabase.rpc('accept_booking_request', {
+      p_booking_request_id: booking.id,
+      p_carrier_note: carrierNote ?? null,
+    })
 
-    const fallbackPrice =
-      booking.service_type === 'passenger'
-        ? seatPrice || 0
-        : weight > 0
-          ? kiloPrice * weight
-          : kiloPrice || 0
-
-    const price = roundCurrency(priceEstimate > 0 ? priceEstimate : fallbackPrice)
-    const commission = roundCurrency(price * 0.15)
-    const carrierPayout = roundCurrency(price - commission)
-
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        sender_id: booking.sender_id,
-        receiver_id: trip.carrier_id,
-        trip_id: trip.id,
-        booking_request_id: booking.id,
-        type: toOrderType(booking.service_type),
-        description: booking.description,
-        weight_kg: booking.weight_kg,
-        pickup_address: booking.pickup_address,
-        dropoff_address: booking.dropoff_address,
-        price,
-        commission,
-        carrier_payout: carrierPayout,
-        status: 'pending',
-        confirmed_at: respondedAt,
-      })
-      .select('*')
-      .single()
-
-    if (orderError || !order) {
-      return NextResponse.json({ error: orderError?.message ?? 'Kunde inte skapa order' }, { status: 500 })
+    if (rpcError || !result) {
+      console.error('[respond] accept_booking_request error:', JSON.stringify(rpcError))
+      return NextResponse.json({ error: rpcError?.message ?? 'Kunde inte acceptera bokning' }, { status: 500 })
     }
 
-    const { data: acceptedBooking, error: acceptedError } = await supabase
-      .from('booking_requests')
-      .update({
-        status,
-        carrier_note: carrierNote,
-        responded_at: respondedAt,
-        order_id: order.id,
-      })
-      .eq('id', id)
-      .select('*')
-      .single()
+    const orderId = (result as { order_id: string }).order_id
+    const { data: order } = await supabase.from('orders').select('*').eq('id', orderId).single()
+    const { data: acceptedBooking } = await supabase.from('booking_requests').select('*').eq('id', id).single()
 
-    if (acceptedError) {
-      await supabase.from('orders').delete().eq('id', order.id)
-      return NextResponse.json({ error: acceptedError.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ booking: acceptedBooking, order })
+    return NextResponse.json({ booking: acceptedBooking ?? booking, order: order ?? { id: orderId } })
   }
 
   const { data: order, error: orderError } = await supabase
@@ -220,19 +167,13 @@ export async function POST(
   const respondedAt = new Date().toISOString()
 
   if (status === 'declined') {
-    const { data: declinedOrder, error: declineError } = await supabase
-      .from('orders')
-      .update({
-        status: 'cancelled',
-        confirmed_at: respondedAt,
-      })
-      .eq('id', id)
-      .select('*')
-      .single()
+    const { error: declineError } = await supabase.rpc('cancel_order_status', { p_order_id: id })
 
-    if (declineError || !declinedOrder) {
-      return NextResponse.json({ error: declineError?.message ?? 'Kunde inte avböja ordern' }, { status: 500 })
+    if (declineError) {
+      return NextResponse.json({ error: declineError.message }, { status: 500 })
     }
+
+    const { data: declinedOrder } = await supabase.from('orders').select('*').eq('id', id).single()
 
     let sender: { name?: string | null; phone?: string | null; email?: string | null } | null = null
     if (order.sender_id) {
@@ -240,7 +181,7 @@ export async function POST(
       sender = senderResult.data ?? null
     }
 
-    return NextResponse.json({ booking: toPseudoBooking(declinedOrder as Record<string, unknown>, sender ?? undefined), order: declinedOrder })
+    return NextResponse.json({ booking: toPseudoBooking((declinedOrder ?? order) as Record<string, unknown>, sender ?? undefined), order: declinedOrder ?? order })
   }
 
   if (!order.trip_id) {
@@ -301,20 +242,17 @@ export async function POST(
     )
   }
 
-  const { data: acceptedOrder, error: acceptError } = await supabase
-    .from('orders')
-    .update({
-      receiver_id: trip.carrier_id,
-      confirmed_at: respondedAt,
-      status: 'pending',
-    })
-    .eq('id', id)
-    .select('*')
-    .single()
+  const { error: acceptError } = await supabase.rpc('accept_order_direct', {
+    p_order_id: id,
+    p_receiver_id: trip.carrier_id,
+    p_confirmed_at: respondedAt,
+  })
 
-  if (acceptError || !acceptedOrder) {
-    return NextResponse.json({ error: acceptError?.message ?? 'Kunde inte acceptera ordern' }, { status: 500 })
+  if (acceptError) {
+    return NextResponse.json({ error: acceptError.message ?? 'Kunde inte acceptera ordern' }, { status: 500 })
   }
+
+  const { data: acceptedOrder } = await supabase.from('orders').select('*').eq('id', id).single()
 
   let sender: { name?: string | null; phone?: string | null; email?: string | null } | null = null
   if (order.sender_id) {
@@ -322,5 +260,10 @@ export async function POST(
     sender = senderResult.data ?? null
   }
 
-  return NextResponse.json({ booking: toPseudoBooking(acceptedOrder as Record<string, unknown>, sender ?? undefined), order: acceptedOrder })
+  return NextResponse.json({ booking: toPseudoBooking((acceptedOrder ?? order) as Record<string, unknown>, sender ?? undefined), order: acceptedOrder ?? order })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[respond] unhandled:', msg)
+    return NextResponse.json({ error: `Serverfel: ${msg}` }, { status: 500 })
+  }
 }

@@ -18,7 +18,10 @@ export interface TripInfo {
   from: string
   to: string
   carrier: string
+  carrier_id?: string
   price: number
+  pricePerKg?: number
+  pricePerSeat?: number
   vehicleType?: string
   vehicleMake?: string
   vehicleModel?: string
@@ -107,6 +110,14 @@ export default function TripBookingModal({
   const [done, setDone] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
   const [pendingSubmit, setPendingSubmit] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   const isPassenger = type === 'passenger'
   const tooManySeats = isPassenger && typeof trip.seatsLeft === 'number' && passengerSeats > trip.seatsLeft
@@ -122,6 +133,14 @@ export default function TripBookingModal({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, pendingSubmit])
+
+  function calcPriceEst(): number {
+    if (isPassenger) {
+      return (trip.pricePerSeat ?? trip.price ?? 0) * (passengerSeats || 1)
+    }
+    if (trip.pricePerKg && weight > 0) return Math.round(trip.pricePerKg * weight * 100) / 100
+    return trip.price ?? 0
+  }
 
   function buildDraft(): PendingBookingDraft {
     return {
@@ -139,6 +158,7 @@ export default function TripBookingModal({
       recipient_phone: isPassenger ? sPhone : rPhone,
       recipient_email: isPassenger ? sEmail : rEmail,
       status: 'pending',
+      price_est: calcPriceEst(),
     }
   }
 
@@ -150,7 +170,6 @@ export default function TripBookingModal({
     })
     clearPendingBookingDraft()
     setDone(true)
-    setTimeout(onClose, 2800)
   }
 
   async function submit(e: React.FormEvent) {
@@ -183,7 +202,7 @@ export default function TripBookingModal({
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: 20,
+          padding: isMobile ? 10 : 20,
         }}
       >
         <div
@@ -191,10 +210,10 @@ export default function TripBookingModal({
           style={{
             background: 'rgba(10,10,10,0.95)',
             border: '1px solid rgba(255,255,255,0.14)',
-            borderRadius: 24,
+            borderRadius: isMobile ? 18 : 24,
             width: '100%',
             maxWidth: 500,
-            maxHeight: '92vh',
+            maxHeight: isMobile ? '94vh' : '92vh',
             overflowY: 'auto',
             boxShadow: '0 32px 72px rgba(0,0,0,0.6)',
             backdropFilter: 'blur(20px)',
@@ -202,12 +221,12 @@ export default function TripBookingModal({
           }}
         >
           <div style={{
-            padding: '20px 24px 16px',
+            padding: isMobile ? '16px 16px 14px' : '20px 24px 16px',
             borderBottom: '1px solid var(--border)',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
             position: 'sticky', top: 0,
             background: 'rgba(10,10,10,0.95)',
-            borderRadius: '24px 24px 0 0',
+            borderRadius: isMobile ? '18px 18px 0 0' : '24px 24px 0 0',
             zIndex: 1,
           }}>
             <div>
@@ -225,7 +244,7 @@ export default function TripBookingModal({
           </div>
 
           {done ? (
-            <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+              <div style={{ padding: isMobile ? '32px 16px' : '48px 24px', textAlign: 'center' }}>
               <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--accent-soft)', border: '1px solid rgba(146,255,99,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '1.5rem' }}>
                 ✓
               </div>
@@ -240,9 +259,11 @@ export default function TripBookingModal({
               )}
             </div>
           ) : (
-            <form onSubmit={submit} style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <form onSubmit={submit} style={{ padding: isMobile ? '16px 16px 18px' : '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
               <CarrierProfile
                 name={trip.carrier}
+                carrierId={trip.carrier_id}
+                tripId={trip.id}
                 variant={isPassenger ? 'full' : 'light'}
                 tripFrom={trip.from}
                 tripTo={trip.to}
@@ -298,7 +319,7 @@ export default function TripBookingModal({
                     {SERVICE_TYPES.find((item) => item.key === type)?.label ?? 'Passagerare'}
                   </div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 8 }}>
                     {SERVICE_TYPES.map(({ key, icon: Icon, label }) => (
                       <button key={key} type="button" onClick={() => setType(key)} style={{
                         padding: '10px 6px', borderRadius: 10,

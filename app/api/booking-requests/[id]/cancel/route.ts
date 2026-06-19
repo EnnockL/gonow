@@ -17,16 +17,11 @@ export async function POST(
       .single()
 
     if (booking) {
-      if (booking.status !== 'pending') {
-        return NextResponse.json({ error: 'Kan bara avbryta förfrågningar med status "väntar".' }, { status: 409 })
+      if (!['pending', 'accepted'].includes(booking.status)) {
+        return NextResponse.json({ error: 'Kan bara avbryta förfrågningar som väntar eller accepterats.' }, { status: 409 })
       }
 
-      const { error } = await supabase
-        .from('booking_requests')
-        .update({ status: 'cancelled', responded_at: new Date().toISOString() })
-        .eq('id', id)
-
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      await supabase.rpc('cancel_booking_request_status', { p_booking_request_id: id }).catch(() => null)
 
       if (booking.order_id) {
         await supabase.rpc('cancel_order_status', { p_order_id: booking.order_id }).catch(() => null)

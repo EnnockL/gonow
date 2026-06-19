@@ -149,7 +149,15 @@ function BookingCard({ b, onUpdate }: { b: BookingRequest; onUpdate: () => void 
 function TripCard({ trip, onDelete }: { trip: SavedTrip; onDelete: () => void }) {
   const [open, setOpen] = useState(false)
   const [bookings, setBookings] = useState<BookingRequest[]>([])
+  const [isMobile, setIsMobile] = useState(false)
   const VehicleIcon = VEHICLE_ICONS[trip.vehicle_type] ?? Car
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    onResize()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   async function refreshBookings() {
     const next = await getBookingsForTrip(trip.id)
@@ -249,7 +257,7 @@ function TripCard({ trip, onDelete }: { trip: SavedTrip; onDelete: () => void })
           </div>
 
           {/* Kapacitet + pris */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
             {[
               ['Maxvikt', `${trip.weight_capacity_kg} kg`],
               ['Lediga nu', `${capacity.seatsLeft ?? trip.seats_available} st`],
@@ -291,7 +299,7 @@ function TripCard({ trip, onDelete }: { trip: SavedTrip; onDelete: () => void })
           </div>
 
           {/* Kontakt + radera */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: isMobile ? 10 : 0, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
             <p style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
               {trip.carrier_name && <span style={{ fontWeight: 500, color: 'var(--text)' }}>{trip.carrier_name} · </span>}
               {trip.carrier_phone}
