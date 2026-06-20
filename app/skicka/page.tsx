@@ -61,7 +61,8 @@ function localTripToMatchTrip(trip: SavedTrip): MatchTrip {
   return localTripToActiveTrip(trip)
 }
 
-function estimateTripPrice(trip: MatchTrip) {
+function estimateTripPrice(trip: MatchTrip, routePriceOverride?: number) {
+  if (routePriceOverride && routePriceOverride > 0) return routePriceOverride
   return trip.price_per_kg ? Math.max(149, Math.round(99 + trip.price_per_kg * 5)) : 149
 }
 
@@ -98,7 +99,7 @@ function getTripMeta(trip: MatchTrip, bookings: BookingRequest[], userId?: strin
   }
 }
 
-function toTripInfo(trip: MatchTrip, bookings: BookingRequest[], userId?: string | null): TripInfo {
+function toTripInfo(trip: MatchTrip, bookings: BookingRequest[], userId?: string | null, routePriceOverride?: number): TripInfo {
   const meta = getTripMeta(trip, bookings, userId)
   return {
     id: trip.id,
@@ -106,7 +107,7 @@ function toTripInfo(trip: MatchTrip, bookings: BookingRequest[], userId?: string
     to: trip.to_city,
     carrier: trip.users?.name || 'Bärare',
     carrier_id: trip.carrier_id,
-    price: estimateTripPrice(trip),
+    price: estimateTripPrice(trip, routePriceOverride),
     pricePerKg: trip.price_per_kg ?? undefined,
     pricePerSeat: trip.price_per_seat ?? undefined,
     vehicleType: trip.vehicle_type,
@@ -159,11 +160,25 @@ function SkickaPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tabMode = searchParams.get('tab') === 'lift' ? 'lift' : 'skicka'
+  const presetTripId = searchParams.get('trip_id')
 
   function switchTab(tab: 'skicka' | 'lift') {
     setAiMode(false)
     router.replace(tab === 'lift' ? '/skicka?tab=lift' : '/skicka', { scroll: false })
   }
+
+  // Pre-select trip when coming from /resor with ?trip_id=
+  useEffect(() => {
+    if (!presetTripId) return
+    fetch(`/api/trips?status=active`)
+      .then(r => r.json())
+      .then((data: { trips?: MatchTrip[] }) => {
+        const trip = data.trips?.find((t: MatchTrip) => t.id === presetTripId)
+        if (trip) jumpToTripMatches(trip)
+      })
+      .catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetTripId])
 
   // Simple form state (default Uber-like view)
   const [aiMode, setAiMode]       = useState(false)
@@ -304,7 +319,7 @@ function SkickaPageContent() {
   }
 
   function openTripFromActive(trip: MatchTrip) {
-    setActiveTripModal(toTripInfo(trip, bookings, userId))
+    setActiveTripModal(toTripInfo(trip, bookings, userId, routePrice?.price))
   }
 
   function jumpToTripMatches(trip: MatchTrip) {
@@ -380,8 +395,11 @@ function SkickaPageContent() {
       })
       setCreatedBookingId(booking.id)
       setStep('confirmed')
-    } catch {
-      setSubmitError('Kunde inte skicka bokningsförfrågan just nu. Försök igen.')
+    } catch (err) {
+      const msg = err instanceof Error && err.message.toLowerCase().includes('timeout')
+        ? 'Anslutningen tog för lång tid. Kontrollera din uppkoppling och försök igen.'
+        : 'Kunde inte skicka bokningsförfrågan just nu. Försök igen.'
+      setSubmitError(msg)
       setStep('matches')
     }
   }
@@ -392,14 +410,14 @@ function SkickaPageContent() {
     try {
       const res = await fetch(`/api/orders/${orderId}/checkout`, { method: 'POST' })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Kunde inte starta betalning.')
+      if (!res.ok) throw new Error(data.error || 'Betalningen kunde inte genomföras. Inga pengar har dragits.')
       if (data.url) {
         window.location.href = data.url
         return
       }
       throw new Error('Ingen checkout-länk kunde skapas.')
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Betalning kunde inte startas.')
+      setSubmitError(error instanceof Error ? error.message : 'Betalningen kunde inte genomföras. Inga pengar har dragits.')
       setPayingOrderId(null)
     }
   }

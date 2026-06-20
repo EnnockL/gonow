@@ -8,6 +8,7 @@ import {
   ArrowRight, Car, CheckCircle2, Clock, CreditCard, Loader2, LogOut,
   Mail, MapPin, Package, Phone, Shield, Star, UserRound, Users, Wallet,
 } from 'lucide-react'
+import LiftChat from '@/components/lift/LiftChat'
 import { useAuth } from '@/hooks/useAuth'
 import AuthModal from '@/components/auth/AuthModal'
 import { createClient } from '@/lib/supabase'
@@ -28,7 +29,20 @@ import { GonowScoreCard, GonowScoreBadgeCompact } from '@/components/GonowScoreB
 import { loadSignupEmail } from '@/lib/pending-booking'
 import CarrierProfileModal from '@/components/carrier/CarrierProfileModal'
 
-type TabKey = 'overview' | 'assignments' | 'orders' | 'requests' | 'profile' | 'carriers'
+type TabKey = 'overview' | 'assignments' | 'orders' | 'requests' | 'lift_offers' | 'profile' | 'carriers'
+
+type LiftOffer = {
+  id: string
+  from_city: string
+  to_city: string
+  travel_date: string
+  passengers: number
+  status: string
+  max_price: number | null
+  final_price: number | null
+  note: string | null
+  users?: { name: string; rating_avg: number; avatar_url: string | null; phone?: string | null } | null
+}
 type BookingRequestWithTrip = BookingRequest & {
   trips?: { from_city: string; to_city: string; departure_at: string | null }
 }
@@ -81,6 +95,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'assignments',  label: 'Aktiva uppdrag'  },
   { key: 'orders',       label: 'Bokningar'       },
   { key: 'requests',     label: 'Förfrågningar'   },
+  { key: 'lift_offers',  label: 'Mina erbjudanden' },
   { key: 'profile',      label: 'Profil'          },
   { key: 'carriers',     label: 'Utforska förare' },
 ]
@@ -227,7 +242,7 @@ function groupCarriers(trips: (Trip & { users?: { name: string; rating_avg: numb
   })
 }
 
-const VALID_TABS: TabKey[] = ['overview', 'assignments', 'orders', 'requests', 'profile', 'carriers']
+const VALID_TABS: TabKey[] = ['overview', 'assignments', 'orders', 'requests', 'lift_offers', 'profile', 'carriers']
 
 export default function ProfilPage() {
   const { userId, profile, loading: authLoading } = useAuth()
@@ -239,6 +254,17 @@ export default function ProfilPage() {
     const tab = params.get('tab') as TabKey | null
     if (tab && VALID_TABS.includes(tab)) setActiveTab(tab)
   }, [])
+
+  // Trigger onboarding for new users who haven't completed it
+  useEffect(() => {
+    if (authLoading || !profile) return
+    if (profile.onboarding_completed) return
+    const created = new Date(profile.created_at)
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    if (created > sevenDaysAgo) {
+      router.replace('/profil/onboarding')
+    }
+  }, [authLoading, profile, router])
 
   function handleTabChange(tab: TabKey) {
     setActiveTab(tab)
@@ -285,6 +311,9 @@ export default function ProfilPage() {
   const [statusError, setStatusError] = useState<{ id: string; msg: string } | null>(null)
   const [viewProfileUserId, setViewProfileUserId] = useState<string | null>(null)
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null)
+  const [myLiftOffers, setMyLiftOffers] = useState<LiftOffer[]>([])
+  const [withdrawingLiftId, setWithdrawingLiftId] = useState<string | null>(null)
+  const [liftOffersTab, setLiftOffersTab] = useState<string | null>(null)
 
   useEffect(() => {
     // Don't do anything while auth is still resolving — avoids flash of wrong state
@@ -385,6 +414,14 @@ export default function ProfilPage() {
 
       const tripList = Array.isArray(allTripsRes) && allTripsRes.length > 0 ? allTripsRes : SIM_TRIPS
       setCarriers(groupCarriers(tripList))
+
+      // Lift offers where this user is the carrier
+      const liftOffersRes = await fetch(`/api/lift?carrier_id=${activeUserId}`).catch(() => null)
+      if (liftOffersRes?.ok) {
+        const liftData = await liftOffersRes.json()
+        setMyLiftOffers((liftData.lift_requests as LiftOffer[]) ?? [])
+      }
+
       setLoadingData(false)
     }
 
@@ -724,6 +761,25 @@ export default function ProfilPage() {
     }
   }
 
+  async function handleWithdrawOffer(liftId: string) {
+    if (!confirm('Dra tillbaka ditt erbjudande?')) return
+    setWithdrawingLiftId(liftId)
+    try {
+      const res = await fetch(`/api/lift/${liftId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'open', carrier_id: null }),
+      })
+      if (res.ok) {
+        setMyLiftOffers(prev => prev.filter(l => l.id !== liftId))
+      }
+    } catch {
+      // noop
+    } finally {
+      setWithdrawingLiftId(null)
+    }
+  }
+
   async function reloadLedger() {
     if (!userId) return
     const res = await fetch(`/api/ledger?carrier_id=${userId}`).catch(() => null)
@@ -889,7 +945,7 @@ export default function ProfilPage() {
       {isMobile && (
         <div className="mobile-app-tabs" style={{ position: 'sticky', top: 66, zIndex: 20, background: isDark ? 'rgba(17,17,17,0.92)' : 'rgba(255,255,255,0.92)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`, display: 'flex', overflowX: 'auto', scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'], scrollSnapType: 'x proximity' }}>
           {TABS.map((tab) => {
-            const badge = tab.key === 'assignments' ? activeAssignments.length : tab.key === 'requests' ? pendingIncoming : 0
+            const badge = tab.key === 'assignments' ? activeAssignments.length : tab.key === 'requests' ? pendingIncoming : tab.key === 'lift_offers' ? myLiftOffers.filter(l => l.status === 'offered').length : 0
             const isActive = activeTab === tab.key
             return (
               <button key={tab.key} onClick={() => handleTabChange(tab.key)} style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '15px 15px 12px', border: 'none', borderBottom: `2.5px solid ${isActive ? '#22c55e' : 'transparent'}`, background: 'none', color: isActive ? 'var(--text)' : 'var(--muted)', fontWeight: isActive ? 700 : 500, fontSize: '0.81rem', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'color 0.15s', marginBottom: -1 }}>
@@ -942,7 +998,7 @@ export default function ProfilPage() {
             <aside style={{ ...panelStyle(false, isDark, isMobile), padding: 16, position: 'sticky', top: 96, borderRadius: 22, boxShadow: isDark ? '0 16px 40px rgba(0,0,0,0.22)' : '0 20px 44px rgba(15,23,42,0.06)' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {TABS.map((tab) => {
-                  const badge = tab.key === 'assignments' ? activeAssignments.length : tab.key === 'requests' ? pendingIncoming : 0
+                  const badge = tab.key === 'assignments' ? activeAssignments.length : tab.key === 'requests' ? pendingIncoming : tab.key === 'lift_offers' ? myLiftOffers.filter(l => l.status === 'offered').length : 0
                   return (
                     <button key={tab.key} onClick={() => handleTabChange(tab.key)} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 14, border: '1px solid transparent', background: activeTab === tab.key ? 'var(--accent-soft)' : 'transparent', color: activeTab === tab.key ? 'var(--text)' : 'var(--muted)', fontWeight: activeTab === tab.key ? 700 : 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                       {tab.label}
@@ -1645,6 +1701,194 @@ export default function ProfilPage() {
                       </button>
                     )}
                   </div>
+              </div>
+            )}
+
+            {activeTab === 'lift_offers' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {isMobile && (
+                  <MobileSectionIntro
+                    eyebrow="Mina erbjudanden"
+                    title="Lift-resor du erbjudit dig att köra."
+                    subtitle="Här ser du alla lift-förfrågningar där du har skickat ett erbjudande. När passageraren accepterar visas det som Matchad."
+                    meta={`${myLiftOffers.length} totalt`}
+                  />
+                )}
+                <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                  {!isMobile && (
+                    <SectionTitle
+                      title="Mina erbjudanden"
+                      subtitle="Lift-förfrågningar där du har erbjudit plats. Passageraren behöver acceptera för att resan ska bli Matchad."
+                    />
+                  )}
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, minmax(0,1fr))', gap: 12, marginBottom: 20 }}>
+                    {[
+                      { label: 'Erbjudna', value: myLiftOffers.filter(l => l.status === 'offered').length, hint: 'väntar på svar' },
+                      { label: 'Matchade', value: myLiftOffers.filter(l => l.status === 'matched').length, hint: 'bekräftade resor' },
+                      { label: 'Totalt', value: myLiftOffers.length, hint: 'alla erbjudanden' },
+                    ].map(item => (
+                      <div key={item.label} style={{ padding: isMobile ? 14 : 16, borderRadius: 18, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                        <p style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>{item.label}</p>
+                        <p style={{ fontSize: isMobile ? '1.2rem' : '1.4rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em', marginBottom: 4 }}>{item.value}</p>
+                        <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>{item.hint}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {(() => {
+                    const offerStatusMeta: Record<string, { label: string; color: string; bg: string }> = {
+                      offered:   { label: 'Erbjuden',  color: '#b45309', bg: 'rgba(245,158,11,0.12)' },
+                      matched:   { label: 'Matchad',   color: '#1d4ed8', bg: 'rgba(59,130,246,0.12)' },
+                      open:      { label: 'Öppen',     color: '#15803d', bg: 'rgba(34,197,94,0.10)' },
+                      cancelled: { label: 'Avbruten',  color: '#64748b', bg: 'rgba(148,163,184,0.14)' },
+                      expired:   { label: 'Utgått',    color: '#64748b', bg: 'rgba(148,163,184,0.14)' },
+                    }
+                    const renderOfferCard = (lift: LiftOffer) => {
+                      const s = offerStatusMeta[lift.status] ?? offerStatusMeta.open
+                      const passengerName = lift.users?.name ?? 'Passagerare'
+                      return (
+                        <div key={lift.id} style={{ padding: isMobile ? 16 : 20, borderRadius: 20, background: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 14, boxShadow: isMobile ? 'none' : '0 10px 28px rgba(15,23,42,0.05)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+                                <MapPin size={14} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)' }}>{lift.from_city}</span>
+                                <span style={{ color: 'var(--muted)' }}>→</span>
+                                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)' }}>{lift.to_city}</span>
+                              </div>
+                              <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
+                                {new Date(lift.travel_date).toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                {' · '}{lift.passengers} passagerare
+                                {lift.max_price ? ` · max ${lift.max_price} kr` : ''}
+                              </p>
+                            </div>
+                            <span style={{ padding: '5px 11px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700, color: s.color, background: s.bg, flexShrink: 0 }}>
+                              {s.label}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <UserRound size={14} style={{ color: 'var(--muted)' }} />
+                            </div>
+                            <div>
+                              <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Passagerare</p>
+                              <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)' }}>{passengerName}</p>
+                            </div>
+                            {lift.users?.rating_avg ? (
+                              <span style={{ marginLeft: 'auto', fontSize: '0.76rem', color: '#b45309', fontWeight: 700 }}>
+                                ★ {lift.users.rating_avg.toFixed(1)}
+                              </span>
+                            ) : null}
+                          </div>
+                          {lift.note && (
+                            <p style={{ fontSize: '0.78rem', color: 'var(--muted)', fontStyle: 'italic', padding: '10px 12px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                              &ldquo;{lift.note}&rdquo;
+                            </p>
+                          )}
+                          {lift.status === 'matched' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                              <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                                <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1d4ed8', margin: '0 0 4px' }}>
+                                  {passengerName} har accepterat — resan är bekräftad!
+                                </p>
+                                {lift.users?.phone ? (
+                                  <a href={`tel:${lift.users.phone}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', color: '#1d4ed8', fontWeight: 600, textDecoration: 'none' }}>
+                                    <Phone size={12} /> {lift.users.phone}
+                                  </a>
+                                ) : (
+                                  <p style={{ fontSize: '0.74rem', color: 'var(--muted)', margin: 0 }}>Ingen telefon sparad — chatta nedan</p>
+                                )}
+                              </div>
+                              <LiftChat liftId={lift.id} />
+                              <button
+                                onClick={async () => {
+                                  if (!confirm('Är du säker på att du vill avboka denna matchade resa? Passageraren behöver hitta en ny förare.')) return
+                                  setWithdrawingLiftId(lift.id)
+                                  try {
+                                    const res = await fetch(`/api/lift/${lift.id}`, {
+                                      method: 'PATCH',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ status: 'cancelled', carrier_id: null }),
+                                    })
+                                    if (res.ok) setMyLiftOffers(prev => prev.map(l => l.id === lift.id ? { ...l, status: 'cancelled' } : l))
+                                  } finally {
+                                    setWithdrawingLiftId(null)
+                                  }
+                                }}
+                                disabled={withdrawingLiftId === lift.id}
+                                style={{ padding: '10px 14px', borderRadius: 12, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.06)', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.8rem', fontWeight: 600, opacity: withdrawingLiftId === lift.id ? 0.6 : 1 }}
+                              >
+                                {withdrawingLiftId === lift.id ? 'Avbokar...' : 'Avboka resa'}
+                              </button>
+                            </div>
+                          )}
+                          {lift.status === 'offered' && (
+                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                              <div style={{ flex: 1, padding: '10px 14px', borderRadius: 12, background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)', fontSize: '0.8rem', color: '#b45309', fontWeight: 600 }}>
+                                Väntar på svar från passageraren...
+                              </div>
+                              <button
+                                onClick={() => handleWithdrawOffer(lift.id)}
+                                disabled={withdrawingLiftId === lift.id}
+                                style={{ padding: '10px 14px', borderRadius: 12, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.06)', color: '#dc2626', cursor: withdrawingLiftId === lift.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '0.8rem', fontWeight: 600, opacity: withdrawingLiftId === lift.id ? 0.6 : 1, whiteSpace: 'nowrap' }}
+                              >
+                                {withdrawingLiftId === lift.id ? 'Drar tillbaka...' : 'Dra tillbaka'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    }
+
+                    if (myLiftOffers.length === 0) return (
+                      <div style={{ padding: 32, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
+                        <Users size={28} style={{ color: 'var(--muted)', marginBottom: 10 }} />
+                        <p style={{ fontSize: '0.88rem', color: 'var(--muted)' }}>Inga erbjudanden än.</p>
+                        <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 4 }}>Gå till Lift och klicka &quot;Erbjud plats&quot; på en förfrågan för att komma igång.</p>
+                      </div>
+                    )
+
+                    const matchedOffers  = myLiftOffers.filter(l => l.status === 'matched')
+                    const pendingOffers  = myLiftOffers.filter(l => l.status === 'offered')
+                    const historyOffers  = myLiftOffers.filter(l => ['cancelled', 'expired', 'open'].includes(l.status))
+
+                    const offerTabs = [
+                      ...(matchedOffers.length > 0 ? [{ key: 'matched', label: 'Matchade',  count: matchedOffers.length }] : []),
+                      ...(pendingOffers.length > 0 ? [{ key: 'pending', label: 'Väntande',  count: pendingOffers.length }] : []),
+                      ...(historyOffers.length > 0 ? [{ key: 'history', label: 'Historik',  count: historyOffers.length }] : []),
+                    ]
+                    const defaultOfferTab = offerTabs[0]?.key ?? 'pending'
+                    const activeOfferTab  = liftOffersTab ?? defaultOfferTab
+
+                    return (
+                      <div>
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+                          {offerTabs.map(t => (
+                            <button
+                              key={t.key}
+                              onClick={() => setLiftOffersTab(t.key)}
+                              style={{
+                                padding: '6px 13px', borderRadius: 999, border: '1px solid',
+                                fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                                background: activeOfferTab === t.key ? 'var(--accent)' : 'var(--surface)',
+                                color: activeOfferTab === t.key ? '#0a0a0a' : 'var(--muted)',
+                                borderColor: activeOfferTab === t.key ? 'var(--accent)' : 'var(--border)',
+                                display: 'inline-flex', alignItems: 'center', gap: 5, transition: 'all 0.15s',
+                              }}
+                            >
+                              {t.label}
+                              <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '1px 5px', borderRadius: 999, background: activeOfferTab === t.key ? 'rgba(0,0,0,0.15)' : 'var(--surface-2)', color: 'inherit' }}>
+                                {t.count}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                          {(activeOfferTab === 'matched' ? matchedOffers : activeOfferTab === 'pending' ? pendingOffers : historyOffers).map(renderOfferCard)}
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </div>
               </div>
             )}
 

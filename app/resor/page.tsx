@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { MapPin, Clock, Car, Users, Package as PkgIcon, Star, Shield, X } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { MapPin, Clock, Car, Users, Package as PkgIcon, Star, Shield, Route } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import AuthModal from '@/components/auth/AuthModal'
+import TripBookingModal, { type TripInfo } from '@/components/booking/TripBookingModal'
+import { TripCardSkeleton } from '@/components/ui/Skeleton'
 
 interface Trip {
   id: string
@@ -52,126 +53,22 @@ function formatDep(iso: string): string {
   return `${prefix} kl ${d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`
 }
 
-// ─── BookSeatModal ────────────────────────────────────────────────────────────
+// ─── toTripInfo — konverterar Trip → TripInfo för TripBookingModal ────────────
 
-function BookSeatModal({ trip, onClose, onSuccess }: { trip: Trip; onClose: () => void; onSuccess: () => void }) {
-  const [seats, setSeats] = useState(1)
-  const [pickupAddr, setPickupAddr] = useState('')
-  const [dropoffAddr, setDropoffAddr] = useState('')
-  const [note, setNote] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-
-  const pricePerSeat = trip.price_per_seat ?? 0
-  const total = pricePerSeat * seats
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setSubmitting(true)
-    try {
-      await fetch('/api/lift', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          from_city: trip.from_city,
-          from_address: pickupAddr,
-          to_city: trip.to_city,
-          to_address: dropoffAddr,
-          travel_date: trip.departure_at.split('T')[0],
-          flexibility: 'exact',
-          passengers: seats,
-          note: note || null,
-          matched_trip_id: trip.id,
-        }),
-      })
-      onSuccess()
-    } catch {
-      onSuccess()
-    } finally {
-      setSubmitting(false)
-    }
+function toTripInfo(trip: Trip): TripInfo {
+  return {
+    id: trip.id,
+    from: trip.from_city,
+    to: trip.to_city,
+    carrier: trip.users?.name ?? 'Förare',
+    carrier_id: trip.carrier_id,
+    price: trip.price_per_kg ?? trip.price_per_seat ?? 0,
+    pricePerKg: trip.price_per_kg ?? undefined,
+    pricePerSeat: trip.price_per_seat ?? undefined,
+    vehicleType: trip.vehicle_type ?? undefined,
+    seatsLeft: trip.seats_available,
+    weightLeftKg: trip.weight_capacity_kg,
   }
-
-  const inp: React.CSSProperties = {
-    width: '100%', boxSizing: 'border-box',
-    background: 'var(--surface-2)', border: '1px solid var(--border)',
-    borderRadius: 10, padding: '10px 12px',
-    fontSize: '0.85rem', color: 'var(--text)', fontFamily: 'inherit', outline: 'none',
-  }
-  const lbl: React.CSSProperties = { fontSize: '0.72rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }
-
-  return (
-    <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }} />
-      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 10001, width: '100%', maxWidth: 440, padding: '0 16px', maxHeight: '90vh', overflowY: 'auto' }}>
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: '24px 22px', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>Boka plats</h2>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: 4, display: 'flex' }}><X size={18} /></button>
-          </div>
-
-          <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', marginBottom: 18 }}>
-            <p style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text)', margin: '0 0 4px' }}>{trip.from_city} → {trip.to_city}</p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--muted)', margin: 0 }}>{formatDep(trip.departure_at)}</p>
-          </div>
-
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div>
-              <label style={lbl}>Antal platser</label>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {[1, 2, 3].map(n => (
-                  <button key={n} type="button" onClick={() => setSeats(n)} style={{
-                    flex: 1, padding: '9px 0', borderRadius: 10, fontSize: '0.88rem', fontWeight: 700,
-                    border: '1px solid', cursor: 'pointer', fontFamily: 'inherit',
-                    background: seats === n ? 'var(--accent)' : 'var(--surface-2)',
-                    color: seats === n ? '#0a0a0a' : 'var(--muted)',
-                    borderColor: seats === n ? 'var(--accent)' : 'var(--border)',
-                  }}>
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label style={lbl}>Upphämtningsadress</label>
-              <input value={pickupAddr} onChange={e => setPickupAddr(e.target.value)} placeholder={`${trip.from_city}...`} style={inp}
-                onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
-                onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
-            </div>
-
-            <div>
-              <label style={lbl}>Avlämningsadress</label>
-              <input value={dropoffAddr} onChange={e => setDropoffAddr(e.target.value)} placeholder={`${trip.to_city}...`} style={inp}
-                onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
-                onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
-            </div>
-
-            <div>
-              <label style={lbl}>Meddelande till föraren <span style={{ fontWeight: 400, textTransform: 'none' }}>(valfri)</span></label>
-              <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} style={{ ...inp, resize: 'vertical' }}
-                onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
-                onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
-            </div>
-
-            {pricePerSeat > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderTop: '1px solid var(--border)' }}>
-                <span style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>{seats} plats{seats > 1 ? 'er'  : ''} × {pricePerSeat} kr</span>
-                <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)' }}>{total} kr</span>
-              </div>
-            )}
-
-            <button type="submit" disabled={submitting} style={{
-              minHeight: 44, background: 'var(--accent)', color: '#0a0a0a', border: 'none', borderRadius: 12,
-              fontSize: '0.9rem', fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer',
-              fontFamily: 'inherit', opacity: submitting ? 0.7 : 1, transition: 'opacity 0.15s',
-            }}>
-              {submitting ? 'Bekräftar...' : 'Bekräfta bokning'}
-            </button>
-          </form>
-        </div>
-      </div>
-    </>
-  )
 }
 
 // ─── TripCard ─────────────────────────────────────────────────────────────────
@@ -179,7 +76,7 @@ function BookSeatModal({ trip, onClose, onSuccess }: { trip: Trip; onClose: () =
 function TripCard({ trip, onBookSeat, onSendPackage }: {
   trip: Trip
   onBookSeat: (trip: Trip) => void
-  onSendPackage: (tripId: string) => void
+  onSendPackage: (trip: Trip) => void
 }) {
   const carrier = trip.users
   const name = carrier?.name ?? 'Förare'
@@ -257,7 +154,7 @@ function TripCard({ trip, onBookSeat, onSendPackage }: {
       <div style={{ display: 'flex', gap: 8 }}>
         {trip.allows_passengers && trip.seats_available > 0 && (
           <button onClick={() => onBookSeat(trip)} style={{
-            flex: 1, minHeight: 40, background: 'var(--accent)', color: '#0a0a0a', border: 'none', borderRadius: 10,
+            flex: 1, minHeight: 44, background: 'var(--accent)', color: '#0a0a0a', border: 'none', borderRadius: 10,
             fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'opacity 0.15s',
           }}
             onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
@@ -267,8 +164,8 @@ function TripCard({ trip, onBookSeat, onSendPackage }: {
           </button>
         )}
         {trip.allows_packages && trip.weight_capacity_kg > 0 && (
-          <button onClick={() => onSendPackage(trip.id)} style={{
-            flex: 1, minHeight: 40, background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 10,
+          <button onClick={() => onSendPackage(trip)} style={{
+            flex: 1, minHeight: 44, background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 10,
             fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'opacity 0.15s',
           }}
             onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
@@ -282,26 +179,26 @@ function TripCard({ trip, onBookSeat, onSendPackage }: {
   )
 }
 
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function ResorPage() {
-  const router = useRouter()
   const [trips, setTrips] = useState<Trip[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<Filter>('Alla')
   const { userId } = useAuth()
-  const [bookingTrip, setBookingTrip] = useState<Trip | null>(null)
+  const [modalTrip, setModalTrip] = useState<{ trip: Trip; type: 'passenger' | 'package' } | null>(null)
   const [showAuth, setShowAuth] = useState(false)
-  const [pendingTrip, setPendingTrip] = useState<Trip | null>(null)
+  const [pendingModal, setPendingModal] = useState<{ trip: Trip; type: 'passenger' | 'package' } | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
 
-  function handleBookSeat(trip: Trip) {
+  function openModal(trip: Trip, type: 'passenger' | 'package') {
     if (!userId) {
-      setPendingTrip(trip)
+      setPendingModal({ trip, type })
       setShowAuth(true)
     } else {
-      setBookingTrip(trip)
+      setModalTrip({ trip, type })
     }
   }
 
@@ -357,7 +254,7 @@ export default function ResorPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--page-gradient)', paddingTop: 88, paddingBottom: 80 }}>
       {toast && (
-        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', zIndex: 20000, background: '#0a0a0a', color: '#fff', padding: '12px 22px', borderRadius: 999, fontSize: '0.85rem', fontWeight: 600, boxShadow: '0 8px 32px rgba(0,0,0,0.28)', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', zIndex: 20000, background: '#0a0a0a', color: '#fff', padding: '12px 22px', borderRadius: 999, fontSize: '0.85rem', fontWeight: 600, boxShadow: '0 8px 32px rgba(0,0,0,0.28)', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', animation: 'toast-in 0.2s ease both' }}>
           <span style={{ color: '#22c55e' }}>✓</span> {toast}
         </div>
       )}
@@ -386,22 +283,38 @@ export default function ResorPage() {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--muted)' }}>
-            <p style={{ fontSize: '0.88rem' }}>Hämtar resor...</p>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+            {Array.from({ length: 4 }).map((_, i) => <TripCardSkeleton key={i} />)}
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 0' }}>
-            <p style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Inga resor hittades</p>
-            <p style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>Prova ett annat filter eller registrera en resa på /kor.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '64px 0', textAlign: 'center' }}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Route size={24} style={{ color: 'var(--muted)' }} />
+            </div>
+            <div>
+              <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                {filter === 'Alla' ? 'Inga aktiva resor hittades' : `Inga resor för "${filter}"`}
+              </p>
+              <p style={{ fontSize: '0.84rem', color: 'var(--muted)', maxWidth: 280, margin: '0 auto' }}>
+                {filter === 'Alla'
+                  ? 'Inga förare har registrerat en resa just nu. Kolla tillbaka snart!'
+                  : 'Prova ett annat filter eller visa alla resor.'}
+              </p>
+            </div>
+            {filter !== 'Alla' && (
+              <button onClick={() => setFilter('Alla')} style={{ minHeight: 44, padding: '0 20px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 10, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Visa alla resor
+              </button>
+            )}
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16, animation: 'fade-in 0.3s ease both' }}>
             {filtered.map(trip => (
               <TripCard
                 key={trip.id}
                 trip={trip}
-                onBookSeat={handleBookSeat}
-                onSendPackage={id => router.push(`/skicka?trip_id=${id}`)}
+                onBookSeat={trip => openModal(trip, 'passenger')}
+                onSendPackage={trip => openModal(trip, 'package')}
               />
             ))}
           </div>
@@ -410,22 +323,19 @@ export default function ResorPage() {
 
       {showAuth && (
         <AuthModal
-          onClose={() => { setShowAuth(false); setPendingTrip(null) }}
+          onClose={() => { setShowAuth(false); setPendingModal(null) }}
           onSuccess={() => {
             setShowAuth(false)
-            if (pendingTrip) { setBookingTrip(pendingTrip); setPendingTrip(null) }
+            if (pendingModal) { setModalTrip(pendingModal); setPendingModal(null) }
           }}
-          reason="Logga in för att boka plats"
+          reason={pendingModal?.type === 'package' ? 'Logga in för att skicka paket' : 'Logga in för att boka plats'}
         />
       )}
-      {bookingTrip && (
-        <BookSeatModal
-          trip={bookingTrip}
-          onClose={() => setBookingTrip(null)}
-          onSuccess={() => {
-            setBookingTrip(null)
-            showToast('Bokning bekräftad!')
-          }}
+      {modalTrip && (
+        <TripBookingModal
+          trip={toTripInfo(modalTrip.trip)}
+          initialType={modalTrip.type}
+          onClose={() => setModalTrip(null)}
         />
       )}
     </div>

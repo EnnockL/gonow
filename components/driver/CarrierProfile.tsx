@@ -24,6 +24,7 @@ interface CarrierData {
   bankid_verified: boolean
   member_since: string
   completed_trips: number
+  completion_rate?: number | null
   age?: number | null
   city?: string | null
   gender?: string | null
@@ -41,8 +42,13 @@ function initials(name: string) {
 function safeFormat(dateStr: string) {
   try { const d = new Date(dateStr); return isNaN(d.getTime()) ? null : format(d, 'MMM yyyy', { locale: sv }) } catch { return null }
 }
-function yearsOnPlatform(dateStr: string) {
-  try { const d = new Date(dateStr); return isNaN(d.getTime()) ? '0' : String(Math.max(0, new Date().getFullYear() - d.getFullYear())) } catch { return '0' }
+function memberTenure(dateStr: string) {
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return 'Ny medlem'
+    const years = Math.max(0, new Date().getFullYear() - d.getFullYear())
+    return years === 0 ? 'Ny medlem' : `${years} år på Gonow`
+  } catch { return 'Ny medlem' }
 }
 
 const PREF_TAGS = [
@@ -83,11 +89,12 @@ export default function CarrierProfile({ name, carrierId, tripId, mutedBadge }: 
       .catch(() => {})
   }, [carrierId])
 
-  const rating = data ? Number(data.rating_avg).toFixed(1) : [4.7, 4.9, 5.0][s]
-  const trips  = data ? data.completed_trips : [67, 89, 124][s]
-  const since  = data?.member_since ? safeFormat(data.member_since) : ['jan 2025', 'mars 2026', 'sep 2024'][s]
-  const years  = data?.member_since ? yearsOnPlatform(data.member_since) : ['1', '2', '3'][s]
-  const bankid = data?.bankid_verified ?? true
+  const rating     = data ? Number(data.rating_avg).toFixed(1) : [4.7, 4.9, 5.0][s]
+  const trips      = data ? data.completed_trips : [67, 89, 124][s]
+  const since      = data?.member_since ? safeFormat(data.member_since) : ['jan 2025', 'mars 2026', 'sep 2024'][s]
+  const tenure     = data?.member_since ? memberTenure(data.member_since) : ['1 år på Gonow', '2 år på Gonow', 'Ny medlem'][s]
+  const bankid     = data?.bankid_verified ?? true
+  const completion = data?.completion_rate != null ? Math.round(data.completion_rate) : null
   const genderLabel = data?.gender === 'man' ? 'Man' : data?.gender === 'kvinna' ? 'Kvinna' : null
   const tags = PREF_TAGS[s]
 
@@ -129,7 +136,7 @@ export default function CarrierProfile({ name, carrierId, tripId, mutedBadge }: 
             )}
           </div>
           <p style={{ fontSize: '0.7rem', color: 'var(--muted)', margin: 0 }}>
-            {since ? `Medlem sedan ${since} · ` : ''}{years} år på Gonow
+            {since ? `Medlem sedan ${since} · ` : ''}{tenure}
           </p>
           {(genderLabel || data?.age || data?.city) && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
@@ -165,12 +172,13 @@ export default function CarrierProfile({ name, carrierId, tripId, mutedBadge }: 
 
       {/* Tab content */}
       {tab === 'profil' && (
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 8 }}>
-          {[
+        <div style={{ display: 'grid', gridTemplateColumns: completion != null ? 'repeat(2, 1fr)' : isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 8 }}>
+          {([
             { label: 'Snittbetyg', value: rating, star: true },
             { label: 'Resor', value: trips, star: false },
-            { label: 'År på Gonow', value: years, star: false },
-          ].map(({ label, value, star }) => (
+            { label: 'Erfaren', value: tenure, star: false },
+            ...(completion != null ? [{ label: 'Slutförda', value: `${completion}%`, star: false }] : []),
+          ] as { label: string; value: string | number; star: boolean }[]).map(({ label, value, star }) => (
             <div key={label} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 12, padding: '11px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
               <p style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1, display: 'flex', alignItems: 'center', gap: 3, margin: 0 }}>
                 {star && <Star size={12} style={{ color: '#fbbf24', fill: '#fbbf24' }} />}{value}

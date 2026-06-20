@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
-    const { user_id, name, phone, role, city, age, gender, bio } = body
+    const { user_id, name, phone, role, city, age, gender, bio, onboarding_completed } = body
 
     if (!user_id) return NextResponse.json({ error: 'user_id krävs' }, { status: 400 })
 
@@ -17,6 +17,7 @@ export async function PATCH(req: NextRequest) {
     if (age !== undefined) payload.age = age || null
     if (gender !== undefined) payload.gender = gender || null
     if (bio !== undefined) payload.bio = bio || null
+    if (onboarding_completed !== undefined) payload.onboarding_completed = onboarding_completed
 
     const { error } = await supabase.from('users').update(payload).eq('id', user_id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -64,6 +64,11 @@ export default function AIChat({ onParsed }: AIChatProps) {
           },
         ])
         setTimeout(() => onParsed(r), 10000)
+      } else if (!res.ok) {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: 'AI-matchning är tillfälligt otillgänglig. Prova att fylla i formuläret manuellt eller försök igen om en stund.' },
+        ])
       } else {
         setMessages((prev) => [
           ...prev,
@@ -73,7 +78,7 @@ export default function AIChat({ onParsed }: AIChatProps) {
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: 'Något gick fel. Försök igen om ett ögonblick.' },
+        { role: 'assistant', content: 'AI-matchning är tillfälligt otillgänglig. Kontrollera din anslutning och försök igen.' },
       ])
     }
     setLoading(false)

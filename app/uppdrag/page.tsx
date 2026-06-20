@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Sparkles, ChevronRight } from 'lucide-react'
+import { Plus, Sparkles, ChevronRight, Package as PkgIcon } from 'lucide-react'
 import PackageCard, { UppdragPackage } from '@/components/uppdrag/PackageCard'
 import ErbjudModal from '@/components/uppdrag/ErbjudModal'
 import PubliceraModal from '@/components/uppdrag/PubliceraModal'
 import { useAuth } from '@/hooks/useAuth'
 import AuthModal from '@/components/auth/AuthModal'
+import { PackageCardSkeleton } from '@/components/ui/Skeleton'
 
 function dbToPackage(row: Record<string, unknown>): UppdragPackage {
   const deadline = (row.deadline as UppdragPackage['deadline']) ?? 'flexible'
@@ -162,6 +163,7 @@ export default function UppdragPage() {
           padding: '12px 22px', borderRadius: 999, fontSize: '0.85rem', fontWeight: 600,
           boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
           display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
+          animation: 'toast-in 0.2s ease both',
         }}>
           <span style={{ color: '#22c55e' }}>✓</span> {toast}
         </div>
@@ -267,20 +269,40 @@ export default function UppdragPage() {
 
         {/* Package grid */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--muted)' }}>
-            <p style={{ fontSize: '0.88rem' }}>Hämtar paket...</p>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+            {Array.from({ length: 6 }).map((_, i) => <PackageCardSkeleton key={i} />)}
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--muted)' }}>
-            <p style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Inga paket hittades</p>
-            <p style={{ fontSize: '0.85rem' }}>Prova ett annat filter eller publicera ett eget paket.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '64px 0', textAlign: 'center' }}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PkgIcon size={24} style={{ color: 'var(--muted)' }} />
+            </div>
+            <div>
+              <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                {filter === 'Alla' ? 'Inga paket längs din rutt just nu' : `Inga paket för "${filter}"`}
+              </p>
+              <p style={{ fontSize: '0.84rem', color: 'var(--muted)', maxWidth: 280, margin: '0 auto' }}>
+                {filter === 'Alla'
+                  ? 'Var den första att publicera ett paket eller kolla igen senare.'
+                  : 'Prova ett annat filter eller visa alla paket.'}
+              </p>
+            </div>
+            {filter !== 'Alla' ? (
+              <button onClick={() => setFilter('Alla')} style={{ minHeight: 44, padding: '0 20px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 10, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Visa alla paket
+              </button>
+            ) : (
+              <button onClick={handlePubliceraClick} style={{ minHeight: 44, padding: '0 20px', background: 'var(--accent)', color: '#0a0a0a', border: 'none', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Plus size={15} /> Publicera ett paket
+              </button>
+            )}
           </div>
-        ) : null}
-        {!loading && filtered.length > 0 && (
+        ) : (
           <div style={{
             display: 'grid',
             gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))',
             gap: 16,
+            animation: 'fade-in 0.3s ease both',
           }}>
             {filtered.map(pkg => (
               <PackageCard

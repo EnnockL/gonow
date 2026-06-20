@@ -255,6 +255,13 @@ export default function Navbar() {
             {dark ? <Sun size={14} /> : <Moon size={14} />}
           </button>
 
+          {/* Admin link — only for role=admin */}
+          {profile?.role === 'admin' && (
+            <Link href="/admin/dashboard" style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent)', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 8, padding: '4px 10px', textDecoration: 'none', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              Admin
+            </Link>
+          )}
+
           {/* Auth — inloggad: avatar → /profil, ej inloggad: logga in-knapp */}
           {userId && profile ? (
             <Link href="/profil" style={{

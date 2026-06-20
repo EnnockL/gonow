@@ -42,6 +42,7 @@ export default function ErbjudModal({ pkg, onClose, onSuccess }: ErbjudModalProp
       <div style={{
         position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
         zIndex: 10001, width: '100%', maxWidth: 420, padding: '0 16px',
+        maxHeight: '95vh', overflowY: 'auto',
       }}>
         <div style={{
           background: 'var(--surface)',
@@ -49,6 +50,7 @@ export default function ErbjudModal({ pkg, onClose, onSuccess }: ErbjudModalProp
           borderRadius: 20,
           padding: '24px 22px',
           boxShadow: '0 24px 64px rgba(0,0,0,0.18)',
+          animation: 'modal-in 0.2s ease both',
         }}>
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>

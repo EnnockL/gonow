@@ -27,6 +27,8 @@ export interface User {
   city?: string | null
   gender?: string | null
   bio?: string | null
+  onboarding_completed?: boolean
+  completion_rate?: number | null
 }
 
 export interface Trip {
