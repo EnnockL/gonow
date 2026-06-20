@@ -499,8 +499,8 @@ function SkickaPageContent() {
                     </h2>
                     <p className="sk-simple-subtitle">
                       {tabMode === 'lift'
-                        ? 'SÃ¶k efter resor med lugn, tydlig planering. VÃ¤lj datum, antal passagerare och boka utan att tappa Ã¶verblicken.'
-                        : 'BÃ¶rja med en enkel rutt. Gonow visar aktiva bÃ¤rare direkt och lÃ¥ter AI:n ta Ã¶ver nÃ¤r du behÃ¶ver mer precision.'}
+                        ? 'Sök efter resor med lugn, tydlig planering. Välj datum, antal passagerare och boka utan att tappa överblicken.'
+                        : 'Börja med en enkel rutt. Gonow visar aktiva bärare direkt och låter AI:n ta över när du behöver mer precision.'}
                     </p>
                     <div className="sk-info-strip">
                       {(tabMode === 'lift'
@@ -512,7 +512,7 @@ function SkickaPageContent() {
                         : [
                             { icon: <Package size={13} />, label: simpleWeight < 20 ? `${simpleWeight} kg` : '20+ kg' },
                             { icon: <Clock size={13} />, label: 'Snabb matchning' },
-                            { icon: <Shield size={13} />, label: 'BankID-nÃ¤tverk' },
+                            { icon: <Shield size={13} />, label: 'BankID-nätverk' },
                           ]).map((item) => (
                         <div key={item.label} className="sk-info-pill">
                           {item.icon}
@@ -549,35 +549,59 @@ function SkickaPageContent() {
                       </div>
                     </div>
 
-                    {/* Lift: date + passengers — desktop only */}
-                    {tabMode === 'lift' && !isMobile && (
-                      <div className="sk-lift-controls">
-                        <div className="sk-lift-card">
-                          <div className="sk-lift-card-head">
-                            <span className="sk-lift-card-label">Datum</span>
-                            <Calendar size={14} />
+                    {tabMode === 'lift' && (
+                      <div className="sk-lift-panel">
+                        <div className="sk-lift-panel-top">
+                          <div>
+                            <p className="sk-lift-panel-kicker">Resplan</p>
+                            <h3 className="sk-lift-panel-title">Ställ in när och hur många som ska åka</h3>
                           </div>
-                          <input
-                            type="date"
-                            className="sk-rf-input sk-date-input"
-                            value={liftDate}
-                            onChange={e => setLiftDate(e.target.value)}
-                            onFocus={e => keepSearchFormVisible(e.currentTarget)}
-                          />
-                        </div>
-                        <div className="sk-lift-card">
-                          <div className="sk-lift-card-head">
-                            <span className="sk-lift-card-label">Platser</span>
-                            <Users size={14} />
-                          </div>
-                          <div className="sk-weight-row sk-passenger-row">
-                            {[1, 2, 3, 4].map(n => (
-                              <button key={n} className={`sk-weight-chip ${liftPassengers === n ? 'active' : ''}`} onClick={() => setLiftPassengers(n)}>
-                                {n}
-                              </button>
-                            ))}
+                          <div className="sk-lift-panel-pills">
+                            <span className="sk-lift-panel-pill">
+                              <Calendar size={12} />
+                              {liftDate
+                                ? new Date(liftDate).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
+                                : 'Flexibelt datum'}
+                            </span>
+                            <span className="sk-lift-panel-pill">
+                              <Users size={12} />
+                              {liftPassengers} {liftPassengers === 1 ? 'plats' : 'platser'}
+                            </span>
                           </div>
                         </div>
+
+                        <div className="sk-lift-controls">
+                          <div className="sk-lift-card">
+                            <div className="sk-lift-card-head">
+                              <span className="sk-lift-card-label">Datum</span>
+                              <Calendar size={14} />
+                            </div>
+                            <input
+                              type="date"
+                              className="sk-rf-input sk-date-input"
+                              value={liftDate}
+                              onChange={e => setLiftDate(e.target.value)}
+                              onFocus={e => keepSearchFormVisible(e.currentTarget)}
+                            />
+                          </div>
+                          <div className="sk-lift-card">
+                            <div className="sk-lift-card-head">
+                              <span className="sk-lift-card-label">Platser</span>
+                              <Users size={14} />
+                            </div>
+                            <div className="sk-weight-row sk-passenger-row">
+                              {[1, 2, 3, 4].map(n => (
+                                <button key={n} className={`sk-weight-chip ${liftPassengers === n ? 'active' : ''}`} onClick={() => setLiftPassengers(n)}>
+                                  {n}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <p className="sk-lift-panel-note">
+                          Börja med en enkel resa. Du kan alltid justera datum och antal platser innan du bokar.
+                        </p>
                       </div>
                     )}
                     {/* Skicka: weight chips */}
@@ -603,21 +627,14 @@ function SkickaPageContent() {
                       {loading
                         ? <><Loader2 size={14} style={{ animation: 'sk-spin 1s linear infinite' }} /> Söker...</>
                         : tabMode === 'lift'
-                          ? <>Hitta lift <ArrowRight size={14} /></>
+                          ? <>Se resor <ArrowRight size={14} /></>
                           : <>Hitta bärare <ArrowRight size={14} /></>
                       }
                     </button>
 
-                    <button onClick={() => setAiMode(true)} style={{
-                      marginTop: 14, border: '1px solid rgba(34,197,94,0.45)',
-                      background: 'rgba(34,197,94,0.12)', color: '#d9ffc8',
-                      borderRadius: 10, padding: '9px 16px', cursor: 'pointer',
-                      fontFamily: 'inherit', fontSize: '0.82rem', fontWeight: 600,
-                      display: 'inline-flex', alignItems: 'center', gap: 6,
-                      transition: 'background 0.15s',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(34,197,94,0.15)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(34,197,94,0.08)')}
+                    <button
+                    className="sk-ai-entry-btn"
+                    onClick={() => setAiMode(true)}
                     >
                       <Zap size={13} /> AI-matchning — beskriv fritt
                     </button>
@@ -1631,6 +1648,66 @@ function SkickaPageContent() {
           margin: 0 16px;
         }
 
+        .sk-lift-panel {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          padding: 14px;
+          border-radius: 18px;
+          border: 1px solid rgba(255,255,255,0.12);
+          background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+
+        .sk-lift-panel-top {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        .sk-lift-panel-kicker {
+          font-size: 0.64rem;
+          font-weight: 800;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: rgba(255,255,255,0.55);
+          margin-bottom: 4px;
+        }
+
+        .sk-lift-panel-title {
+          font-size: 0.96rem;
+          line-height: 1.35;
+          font-weight: 700;
+          color: #fff;
+        }
+
+        .sk-lift-panel-pills {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          gap: 8px;
+        }
+
+        .sk-lift-panel-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 10px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.08);
+          border: 1px solid rgba(255,255,255,0.12);
+          color: rgba(255,255,255,0.78);
+          font-size: 0.72rem;
+          font-weight: 600;
+        }
+
+        .sk-lift-panel-note {
+          font-size: 0.76rem;
+          line-height: 1.55;
+          color: rgba(255,255,255,0.62);
+        }
+
         .sk-lift-controls {
           display: grid;
           grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
@@ -1731,6 +1808,30 @@ function SkickaPageContent() {
 
         .sk-find-btn:hover:not(:disabled) { opacity: 0.8; }
         .sk-find-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        .sk-ai-entry-btn {
+          margin-top: 14px;
+          border: 1px solid rgba(34,197,94,0.45);
+          background: rgba(34,197,94,0.12);
+          color: #d9ffc8;
+          border-radius: 12px;
+          padding: 10px 16px;
+          cursor: pointer;
+          font-family: inherit;
+          font-size: 0.82rem;
+          font-weight: 700;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          align-self: flex-start;
+          transition: background 0.15s, border-color 0.15s, transform 0.15s;
+        }
+
+        .sk-ai-entry-btn:hover {
+          background: rgba(34,197,94,0.16);
+          border-color: rgba(34,197,94,0.56);
+          transform: translateY(-1px);
+        }
 
         .sk-simple-visual {
           background: rgba(0,0,0,0.30);
@@ -2608,17 +2709,9 @@ function SkickaPageContent() {
             text-align: center;
             line-height: 1.2;
           }
-          .sk-step-mobile-desc {
-            display: block;
-            font-size: 0.58rem;
-            line-height: 1.25;
-            text-align: center;
-            color: var(--muted-2);
-          }
+          .sk-step-mobile-desc { display: none; }
           .sk-step-active .sk-step-mobile-label { color: var(--text); }
-          .sk-step-active .sk-step-mobile-desc { color: var(--muted); }
           .sk-step-done .sk-step-mobile-label { color: #15803d; }
-          .sk-step-done .sk-step-mobile-desc { color: #15803d; }
           .sk-tab-row {
             position: static;
             top: auto;
@@ -2740,6 +2833,32 @@ function SkickaPageContent() {
             line-height: 1.62;
             max-width: none;
           }
+          .sk-lift-panel {
+            padding: 12px;
+            border-radius: 16px;
+            gap: 10px;
+          }
+          .sk-lift-panel-top {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+          }
+          .sk-lift-panel-title {
+            font-size: 0.88rem;
+            line-height: 1.35;
+          }
+          .sk-lift-panel-pills {
+            justify-content: flex-start;
+            gap: 6px;
+          }
+          .sk-lift-panel-pill {
+            font-size: 0.69rem;
+            padding: 7px 9px;
+          }
+          .sk-lift-panel-note {
+            font-size: 0.72rem;
+            line-height: 1.5;
+          }
           .sk-info-strip {
             flex-wrap: nowrap;
             overflow-x: auto;
@@ -2819,12 +2938,12 @@ function SkickaPageContent() {
             flex: 0 0 auto;
           }
           .sk-lift-controls {
-            grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+            grid-template-columns: 1fr;
             gap: 10px;
             align-items: stretch;
           }
           .sk-lift-card {
-            padding: 11px 12px;
+            padding: 12px;
             border-radius: 15px;
             gap: 8px;
             min-height: 0;
@@ -2836,8 +2955,8 @@ function SkickaPageContent() {
             font-size: 0.67rem;
           }
           .sk-passenger-row .sk-weight-chip {
-            min-width: 48px;
-            min-height: 40px;
+            min-width: 52px;
+            min-height: 42px;
           }
           .sk-date-input {
             min-height: 40px;
@@ -2850,6 +2969,14 @@ function SkickaPageContent() {
             border-radius: 14px;
             font-size: 0.88rem;
             box-shadow: 0 12px 28px rgba(34,197,94,0.18);
+          }
+          .sk-ai-entry-btn {
+            width: 100%;
+            justify-content: center;
+            min-height: 48px;
+            border-radius: 14px;
+            padding: 11px 14px;
+            font-size: 0.8rem;
           }
           .sk-visual-route {
             grid-template-columns: 1fr auto !important;
@@ -2883,11 +3010,14 @@ function SkickaPageContent() {
         }
 
         @media (max-width: 380px) {
-          .sk-lift-controls {
-            grid-template-columns: 1fr !important;
-          }
           .sk-rf-input {
             min-height: 48px;
+          }
+          .sk-passenger-row {
+            gap: 5px;
+          }
+          .sk-passenger-row .sk-weight-chip {
+            min-width: 46px;
           }
         }
       `}</style>
