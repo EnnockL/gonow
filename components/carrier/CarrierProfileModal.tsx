@@ -156,13 +156,12 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
 
       <div style={{
         position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-        zIndex: 10001, width: '100%', maxWidth: 380,
+        zIndex: 10001, width: isMobile ? 'calc(100% - 24px)' : '100%', maxWidth: 380,
         background: 'var(--surface)', borderRadius: isMobile ? 18 : 24,
         border: '1px solid var(--border)',
         boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
         overflow: 'hidden', maxHeight: '90vh',
         display: 'flex', flexDirection: 'column',
-        margin: isMobile ? '0 12px' : 0,
       }}>
         {/* Header — always visible */}
         <div style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.18) 0%, rgba(34,197,94,0.06) 100%)', borderBottom: '1px solid rgba(34,197,94,0.15)', padding: isMobile ? '18px 14px 12px' : '22px 20px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, position: 'relative', flexShrink: 0 }}>

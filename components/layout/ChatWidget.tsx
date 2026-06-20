@@ -158,7 +158,7 @@ export default function ChatWidget() {
 
   return (
     <>
-    <div style={{ position: 'fixed', bottom: 24, right: isMobile ? '50%' : 24, transform: isMobile ? 'translateX(50%)' : undefined, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: isMobile ? 'center' : 'flex-end', gap: 12, pointerEvents: 'none' }}>
+    <div style={{ position: 'fixed', bottom: 24, right: 20, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12, pointerEvents: 'none' }}>
 
       {/* Panel */}
       <div style={{
