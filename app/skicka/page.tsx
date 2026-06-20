@@ -2676,35 +2676,37 @@ function SkickaPageContent() {
           .sk-stepper {
             flex-wrap: nowrap;
             overflow-x: auto;
-            gap: 10px;
-            padding: 14px 14px 6px;
+            gap: 6px;
+            padding: 8px 10px;
             scrollbar-width: none;
-            border-radius: 18px;
+            border-radius: 14px;
+            margin-bottom: 20px;
           }
           .sk-stepper::-webkit-scrollbar { display: none; }
           .sk-step {
             flex: 0 0 auto;
-            min-width: 76px;
+            min-width: 56px;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 4px;
           }
           .sk-step-num {
-            width: 44px;
-            height: 44px;
-            border-radius: 14px;
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
+            font-size: 0.65rem;
           }
           .sk-step-mobile-copy {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 3px;
-            max-width: 88px;
+            gap: 0;
+            max-width: 72px;
           }
           .sk-step-mobile-label {
             display: block;
-            font-size: 0.7rem;
-            font-weight: 800;
+            font-size: 0.6rem;
+            font-weight: 700;
             color: var(--muted);
             text-align: center;
             line-height: 1.2;
