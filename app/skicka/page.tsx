@@ -65,6 +65,27 @@ function estimateTripPrice(trip: MatchTrip) {
   return trip.price_per_kg ? Math.max(149, Math.round(99 + trip.price_per_kg * 5)) : 149
 }
 
+function keepSearchFormVisible(target: HTMLElement) {
+  if (typeof window === 'undefined') return
+  if (!window.matchMedia('(max-width: 820px)').matches) return
+
+  const form = target.closest('.sk-route-form') as HTMLElement | null
+  const anchor = form ?? target
+
+  const scrollToAnchor = () => {
+    anchor.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  window.setTimeout(scrollToAnchor, 120)
+  window.setTimeout(() => {
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight
+    const rect = target.getBoundingClientRect()
+    if (rect.top < 88 || rect.bottom > viewportHeight - 72) {
+      scrollToAnchor()
+    }
+  }, 320)
+}
+
 function getTripMeta(trip: MatchTrip, bookings: BookingRequest[], userId?: string | null) {
   const tripBookings = bookings.filter((booking) => booking.trip_id === trip.id)
   const snapshot = getTripCapacitySnapshot(trip, tripBookings)
@@ -477,6 +498,7 @@ function SkickaPageContent() {
                           placeholder="Varifrån?"
                           value={tabMode === 'lift' ? liftFrom : simpleFrom}
                           onChange={e => tabMode === 'lift' ? setLiftFrom(e.target.value) : setSimpleFrom(e.target.value)}
+                          onFocus={e => keepSearchFormVisible(e.currentTarget)}
                           onKeyDown={e => e.key === 'Enter' && (tabMode === 'lift' ? handleLiftSearch() : handleSimpleSearch())}
                         />
                         <div className="sk-rf-divider" />
@@ -485,6 +507,7 @@ function SkickaPageContent() {
                           placeholder={tabMode === 'lift' ? 'Vart?' : 'Vart ska det?'}
                           value={tabMode === 'lift' ? liftTo : simpleTo}
                           onChange={e => tabMode === 'lift' ? setLiftTo(e.target.value) : setSimpleTo(e.target.value)}
+                          onFocus={e => keepSearchFormVisible(e.currentTarget)}
                           onKeyDown={e => e.key === 'Enter' && (tabMode === 'lift' ? handleLiftSearch() : handleSimpleSearch())}
                         />
                       </div>
@@ -1408,6 +1431,8 @@ function SkickaPageContent() {
           display: flex;
           gap: 12px;
           align-items: stretch;
+          scroll-margin-top: 108px;
+          overflow-anchor: none;
         }
 
         .sk-rf-indicator {
@@ -1447,6 +1472,7 @@ function SkickaPageContent() {
           border-radius: 14px;
           overflow: hidden;
           background: var(--surface-2);
+          min-width: 0;
         }
 
         .sk-rf-input {
@@ -1459,6 +1485,7 @@ function SkickaPageContent() {
           outline: none;
           font-family: inherit;
           box-sizing: border-box;
+          min-width: 0;
         }
 
         .sk-rf-input::placeholder { color: var(--muted); }
@@ -2239,6 +2266,10 @@ function SkickaPageContent() {
           }
           .sk-simple-left {
             gap: 14px;
+            justify-content: flex-start;
+          }
+          .sk-simple-inner {
+            min-height: auto;
           }
           .sk-simple-title {
             font-size: clamp(1.8rem, 8vw, 2.5rem);
@@ -2273,9 +2304,11 @@ function SkickaPageContent() {
           }
           .sk-route-form {
             gap: 10px !important;
+            align-items: flex-start !important;
           }
           .sk-rf-inputs {
             min-width: 0;
+            border-radius: 16px;
           }
           .sk-rf-input {
             font-size: 16px !important;

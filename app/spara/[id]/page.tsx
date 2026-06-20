@@ -67,6 +67,45 @@ function nextStepCopy(status: OrderStatus) {
   }
 }
 
+function statusProgress(status: OrderStatus) {
+  const idx = STATUS_ORDER.indexOf(status)
+  if (idx < 0) return 8
+  return Math.max(8, Math.min(100, Math.round(((idx + 1) / STATUS_ORDER.length) * 100)))
+}
+
+function etaLabel(status: OrderStatus) {
+  switch (status) {
+    case 'pending':
+      return 'Invantar betalning'
+    case 'matched':
+      return 'Kan starta idag'
+    case 'picked_up':
+      return 'Ca 1-2 h till nasta steg'
+    case 'in_transit':
+      return 'ETA 45-90 min'
+    case 'delivered':
+      return 'Levererad, invantar kvittens'
+    case 'confirmed':
+      return 'Slutford'
+    case 'cancelled':
+      return 'Avslutad'
+    default:
+      return 'Uppdateras snart'
+  }
+}
+
+function checkpointFeed(status: OrderStatus) {
+  const feed = [
+    { key: 'accepted', title: 'Uppdrag accepterat', body: 'En barare har tagit uppdraget och reservkapacitet ar satt.', active: true },
+    { key: 'payment', title: 'Betalning och escrow', body: 'Pengar lases innan leveransen startar och slapps forst efter kvittens.', active: ['matched', 'picked_up', 'in_transit', 'delivered', 'confirmed'].includes(status) },
+    { key: 'pickup', title: 'Upphamtning', body: 'Paketet markeras som upphamtat nar bararen startat den fysiska hanteringen.', active: ['picked_up', 'in_transit', 'delivered', 'confirmed'].includes(status) },
+    { key: 'route', title: 'Pa vag', body: 'Har kommer GPS, ETA och kontrollpunkter senare att synkas in i samma vy.', active: ['in_transit', 'delivered', 'confirmed'].includes(status) },
+    { key: 'proof', title: 'Leverans och bevis', body: 'Mottagaren kvitterar och payout kan frigoras till bararen.', active: ['delivered', 'confirmed'].includes(status) },
+  ]
+
+  return feed
+}
+
 export default function SparaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const searchParams = useSearchParams()
@@ -166,6 +205,8 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
   const statusStyle = STATUS_COLOR[order.status] ?? STATUS_COLOR.pending!
   const currentStep = STEPS.find((step) => step.status === order.status)
   const routeLabel = order.trips ? `${order.trips.from_city} → ${order.trips.to_city}` : `${order.pickup_address} → ${order.dropoff_address}`
+  const progress = statusProgress(order.status)
+  const checkpoints = checkpointFeed(order.status)
   const facts = [
     {
       label: 'Status',
@@ -266,6 +307,31 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
               </div>
             </div>
 
+            <div style={{ padding: isMobile ? '18px 16px' : '20px 22px', borderRadius: isMobile ? 18 : 20, background: 'var(--surface)', border: '1px solid var(--border)', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.1fr 0.9fr', gap: 16 }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                  <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', margin: 0 }}>Framdrift</p>
+                  <strong style={{ fontSize: '0.88rem', color: 'var(--text)' }}>{progress}% klar</strong>
+                </div>
+                <div style={{ height: 10, borderRadius: 999, background: 'var(--surface-2)', overflow: 'hidden', marginBottom: 12 }}>
+                  <div style={{ width: `${progress}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent), #4ade80)', borderRadius: 999, transition: 'width 0.25s ease' }} />
+                </div>
+                <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6, margin: 0 }}>
+                  {nextStepCopy(order.status)}
+                </p>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr', gap: 10 }}>
+                <div style={{ padding: '12px 14px', borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  <p style={{ fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 6 }}>Eta</p>
+                  <p style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>{etaLabel(order.status)}</p>
+                </div>
+                <div style={{ padding: '12px 14px', borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  <p style={{ fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 6 }}>Ansvarig</p>
+                  <p style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>{carrier?.name ?? 'Gonow-natverk'}</p>
+                </div>
+              </div>
+            </div>
+
             <div style={{ padding: isMobile ? '18px 16px' : '20px 22px', borderRadius: isMobile ? 18 : 20, background: 'var(--surface)', border: '1px solid var(--border)', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.05fr 0.95fr', gap: 14 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ padding: '14px 16px', borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
@@ -303,6 +369,35 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
               <p style={{ fontSize: '0.76rem', color: 'var(--muted)', margin: 0, textAlign: 'center', maxWidth: 360 }}>
                 Aktiveras nar bararen startar resan. Har finns plats for GPS-push, ETA och kontrollpunkter.
               </p>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', padding: '0 16px' }}>
+                {['Startpunkt', 'Checkpoint', 'Ankomst'].map((item, index) => (
+                  <div key={item} style={{ padding: '8px 12px', borderRadius: 999, border: '1px solid rgba(146,255,99,0.25)', background: index <= Math.max(0, currentIdx - 1) ? 'rgba(146,255,99,0.14)' : 'rgba(255,255,255,0.72)', color: index <= Math.max(0, currentIdx - 1) ? '#15803d' : 'var(--muted)', fontSize: '0.72rem', fontWeight: 700 }}>
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ padding: isMobile ? '18px 16px' : '20px 22px', borderRadius: isMobile ? 18 : 20, background: 'var(--surface)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+                <p style={{ fontWeight: 700, color: 'var(--text)', fontSize: '0.92rem', margin: 0 }}>Checkpoint-feed</p>
+                <span style={{ padding: '6px 10px', borderRadius: 999, fontSize: '0.68rem', fontWeight: 700, color: statusStyle.color, background: statusStyle.bg }}>
+                  {currentStep?.label ?? order.status}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {checkpoints.map((item) => (
+                  <div key={item.key} style={{ display: 'grid', gridTemplateColumns: '22px 1fr', gap: 12, alignItems: 'start' }}>
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: item.active ? 'rgba(146,255,99,0.16)' : 'var(--surface-2)', border: `1.5px solid ${item.active ? 'rgba(146,255,99,0.45)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.active ? 'var(--accent)' : 'var(--border)' }} />
+                    </div>
+                    <div style={{ paddingBottom: 6 }}>
+                      <p style={{ fontSize: '0.82rem', fontWeight: 700, color: item.active ? 'var(--text)' : 'var(--muted)', margin: 0 }}>{item.title}</p>
+                      <p style={{ fontSize: '0.76rem', color: 'var(--muted)', lineHeight: 1.6, marginTop: 4 }}>{item.body}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div style={{ padding: '22px 24px', borderRadius: 18, background: 'var(--surface)', border: '1px solid var(--border)' }}>
@@ -365,6 +460,22 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
                     Spårningssidan ar byggd for att fungera som den tydliga sanningskallan mellan kund, barare och framtida supportflode.
                   </p>
                 </div>
+              </div>
+            </div>
+
+            <div style={{ padding: '20px 22px', borderRadius: 18, background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <p style={{ fontWeight: 700, color: 'var(--text)', fontSize: '0.92rem', margin: 0 }}>Vad händer nu</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[
+                  { title: 'Betalning och escrow', text: 'Nar betalningen har passerat laggs den pa hold tills leveransen ar kvitterad.' },
+                  { title: 'Bararflode', text: 'Bararen markerar upphamtad, pa vag och levererad i sin egen kontrollpanel.' },
+                  { title: 'Kvittens', text: 'Mottagaren bekräftar sist, vilket ar signalen som senare ska trigga payout.' },
+                ].map((item) => (
+                  <div key={item.title} style={{ padding: '12px 14px', borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                    <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>{item.title}</p>
+                    <p style={{ fontSize: '0.74rem', color: 'var(--muted)', lineHeight: 1.6, marginTop: 5 }}>{item.text}</p>
+                  </div>
+                ))}
               </div>
             </div>
 

@@ -144,6 +144,39 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle?: string })
   )
 }
 
+function MobileSectionIntro({
+  eyebrow,
+  title,
+  subtitle,
+  meta,
+}: {
+  eyebrow: string
+  title: string
+  subtitle: string
+  meta?: string
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 2 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <p style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+          {eyebrow}
+        </p>
+        {meta && (
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-soft)', padding: '6px 10px', borderRadius: 999 }}>
+            {meta}
+          </span>
+        )}
+      </div>
+      <h2 style={{ fontSize: '1.18rem', fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1.04, color: 'var(--text)' }}>
+        {title}
+      </h2>
+      <p style={{ fontSize: '0.82rem', lineHeight: 1.65, color: 'var(--muted)' }}>
+        {subtitle}
+      </p>
+    </div>
+  )
+}
+
 function statCard(label: string, value: string, hint: string, icon: React.ReactNode, isDark = false, mobile = false): React.ReactNode {
   return (
     <div style={{ ...panelStyle(false, isDark, mobile), padding: 20 }}>
@@ -933,6 +966,14 @@ export default function ProfilPage() {
 
             {activeTab === 'overview' && (
               <>
+                {isMobile && (
+                  <MobileSectionIntro
+                    eyebrow="Översikt"
+                    title="Din panel, lugn och tydlig."
+                    subtitle="Här får du direkt koll på konto, bokningar, resor och nästa steg utan att behöva hoppa mellan vyer."
+                    meta={`${pendingRequests} väntar`}
+                  />
+                )}
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0,1fr))' : 'repeat(4, minmax(0,1fr))', gap: 14 }}>
                   {statCard('Profil', `${completion}%`, 'Onboarding och sparade standarduppgifter', <UserRound size={18} />, isDark, isMobile)}
                   {statCard('Aktiva resor', `${activeCarrierTrips}`, 'Registrerade rutter i din panel', <Car size={18} />, isDark, isMobile)}
@@ -1157,6 +1198,14 @@ export default function ProfilPage() {
 
             {activeTab === 'assignments' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {isMobile && (
+                  <MobileSectionIntro
+                    eyebrow="Aktiva uppdrag"
+                    title="Det här kör du just nu."
+                    subtitle="Alla leveranser som pågår samlade i en tydlig driftvy med status, kontakt och nästa åtgärd."
+                    meta={`${activeAssignments.length} aktiva`}
+                  />
+                )}
                 <div style={{ ...panelStyle(true, isDark, isMobile), padding: 24, position: 'relative', overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', right: -80, top: -80, width: 240, height: 240, borderRadius: '50%', background: 'var(--enterprise-panel-glow)', pointerEvents: 'none' }} />
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0,1fr))' : 'repeat(4, minmax(0,1fr))', gap: 12 }}>
@@ -1220,13 +1269,26 @@ export default function ProfilPage() {
                             </div>
 
                             {/* Progress timeline */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-                              {ASSIGNMENT_STEPS.map((step, i) => {
-                                const done = i < stepIndex
-                                const current = i === stepIndex
-                                return (
-                                  <div key={step.status} style={{ display: 'flex', alignItems: 'center', flex: i < ASSIGNMENT_STEPS.length - 1 ? 1 : 'none' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 56 }}>
+                            {isMobile ? (
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+                                {ASSIGNMENT_STEPS.map((step, i) => {
+                                  const done = i < stepIndex
+                                  const current = i === stepIndex
+                                  return (
+                                    <div
+                                      key={step.status}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 10,
+                                        minWidth: 0,
+                                        padding: '10px 12px',
+                                        borderRadius: 14,
+                                        border: `1px solid ${done || current ? `${step.color}55` : 'var(--border)'}`,
+                                        background: done ? `${step.color}14` : current ? `${step.color}10` : 'var(--surface)',
+                                        gridColumn: i === ASSIGNMENT_STEPS.length - 1 ? '1 / -1' : 'auto',
+                                      }}
+                                    >
                                       <div style={{
                                         width: 22, height: 22, borderRadius: '50%',
                                         border: `2px solid ${done || current ? step.color : 'var(--border)'}`,
@@ -1243,20 +1305,52 @@ export default function ProfilPage() {
                                           <div style={{ width: 8, height: 8, borderRadius: '50%', background: step.color }} />
                                         )}
                                       </div>
-                                      <span style={{ fontSize: '0.6rem', color: done || current ? 'var(--text)' : 'var(--muted)', fontWeight: current ? 700 : 500, textAlign: 'center', lineHeight: 1.2 }}>
+                                      <span style={{ fontSize: '0.72rem', color: done || current ? 'var(--text)' : 'var(--muted)', fontWeight: current ? 800 : 600, lineHeight: 1.2, minWidth: 0 }}>
                                         {step.label}
                                       </span>
                                     </div>
-                                    {i < ASSIGNMENT_STEPS.length - 1 && (
-                                      <div style={{ flex: 1, height: 2, background: done ? step.color : 'var(--border)', borderRadius: 999, margin: '0 4px', marginBottom: 16 }} />
-                                    )}
-                                  </div>
-                                )
-                              })}
-                            </div>
+                                  )
+                                })}
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+                                {ASSIGNMENT_STEPS.map((step, i) => {
+                                  const done = i < stepIndex
+                                  const current = i === stepIndex
+                                  return (
+                                    <div key={step.status} style={{ display: 'flex', alignItems: 'center', flex: i < ASSIGNMENT_STEPS.length - 1 ? 1 : 'none' }}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 56 }}>
+                                        <div style={{
+                                          width: 22, height: 22, borderRadius: '50%',
+                                          border: `2px solid ${done || current ? step.color : 'var(--border)'}`,
+                                          background: done ? step.color : current ? `${step.color}22` : 'transparent',
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                          flexShrink: 0,
+                                        }}>
+                                          {done && (
+                                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                              <path d="M1 4L3.5 6.5L9 1" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                          )}
+                                          {current && (
+                                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: step.color }} />
+                                          )}
+                                        </div>
+                                        <span style={{ fontSize: '0.6rem', color: done || current ? 'var(--text)' : 'var(--muted)', fontWeight: current ? 700 : 500, textAlign: 'center', lineHeight: 1.2 }}>
+                                          {step.label}
+                                        </span>
+                                      </div>
+                                      {i < ASSIGNMENT_STEPS.length - 1 && (
+                                        <div style={{ flex: 1, height: 2, background: done ? step.color : 'var(--border)', borderRadius: 999, margin: '0 4px', marginBottom: 16 }} />
+                                      )}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
 
                             {/* Sender + recipient info + payout */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: isMobile ? 16 : 12 }}>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                 {/* Sender */}
                                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1295,7 +1389,7 @@ export default function ProfilPage() {
                                   </div>
                                 )}
                               </div>
-                              <div style={{ textAlign: 'right' }}>
+                              <div style={{ textAlign: isMobile ? 'left' : 'right', minWidth: isMobile ? '100%' : undefined }}>
                                 <p style={{ fontSize: '0.62rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Utbetalning</p>
                                 <p style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent)', letterSpacing: '-0.02em', lineHeight: 1 }}>
                                   {order.carrier_payout ?? order.price} kr
@@ -1409,6 +1503,26 @@ export default function ProfilPage() {
 
             {activeTab === 'orders' && (
               <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                {isMobile && (
+                  <div style={{ marginBottom: 18 }}>
+                    <MobileSectionIntro
+                      eyebrow="Förare"
+                      title="Jämför förare som en riktig marknadsplats."
+                      subtitle="Den här vyn ska kännas trygg, sorterad och premium även på liten skärm."
+                      meta={`${carriers.length} profiler`}
+                    />
+                  </div>
+                )}
+                {isMobile && (
+                  <div style={{ marginBottom: 18 }}>
+                    <MobileSectionIntro
+                      eyebrow="Bokningar"
+                      title="Följ varje leverans utan friktion."
+                      subtitle="Här ska det vara självklart om något väntar på betalning, är på väg eller redan är klart."
+                      meta={`${orders.length} totalt`}
+                    />
+                  </div>
+                )}
                 <SectionTitle title="Mina bokningar" subtitle="Här ska kundens status alltid vara tydlig: väntar, accepterad, på väg eller levererad." />
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0,1fr))', gap: 12, marginBottom: 16 }}>
                   {[
@@ -1522,6 +1636,16 @@ export default function ProfilPage() {
 
             {activeTab === 'requests' && (
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20 }}>
+                {isMobile && (
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <MobileSectionIntro
+                      eyebrow="Förfrågningar"
+                      title="Både skickat och inkommande på ett ställe."
+                      subtitle="Som kund ska du se svarsläge direkt. Som förare ska du snabbt kunna sortera vad som är värt att acceptera."
+                      meta={`${pendingIncoming} nya`}
+                    />
+                  </div>
+                )}
                 <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                   <SectionTitle title="Mina skickade förfrågningar" subtitle="Det här är den viktigaste kundvyn att bygga klart vidare på." />
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, minmax(0,1fr))', gap: 10, marginBottom: 14 }}>
@@ -1693,6 +1817,14 @@ export default function ProfilPage() {
 
             {activeTab === 'profile' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {isMobile && (
+                  <MobileSectionIntro
+                    eyebrow="Profil"
+                    title="Spara allt en gång, använd överallt."
+                    subtitle="Kontakt, roll och fordonsdata ska återanvändas i bokning, support, verifiering och payout utan att du fyller om något."
+                    meta={`${completion}% klart`}
+                  />
+                )}
                 <div style={{ ...panelStyle(true, isDark, isMobile), padding: isMobile ? 18 : 24, position: 'relative', overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', right: -70, top: -80, width: 220, height: 220, borderRadius: '50%', background: 'var(--enterprise-panel-glow)', pointerEvents: 'none' }} />
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.05fr 0.95fr', gap: 18, position: 'relative' }}>
