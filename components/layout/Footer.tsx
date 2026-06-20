@@ -154,8 +154,8 @@ export default function Footer() {
 
       <div style={{ padding: isMobile ? '40px 20px 36px' : '64px 24px 56px' }}>
         <div style={{ maxWidth: 1260, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 1fr 1fr 1fr', gap: isMobile ? 24 : 32 }}>
-            <div style={{ background: 'var(--footer-panel-bg)', border: '1px solid var(--footer-divider)', borderRadius: 20, padding: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '2fr 1fr 1fr 1fr 1fr', gap: isMobile ? 24 : 32 }}>
+            <div style={{ background: 'var(--footer-panel-bg)', border: '1px solid var(--footer-divider)', borderRadius: 20, padding: 24, gridColumn: isMobile ? '1 / -1' : undefined }}>
               <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 9, marginBottom: 18, textDecoration: 'none' }}>
                 <div style={{ width: 36, height: 36, borderRadius: 11, background: '#0a0a0a', border: '1.5px solid rgba(34, 197, 94, 0.45)', boxShadow: '0 0 18px rgba(34,197,94,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Image src="/logo-mark.png" alt="Gonow logo" width={66} height={66} style={{ width: 66, height: 66, minWidth: 66, minHeight: 66, objectFit: 'contain', flexShrink: 0, display: 'block' }} />
