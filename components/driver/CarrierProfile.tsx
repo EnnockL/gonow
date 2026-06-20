@@ -123,7 +123,7 @@ export default function CarrierProfile({ name, carrierId, tripId, mutedBadge }: 
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 2 }}>
             <p style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.01em', margin: 0 }}>{name}</p>
             {bankid && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 100, background: mutedBadge ? 'var(--text)' : 'rgba(74,222,85,0.1)', color: mutedBadge ? 'var(--bg)' : '#4ADE55', border: mutedBadge ? '1px solid var(--text)' : '1px solid rgba(74,222,85,0.22)' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 100, background: mutedBadge ? 'var(--text)' : 'rgba(34,197,94,0.1)', color: mutedBadge ? 'var(--bg)' : '#22c55e', border: mutedBadge ? '1px solid var(--text)' : '1px solid rgba(34,197,94,0.22)' }}>
                 <Shield size={8} /> BankID
               </span>
             )}
@@ -154,7 +154,7 @@ export default function CarrierProfile({ name, carrierId, tripId, mutedBadge }: 
               border: 'none', cursor: 'pointer',
               background: tab === t.key ? 'var(--surface)' : 'transparent',
               color: tab === t.key ? 'var(--text)' : 'var(--muted)',
-              borderBottom: `2px solid ${tab === t.key ? '#4ADE55' : 'transparent'}`,
+              borderBottom: `2px solid ${tab === t.key ? '#22c55e' : 'transparent'}`,
               transition: 'all 0.15s',
             }}
           >
@@ -234,7 +234,7 @@ export default function CarrierProfile({ name, carrierId, tripId, mutedBadge }: 
                 type="button"
                 onClick={handleSend}
                 disabled={!message.trim() || sending || !userId}
-                style={{ width: '100%', padding: '11px', borderRadius: 11, border: 'none', background: message.trim() && userId ? '#4ADE55' : 'var(--surface-2)', color: message.trim() && userId ? '#0a0a0a' : 'var(--muted)', cursor: message.trim() && userId ? 'pointer' : 'not-allowed', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.86rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all 0.15s' }}
+                style={{ width: '100%', padding: '11px', borderRadius: 11, border: 'none', background: message.trim() && userId ? '#22c55e' : 'var(--surface-2)', color: message.trim() && userId ? '#0a0a0a' : 'var(--muted)', cursor: message.trim() && userId ? 'pointer' : 'not-allowed', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.86rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all 0.15s' }}
               >
                 <Send size={13} /> {sending ? 'Skickar...' : 'Skicka meddelande'}
               </button>

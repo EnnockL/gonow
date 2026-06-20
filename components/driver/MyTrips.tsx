@@ -95,7 +95,7 @@ function BookingCard({ b, onUpdate }: { b: BookingRequest; onUpdate: () => void 
 
   return (
     <div style={{
-      border: `1px solid ${b.status === 'accepted' ? 'rgba(74,222,85,0.3)' : b.status === 'declined' ? 'rgba(239,68,68,0.2)' : 'var(--border)'}`,
+      border: `1px solid ${b.status === 'accepted' ? 'rgba(34,197,94,0.3)' : b.status === 'declined' ? 'rgba(239,68,68,0.2)' : 'var(--border)'}`,
       borderRadius: 12, padding: '12px 14px', background: 'var(--bg)',
       display: 'flex', flexDirection: 'column', gap: 8,
     }}>
@@ -110,7 +110,7 @@ function BookingCard({ b, onUpdate }: { b: BookingRequest; onUpdate: () => void 
           </span>
         </div>
         {b.status === 'accepted' && (
-          <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: 'rgba(74,222,85,0.12)', color: 'var(--success)', border: '1px solid rgba(74,222,85,0.25)' }}>Accepterad</span>
+          <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: 'rgba(34,197,94,0.12)', color: 'var(--success)', border: '1px solid rgba(34,197,94,0.25)' }}>Accepterad</span>
         )}
         {b.status === 'declined' && (
           <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>Avböjd</span>
@@ -126,9 +126,9 @@ function BookingCard({ b, onUpdate }: { b: BookingRequest; onUpdate: () => void 
         <div style={{ display: 'flex', gap: 6 }}>
           <button
             onClick={accept}
-            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px', borderRadius: 8, border: '1px solid rgba(74,222,85,0.35)', background: 'rgba(74,222,85,0.08)', color: 'var(--success)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.15s' }}
-            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(74,222,85,0.16)')}
-            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(74,222,85,0.08)')}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px', borderRadius: 8, border: '1px solid rgba(34,197,94,0.35)', background: 'rgba(34,197,94,0.08)', color: 'var(--success)', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.15s' }}
+            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(34,197,94,0.16)')}
+            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(34,197,94,0.08)')}
           >
             <Check size={12} /> Acceptera
           </button>
@@ -191,7 +191,7 @@ function TripCard({ trip, onDelete }: { trip: SavedTrip; onDelete: () => void })
 
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 14, background: 'var(--surface)', overflow: 'hidden', transition: 'border-color 0.15s' }}
-      onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(74,222,85,0.3)')}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(34,197,94,0.3)')}
       onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
     >
       {/* Header row — always visible */}
@@ -217,11 +217,11 @@ function TripCard({ trip, onDelete }: { trip: SavedTrip; onDelete: () => void })
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           {pendingCount > 0 && (
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: 'rgba(74,222,85,0.15)', color: 'var(--accent)', border: '1px solid rgba(74,222,85,0.3)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: 'rgba(34,197,94,0.15)', color: 'var(--accent)', border: '1px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', gap: 4 }}>
               <Inbox size={10} /> {pendingCount}
             </span>
           )}
-          <span style={{ fontSize: '0.68rem', fontWeight: 600, padding: '3px 10px', borderRadius: 100, background: 'rgba(74,222,85,0.1)', color: 'var(--success)', border: '1px solid rgba(74,222,85,0.2)' }}>
+          <span style={{ fontSize: '0.68rem', fontWeight: 600, padding: '3px 10px', borderRadius: 100, background: 'rgba(34,197,94,0.1)', color: 'var(--success)', border: '1px solid rgba(34,197,94,0.2)' }}>
             Aktiv
           </span>
           {open ? <ChevronUp size={14} style={{ color: 'var(--muted)' }} /> : <ChevronDown size={14} style={{ color: 'var(--muted)' }} />}
@@ -275,7 +275,7 @@ function TripCard({ trip, onDelete }: { trip: SavedTrip; onDelete: () => void })
           {/* Tillåter */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {allowedTags.map(({ icon: Icon, label }) => (
-              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', padding: '4px 10px', borderRadius: 100, border: '1px solid rgba(74,222,85,0.25)', background: 'var(--accent-softer)', color: 'var(--accent)', fontWeight: 500 }}>
+              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', padding: '4px 10px', borderRadius: 100, border: '1px solid rgba(34,197,94,0.25)', background: 'var(--accent-softer)', color: 'var(--accent)', fontWeight: 500 }}>
                 <Icon size={10} /> {label}
               </span>
             ))}

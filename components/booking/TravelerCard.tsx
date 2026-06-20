@@ -73,16 +73,16 @@ export default function TravelerCard({
         width: '100%',
         textAlign: 'left',
         background: selected
-          ? 'linear-gradient(135deg, rgba(74,222,85,0.08) 0%, rgba(74,222,85,0.04) 100%)'
+          ? 'linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(34,197,94,0.04) 100%)'
           : 'var(--surface)',
-        border: `1.5px solid ${selected ? '#4ADE55' : 'var(--border)'}`,
+        border: `1.5px solid ${selected ? '#22c55e' : 'var(--border)'}`,
         borderRadius: 20,
         padding: '18px 20px',
         cursor: 'pointer',
         fontFamily: 'inherit',
         transition: 'all 0.18s ease',
         boxShadow: selected
-          ? '0 0 0 3px rgba(74,222,85,0.12), 0 8px 32px rgba(74,222,85,0.08)'
+          ? '0 0 0 3px rgba(34,197,94,0.12), 0 8px 32px rgba(34,197,94,0.08)'
           : '0 2px 12px rgba(0,0,0,0.04)',
         display: 'flex',
         flexDirection: 'column',
@@ -90,7 +90,7 @@ export default function TravelerCard({
       }}
       onMouseEnter={(e) => {
         if (!selected) {
-          ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(74,222,85,0.45)'
+          ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(34,197,94,0.45)'
           ;(e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'
         }
       }}
@@ -114,15 +114,15 @@ export default function TravelerCard({
             borderRadius: 16,
             flexShrink: 0,
             background: selected
-              ? 'linear-gradient(135deg, rgba(74,222,85,0.3), rgba(74,222,85,0.15))'
-              : 'linear-gradient(135deg, rgba(74,222,85,0.18), rgba(74,222,85,0.08))',
-            border: `1.5px solid ${selected ? 'rgba(74,222,85,0.5)' : 'rgba(74,222,85,0.2)'}`,
+              ? 'linear-gradient(135deg, rgba(34,197,94,0.3), rgba(34,197,94,0.15))'
+              : 'linear-gradient(135deg, rgba(34,197,94,0.18), rgba(34,197,94,0.08))',
+            border: `1.5px solid ${selected ? 'rgba(34,197,94,0.5)' : 'rgba(34,197,94,0.2)'}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '1rem',
             fontWeight: 800,
-            color: '#4ADE55',
+            color: '#22c55e',
             letterSpacing: '-0.02em',
             cursor: onViewProfile ? 'pointer' : 'default',
             transition: 'transform 0.12s ease',
@@ -197,7 +197,7 @@ export default function TravelerCard({
                 style={{
                   fontSize: '1.35rem',
                   fontWeight: 900,
-                  color: '#4ADE55',
+                  color: '#22c55e',
                   margin: 0,
                   letterSpacing: '-0.03em',
                   lineHeight: 1,
@@ -248,7 +248,7 @@ export default function TravelerCard({
               padding: '12px 12px 11px',
               borderRadius: 14,
               border: '1px solid var(--border)',
-              background: selected ? 'rgba(74,222,85,0.06)' : 'var(--surface-2)',
+              background: selected ? 'rgba(34,197,94,0.06)' : 'var(--surface-2)',
               display: 'flex',
               flexDirection: 'column',
               gap: 6,
@@ -281,9 +281,9 @@ export default function TravelerCard({
             gap: 5,
             padding: '4px 10px',
             borderRadius: 999,
-            background: 'rgba(74,222,85,0.1)',
-            border: '1px solid rgba(74,222,85,0.2)',
-            color: '#34C759',
+            background: 'rgba(34,197,94,0.1)',
+            border: '1px solid rgba(34,197,94,0.2)',
+            color: '#16a34a',
             fontSize: '0.7rem',
             fontWeight: 600,
           }}
@@ -356,14 +356,14 @@ export default function TravelerCard({
               display: 'flex',
               alignItems: 'center',
               gap: 5,
-              color: '#4ADE55',
+              color: '#22c55e',
               fontSize: '0.75rem',
               fontWeight: 700,
               flexShrink: 0,
               justifyContent: 'flex-end',
             }}
           >
-            <CheckCircle2 size={16} style={{ fill: 'rgba(74,222,85,0.15)' }} /> Vald
+            <CheckCircle2 size={16} style={{ fill: 'rgba(34,197,94,0.15)' }} /> Vald
           </div>
         ) : (
           <div
@@ -396,7 +396,7 @@ export default function TravelerCard({
                 padding: '5px 10px',
                 borderRadius: 999,
                 background: 'var(--accent-soft)',
-                border: '1px solid rgba(74,222,85,0.22)',
+                border: '1px solid rgba(34,197,94,0.22)',
                 color: 'var(--text)',
                 fontSize: '0.7rem',
                 fontWeight: 600,
@@ -427,8 +427,8 @@ export default function TravelerCard({
               style={{
                 padding: '5px 10px',
                 borderRadius: 999,
-                background: bookingMeta.seatsLeft > 0 ? 'rgba(74,222,85,0.08)' : 'rgba(239,68,68,0.08)',
-                border: `1px solid ${bookingMeta.seatsLeft > 0 ? 'rgba(74,222,85,0.2)' : 'rgba(239,68,68,0.18)'}`,
+                background: bookingMeta.seatsLeft > 0 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
+                border: `1px solid ${bookingMeta.seatsLeft > 0 ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.18)'}`,
                 color: bookingMeta.seatsLeft > 0 ? '#15803d' : '#dc2626',
                 fontSize: '0.7rem',
                 fontWeight: 700,

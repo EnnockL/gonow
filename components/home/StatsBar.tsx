@@ -44,7 +44,7 @@ export default function StatsBar() {
               style={{
                 position: 'absolute',
                 inset: 0,
-                background: 'linear-gradient(90deg, rgba(74,222,85,0.22) 0%, transparent 28%, transparent 100%)',
+                background: 'linear-gradient(90deg, rgba(34,197,94,0.22) 0%, transparent 28%, transparent 100%)',
               }}
             />
             <div
@@ -112,11 +112,11 @@ export default function StatsBar() {
                     gap: 10,
                     padding: isMobile ? '12px 16px' : '14px 18px',
                     borderRadius: 999,
-                    background: '#4ADE55',
+                    background: '#22c55e',
                     color: '#0a0a0a',
                     fontSize: isMobile ? '0.84rem' : '0.92rem',
                     fontWeight: 700,
-                    boxShadow: '0 14px 30px rgba(74,222,85,0.18)',
+                    boxShadow: '0 14px 30px rgba(34,197,94,0.18)',
                   }}
                 >
                   Utforska nätverket <ArrowRight size={18} />
@@ -189,7 +189,7 @@ export default function StatsBar() {
                   </p>
                 </div>
 
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: '#4ADE55', fontSize: '0.84rem', fontWeight: 700 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: '#22c55e', fontSize: '0.84rem', fontWeight: 700 }}>
                   <Zap size={16} />
                   Samma dag i fler flöden
                 </div>
@@ -212,7 +212,7 @@ export default function StatsBar() {
                   position: 'absolute',
                   inset: 0,
                   background:
-                    'linear-gradient(120deg, transparent 0%, transparent 46%, rgba(74,222,85,0.28) 46.5%, transparent 48%, transparent 63%, rgba(74,222,85,0.22) 63.5%, transparent 65%, transparent 78%, rgba(74,222,85,0.16) 78.5%, transparent 80%)',
+                    'linear-gradient(120deg, transparent 0%, transparent 46%, rgba(34,197,94,0.28) 46.5%, transparent 48%, transparent 63%, rgba(34,197,94,0.22) 63.5%, transparent 65%, transparent 78%, rgba(34,197,94,0.16) 78.5%, transparent 80%)',
                   opacity: 0.95,
                 }}
               />
@@ -243,9 +243,9 @@ export default function StatsBar() {
                       marginBottom: 18,
                     }}
                   >
-                    <ShieldCheck size={18} style={{ color: '#4ADE55' }} />
+                    <ShieldCheck size={18} style={{ color: '#22c55e' }} />
                   </div>
-                  <p style={{ fontSize: '2.55rem', fontWeight: 800, letterSpacing: '-0.05em', color: '#4ADE55', lineHeight: 1 }}>
+                  <p style={{ fontSize: '2.55rem', fontWeight: 800, letterSpacing: '-0.05em', color: '#22c55e', lineHeight: 1 }}>
                     100%
                   </p>
                   <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', marginTop: 8, marginBottom: 6 }}>
@@ -270,9 +270,9 @@ export default function StatsBar() {
                       marginBottom: 18,
                     }}
                   >
-                    <Shield size={18} style={{ color: '#4ADE55' }} />
+                    <Shield size={18} style={{ color: '#22c55e' }} />
                   </div>
-                  <p style={{ fontSize: '2.55rem', fontWeight: 800, letterSpacing: '-0.05em', color: '#4ADE55', lineHeight: 1 }}>
+                  <p style={{ fontSize: '2.55rem', fontWeight: 800, letterSpacing: '-0.05em', color: '#22c55e', lineHeight: 1 }}>
                     250k
                   </p>
                   <p style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', marginTop: 8, marginBottom: 6 }}>

@@ -157,7 +157,7 @@ export default function Footer() {
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '2fr 1fr 1fr 1fr 1fr', gap: isMobile ? 24 : 32 }}>
             <div style={{ background: 'var(--footer-panel-bg)', border: '1px solid var(--footer-divider)', borderRadius: 20, padding: 24, gridColumn: isMobile ? '1 / -1' : undefined }}>
               <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 9, marginBottom: 18, textDecoration: 'none' }}>
-                <div style={{ width: 36, height: 36, borderRadius: 11, background: '#0a0a0a', border: '1.5px solid rgba(74, 222, 85, 0.45)', boxShadow: '0 0 18px rgba(74,222,85,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 36, height: 36, borderRadius: 11, background: '#0a0a0a', border: '1.5px solid rgba(34, 197, 94, 0.45)', boxShadow: '0 0 18px rgba(34,197,94,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Image src="/logo-mark.png" alt="Gonow logo" width={66} height={66} style={{ width: 66, height: 66, minWidth: 66, minHeight: 66, objectFit: 'contain', flexShrink: 0, display: 'block' }} />
                 </div>
                 <span style={{ fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-0.025em', color: 'var(--text)' }}>Gonow</span>

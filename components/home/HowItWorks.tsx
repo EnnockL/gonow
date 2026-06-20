@@ -75,7 +75,7 @@ export default function HowItWorks() {
                 key={step.num}
                 style={{
                   padding: isMobile ? '22px 18px' : '32px 28px',
-                  background: 'linear-gradient(180deg, #6EEF78 0%, #4ADE55 100%)',
+                  background: 'linear-gradient(180deg, #4ade80 0%, #22c55e 100%)',
                   border: '1px solid rgba(10,10,10,0.08)',
                   borderRadius: isMobile ? 18 : 16,
                   marginLeft: !isMobile && index > 0 ? -1 : 0,
@@ -95,7 +95,7 @@ export default function HowItWorks() {
                   const el = e.currentTarget as HTMLElement
                   el.style.zIndex = '0'
                   el.style.borderColor = 'rgba(10,10,10,0.08)'
-                  el.style.background = 'linear-gradient(180deg, #6EEF78 0%, #4ADE55 100%)'
+                  el.style.background = 'linear-gradient(180deg, #4ade80 0%, #22c55e 100%)'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>

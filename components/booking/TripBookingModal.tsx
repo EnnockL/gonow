@@ -71,7 +71,7 @@ function Field({ icon: Icon, ...props }: React.InputHTMLAttributes<HTMLInputElem
       <input
         {...props}
         style={inp}
-        onFocus={e => (e.target.style.borderColor = '#4ADE55')}
+        onFocus={e => (e.target.style.borderColor = '#22c55e')}
         onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
       />
     </div>
@@ -256,7 +256,7 @@ export default function TripBookingModal({
 
           {done ? (
               <div style={{ padding: isMobile ? '32px 16px' : '48px 24px', textAlign: 'center' }}>
-              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--accent-soft)', border: '1px solid rgba(74,222,85,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '1.5rem' }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--accent-soft)', border: '1px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '1.5rem' }}>
                 ✓
               </div>
               <h3 style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text)', marginBottom: 8 }}>Förfrågan skickad!</h3>
@@ -264,7 +264,7 @@ export default function TripBookingModal({
                 {trip.carrier} ser din bokning och väljer om de vill ta uppdraget.
               </p>
               {userId && (
-                <a href="/profil" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: '#4ADE55', color: '#0a0a0a', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none' }}>
+                <a href="/profil" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: '#22c55e', color: '#0a0a0a', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none' }}>
                   Följ din bokning →
                 </a>
               )}
@@ -319,7 +319,7 @@ export default function TripBookingModal({
                   </span>
                 )}
                 {typeof trip.acceptedPassengers === 'number' && trip.acceptedPassengers > 0 && (
-                  <span style={{ padding: '6px 10px', borderRadius: 999, border: '1px solid rgba(74,222,85,0.28)', background: 'rgba(74,222,85,0.12)', color: '#4ADE55', fontSize: '0.72rem', fontWeight: 700 }}>
+                  <span style={{ padding: '6px 10px', borderRadius: 999, border: '1px solid rgba(34,197,94,0.28)', background: 'rgba(34,197,94,0.12)', color: '#22c55e', fontSize: '0.72rem', fontWeight: 700 }}>
                     {trip.acceptedPassengers} passagerare redan bekräftade
                   </span>
                 )}
@@ -347,9 +347,9 @@ export default function TripBookingModal({
                     style={{
                       padding: '12px 14px',
                       borderRadius: 12,
-                      border: '1px solid rgba(74,222,85,0.28)',
-                      background: 'rgba(74,222,85,0.12)',
-                      color: '#4ADE55',
+                      border: '1px solid rgba(34,197,94,0.28)',
+                      background: 'rgba(34,197,94,0.12)',
+                      color: '#22c55e',
                       fontSize: '0.82rem',
                       fontWeight: 600,
                     }}
@@ -361,9 +361,9 @@ export default function TripBookingModal({
                     {SERVICE_TYPES.map(({ key, icon: Icon, label }) => (
                       <button key={key} type="button" onClick={() => setType(key)} style={{
                         padding: '10px 6px', borderRadius: 10,
-                        border: `1px solid ${type === key ? '#4ADE55' : 'rgba(255,255,255,0.1)'}`,
-                        background: type === key ? 'rgba(74,222,85,0.15)' : 'rgba(255,255,255,0.06)',
-                        color: type === key ? '#4ADE55' : 'rgba(255,255,255,0.55)',
+                        border: `1px solid ${type === key ? '#22c55e' : 'rgba(255,255,255,0.1)'}`,
+                        background: type === key ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)',
+                        color: type === key ? '#22c55e' : 'rgba(255,255,255,0.55)',
                         cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 500,
                         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
                         transition: 'all 0.15s',
@@ -382,9 +382,9 @@ export default function TripBookingModal({
                     {WEIGHT_PRESETS.map(w => (
                       <button key={w} type="button" onClick={() => setWeight(w)} style={{
                         padding: '7px 14px', borderRadius: 8,
-                        border: `1px solid ${weight === w ? '#4ADE55' : 'rgba(255,255,255,0.1)'}`,
-                        background: weight === w ? 'rgba(74,222,85,0.15)' : 'rgba(255,255,255,0.06)',
-                        color: weight === w ? '#4ADE55' : 'rgba(255,255,255,0.55)',
+                        border: `1px solid ${weight === w ? '#22c55e' : 'rgba(255,255,255,0.1)'}`,
+                        background: weight === w ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)',
+                        color: weight === w ? '#22c55e' : 'rgba(255,255,255,0.55)',
                         fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
                       }}>
                         {w < 20 ? `${w} kg` : '20+ kg'}
@@ -403,9 +403,9 @@ export default function TripBookingModal({
                       return (
                         <button key={count} type="button" disabled={disabled} onClick={() => setPassengerSeats(count)} style={{
                           padding: '7px 14px', borderRadius: 8,
-                          border: `1px solid ${passengerSeats === count ? '#4ADE55' : 'rgba(255,255,255,0.1)'}`,
-                          background: passengerSeats === count ? 'rgba(74,222,85,0.15)' : 'rgba(255,255,255,0.06)',
-                          color: disabled ? 'rgba(255,255,255,0.22)' : passengerSeats === count ? '#4ADE55' : 'rgba(255,255,255,0.55)',
+                          border: `1px solid ${passengerSeats === count ? '#22c55e' : 'rgba(255,255,255,0.1)'}`,
+                          background: passengerSeats === count ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)',
+                          color: disabled ? 'rgba(255,255,255,0.22)' : passengerSeats === count ? '#22c55e' : 'rgba(255,255,255,0.55)',
                           fontSize: '0.8rem', cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', opacity: disabled ? 0.55 : 1,
                         }}>
                           {count} st
@@ -420,11 +420,11 @@ export default function TripBookingModal({
                 <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Adresser</p>
                 <div style={{ position: 'relative' }}>
                   <MapPin size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
-                  <input value={pickup} onChange={e => setPickup(e.target.value)} placeholder={`Upphämtning i ${trip.from}`} required style={inp} onFocus={e => (e.target.style.borderColor = '#4ADE55')} onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
+                  <input value={pickup} onChange={e => setPickup(e.target.value)} placeholder={`Upphämtning i ${trip.from}`} required style={inp} onFocus={e => (e.target.style.borderColor = '#22c55e')} onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
                 </div>
                 <div style={{ position: 'relative' }}>
                   <MapPin size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
-                  <input value={dropoff} onChange={e => setDropoff(e.target.value)} placeholder={`Avlämning i ${trip.to}`} required style={inp} onFocus={e => (e.target.style.borderColor = '#4ADE55')} onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
+                  <input value={dropoff} onChange={e => setDropoff(e.target.value)} placeholder={`Avlämning i ${trip.to}`} required style={inp} onFocus={e => (e.target.style.borderColor = '#22c55e')} onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
                 </div>
               </div>
 

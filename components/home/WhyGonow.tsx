@@ -116,7 +116,7 @@ export default function WhyGonow() {
               width: isMobile ? 180 : 280,
               height: isMobile ? 180 : 280,
               borderRadius: '50%',
-              background: 'rgba(74,222,85,0.22)',
+              background: 'rgba(34,197,94,0.22)',
               filter: 'blur(56px)',
               pointerEvents: 'none',
             }}
@@ -138,7 +138,7 @@ export default function WhyGonow() {
                   transition: 'border-color 0.15s',
                 }}
                 onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(74,222,85,0.45)'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(34,197,94,0.45)'
                 }}
                 onMouseLeave={(e) => {
                   ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'

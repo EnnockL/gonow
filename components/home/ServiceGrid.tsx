@@ -68,7 +68,7 @@ export default function ServiceGrid() {
               style={{
                 position: 'absolute',
                 inset: 0,
-                background: 'linear-gradient(135deg, rgba(74,222,85,0.12) 0%, transparent 50%)',
+                background: 'linear-gradient(135deg, rgba(34,197,94,0.12) 0%, transparent 50%)',
                 pointerEvents: 'none',
               }}
             />
@@ -81,13 +81,13 @@ export default function ServiceGrid() {
                   gap: 8,
                   padding: '8px 14px',
                   borderRadius: 999,
-                  background: 'rgba(74,222,85,0.15)',
-                  border: '1px solid rgba(74,222,85,0.3)',
+                  background: 'rgba(34,197,94,0.15)',
+                  border: '1px solid rgba(34,197,94,0.3)',
                   backdropFilter: 'blur(12px)',
                   alignSelf: 'flex-start',
                 }}
               >
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ADE55', boxShadow: '0 0 8px #4ADE55' }} />
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px #22c55e' }} />
                 <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#fff', letterSpacing: '0.04em' }}>Sverige, live-nätverk</span>
               </div>
 
@@ -99,7 +99,7 @@ export default function ServiceGrid() {
                     { val: '2 400+', label: 'på väntelistan' },
                   ].map(({ val, label }) => (
                     <div key={label}>
-                      <p style={{ fontSize: 'clamp(1.6rem, 3vw, 2.4rem)', fontWeight: 800, color: '#4ADE55', letterSpacing: '-0.04em', lineHeight: 1 }}>{val}</p>
+                      <p style={{ fontSize: 'clamp(1.6rem, 3vw, 2.4rem)', fontWeight: 800, color: '#22c55e', letterSpacing: '-0.04em', lineHeight: 1 }}>{val}</p>
                       <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.65)', marginTop: 4, fontWeight: 500 }}>{label}</p>
                     </div>
                   ))}
@@ -112,7 +112,7 @@ export default function ServiceGrid() {
                   Vanliga människor kör redan din väg. Vi kopplar samman dem med avsändare, utan tomma bilar och utan onödig frakt.
                 </p>
 
-                <Link href="/skicka" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#4ADE55', color: '#0a0a0a', padding: '12px 22px', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none' }}>
+                <Link href="/skicka" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#22c55e', color: '#0a0a0a', padding: '12px 22px', borderRadius: 10, fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none' }}>
                   Skicka något nu <ArrowUpRight size={15} />
                 </Link>
               </div>
@@ -147,7 +147,7 @@ export default function ServiceGrid() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 20, width: '100%' }}>
-            <div style={{ width: 52, height: 52, borderRadius: 14, background: 'var(--service-card-icon-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid rgba(74,222,85,0.16)' }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: 'var(--service-card-icon-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid rgba(34,197,94,0.16)' }}>
               <Car size={22} style={{ color: 'var(--secondary-strong)' }} />
             </div>
             <div>
@@ -195,7 +195,7 @@ function ServiceCard({ service }: { service: typeof services[0] }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--service-card-icon-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(74,222,85,0.16)' }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--service-card-icon-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(34,197,94,0.16)' }}>
           <service.icon size={18} style={{ color: 'var(--secondary-strong)' }} />
         </div>
         {service.tag && (
