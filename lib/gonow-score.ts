@@ -2,9 +2,9 @@ export interface GonowScoreInput {
   rating_avg: number
   rating_count: number
   bankid_verified: boolean
-  completion_rate?: number    // 0–1
+  completion_rate?: number    // 0–100 (percent)
   completed_trips?: number    // absolute count
-  punctuality_rate?: number   // 0–1, % on time (future data)
+  punctuality_rate?: number   // 0–100, % on time (future data)
   avg_response_min?: number   // minutes (future data)
 }
 
@@ -64,13 +64,14 @@ export function calculateGonowScore(input: GonowScoreInput): GonowScoreResult {
   // Trips: logarithmic 0→0, 1→7, 5→13, 20→20, 100→25 (max 25p)
   const tripsPts = trips > 0 ? Math.min(Math.log(trips + 1) / Math.log(101) * 25, 25) : 0
 
-  // Completion: 15p
-  const completionRate = input.completion_rate ?? (trips > 0 ? 0.95 : 0)
-  const completionPts = completionRate * 15
+  // Completion: 15p (completion_rate is 0–100)
+  const completionRate = input.completion_rate ?? (trips > 0 ? 95 : 0)
+  const completionPts = (completionRate / 100) * 15
 
   // Punctuality: 5p bonus (future — show as locked until data exists)
+  // punctuality_rate is 0–100
   const punctualityRate = input.punctuality_rate ?? 0
-  const punctualityPts = punctualityRate * 5
+  const punctualityPts = (punctualityRate / 100) * 5
 
   // Response time: 5p bonus (10min=5p, 60min=2p, >60min=0)
   const avgMin = input.avg_response_min
@@ -143,6 +144,7 @@ export function getNextLevelRequirements(
   return reqs
 }
 
+// Returns 0–100 to match the DB column and GonowScoreInput.completion_rate
 export function completionRateFromOrders(
   orders: { carrier_id?: string | null; status: string }[],
   userId: string
@@ -150,5 +152,5 @@ export function completionRateFromOrders(
   const mine = orders.filter(o => o.carrier_id === userId)
   if (mine.length === 0) return 0
   const done = mine.filter(o => o.status === 'delivered' || o.status === 'confirmed').length
-  return done / mine.length
+  return Math.round((done / mine.length) * 100)
 }

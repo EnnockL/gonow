@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Package, Users, RotateCcw, MapPin, Phone, Mail, User } from 'lucide-react'
+import { X, Package, Users, RotateCcw, MapPin, Phone, User, ChevronLeft } from 'lucide-react'
 import { saveBooking } from '@/lib/bookings'
 import { useAuth } from '@/hooks/useAuth'
 import AuthModal from '@/components/auth/AuthModal'
@@ -43,439 +43,398 @@ interface Props {
 }
 
 const SERVICE_TYPES = [
-  { key: 'package' as const, icon: Package, label: 'Paket' },
-  { key: 'passenger' as const, icon: Users, label: 'Passagerare' },
-  { key: 'return' as const, icon: RotateCcw, label: 'Retur' },
+  { key: 'package' as const, icon: Package, label: 'Paket', desc: 'Skicka ett paket med föraren' },
+  { key: 'passenger' as const, icon: Users, label: 'Passagerare', desc: 'Boka en plats i bilen' },
+  { key: 'return' as const, icon: RotateCcw, label: 'Retur', desc: 'Hämta upp något på vägen' },
 ]
 
 const WEIGHT_PRESETS = [1, 2, 5, 10, 20]
 
-const inp: React.CSSProperties = {
-  width: '100%',
-  padding: '10px 12px 10px 34px',
-  borderRadius: 8,
-  border: '1px solid rgba(255,255,255,0.1)',
-  background: 'rgba(255,255,255,0.07)',
-  color: '#ffffff',
-  fontSize: '0.85rem',
-  fontFamily: 'inherit',
-  outline: 'none',
-  boxSizing: 'border-box',
-  transition: 'border-color 0.15s',
+type StepKey = 'profile' | 'type' | 'details' | 'addresses' | 'contact' | 'confirm'
+
+function getSteps(type: string, lockType: boolean): StepKey[] {
+  const steps: StepKey[] = ['profile']
+  if (!lockType) steps.push('type')
+  steps.push('details', 'addresses', 'contact', 'confirm')
+  return steps
 }
 
-function Field({ icon: Icon, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { icon: React.ElementType }) {
+const STEP_META: Record<StepKey, { emoji: string; title: (type: string) => string; sub: (type: string) => string }> = {
+  profile:   { emoji: '👋', title: () => 'Din förare',               sub: () => 'Se profil, betyg och chatta innan du bokar' },
+  type:      { emoji: '🚚', title: () => 'Vad vill du göra?',        sub: () => 'Välj typ av uppdrag för denna resa' },
+  details:   { emoji: '📦', title: t => t === 'passenger' ? 'Hur många åker?' : 'Hur tungt är det?', sub: t => t === 'passenger' ? 'Välj antal platser du behöver' : 'Välj vikt för ditt paket' },
+  addresses: { emoji: '📍', title: () => 'Var ska det hämtas?',      sub: () => 'Ange adresser för upphämtning och avlämning' },
+  contact:   { emoji: '👤', title: t => t === 'passenger' ? 'Dina uppgifter' : 'Avsändare & mottagare', sub: t => t === 'passenger' ? 'Så föraren kan nå dig' : 'Kontaktuppgifter för båda parter' },
+  confirm:   { emoji: '✅', title: () => 'Allt ser bra ut!',         sub: () => 'Granska och skicka din bokningsförfrågan' },
+}
+
+const fieldStyle: React.CSSProperties = {
+  width: '100%', padding: '12px 14px 12px 38px', borderRadius: 10,
+  border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)',
+  color: '#ffffff', fontSize: '16px', fontFamily: 'inherit', outline: 'none',
+  boxSizing: 'border-box', transition: 'border-color 0.15s',
+}
+
+function InputField({ icon: Icon, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { icon: React.ElementType }) {
   return (
     <div style={{ position: 'relative' }}>
-      <Icon size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)', pointerEvents: 'none' }} />
-      <input
-        {...props}
-        style={inp}
+      <Icon size={14} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.35)', pointerEvents: 'none' }} />
+      <input {...props} style={fieldStyle}
         onFocus={e => (e.target.style.borderColor = '#22c55e')}
-        onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
-      />
+        onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.12)')} />
     </div>
   )
 }
 
-export default function TripBookingModal({
-  trip,
-  onClose,
-  initialType = 'package',
-  lockType = false,
-}: Props) {
+export default function TripBookingModal({ trip, onClose, initialType = 'package', lockType = false }: Props) {
   const { userId, profile } = useAuth()
-  const vehicleLabel = [trip.vehicleMake, trip.vehicleModel].filter(Boolean).join(' ') || trip.vehicleType || ''
 
   const [type, setType] = useState<'package' | 'passenger' | 'return'>(initialType)
   const [weight, setWeight] = useState(2)
-  const [passengerSeats, setPassengerSeats] = useState(1)
+  const [seats, setSeats] = useState(1)
   const [desc, setDesc] = useState('')
   const [pickup, setPickup] = useState('')
   const [dropoff, setDropoff] = useState('')
   const [sName, setSName] = useState('')
   const [sPhone, setSPhone] = useState('')
-  const [sEmail, setSEmail] = useState('')
+  const [rName, setRName] = useState('')
+  const [rPhone, setRPhone] = useState('')
+  const [done, setDone] = useState(false)
+  const [showAuth, setShowAuth] = useState(false)
+  const [pendingSubmit, setPendingSubmit] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  const steps = getSteps(type, lockType)
+  const [stepIdx, setStepIdx] = useState(0)
+  const currentStep = steps[stepIdx]
+  const isPassenger = type === 'passenger'
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check(); window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     if (profile) {
       setSName(n => n || profile.name || '')
       setSPhone(p => p || profile.phone || '')
-      setSEmail(e => e || profile.email || '')
     }
   }, [profile])
-  const [rName, setRName] = useState('')
-  const [rPhone, setRPhone] = useState('')
-  const [rEmail, setREmail] = useState('')
-  const [done, setDone] = useState(false)
-  const [showAuth, setShowAuth] = useState(false)
-  const [pendingSubmit, setPendingSubmit] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
 
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
-
-  const isPassenger = type === 'passenger'
-  const tooManySeats = isPassenger && typeof trip.seatsLeft === 'number' && passengerSeats > trip.seatsLeft
-
-  // Auto-submit after login if user logged in on the same tab (not via email confirmation in new tab)
   useEffect(() => {
     if (pendingSubmit && userId && !done) {
       setPendingSubmit(false)
       const draft = loadPendingBookingDraft()
-      // If draft is gone, /auth/callback already submitted it — don't double-submit
       if (!draft || draft.trip_id !== trip.id) return
       doSaveBooking(userId, draft)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, pendingSubmit])
 
-  function calcPriceEst(): number {
-    if (isPassenger) {
-      return (trip.pricePerSeat ?? trip.price ?? 0) * (passengerSeats || 1)
-    }
-    if (trip.pricePerKg && weight > 0) return Math.round(trip.pricePerKg * weight * 100) / 100
+  function calcPrice() {
+    if (isPassenger) return (trip.pricePerSeat ?? trip.price ?? 0) * (seats || 1)
     return trip.price ?? 0
-  }
-
-  const priceEstimate = calcPriceEst()
-  const sectionStyle: React.CSSProperties = {
-    padding: isMobile ? '14px' : '16px',
-    borderRadius: 16,
-    border: '1px solid rgba(255,255,255,0.1)',
-    background: 'rgba(255,255,255,0.045)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 10,
   }
 
   function buildDraft(): PendingBookingDraft {
     return {
       trip_id: trip.id,
       service_type: type,
-      seats_requested: isPassenger ? passengerSeats : undefined,
+      seats_requested: isPassenger ? seats : undefined,
       weight_kg: isPassenger ? 0 : weight,
       description: desc,
       pickup_address: pickup,
       dropoff_address: dropoff,
       sender_name: sName,
       sender_phone: sPhone,
-      sender_email: sEmail,
+      sender_email: '',
       recipient_name: isPassenger ? sName : rName,
       recipient_phone: isPassenger ? sPhone : rPhone,
-      recipient_email: isPassenger ? sEmail : rEmail,
+      recipient_email: '',
       status: 'pending',
-      price_est: priceEstimate,
+      price_est: calcPrice(),
     }
   }
 
   async function doSaveBooking(uid: string, draftOverride?: PendingBookingDraft) {
     const draft = draftOverride ?? buildDraft()
-    await saveBooking({
-      ...draft,
-      sender_id: uid,
-    })
+    await saveBooking({ ...draft, sender_id: uid })
     clearPendingBookingDraft()
     setDone(true)
   }
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault()
-    if (tooManySeats) return
-    if (!userId) {
-      savePendingBookingDraft(buildDraft())
-      setPendingSubmit(true)
-      setShowAuth(true)
+  function canProceed(): boolean {
+    switch (currentStep) {
+      case 'profile': return true
+      case 'type': return true
+      case 'details': return true
+      case 'addresses': return pickup.trim().length > 0 && dropoff.trim().length > 0
+      case 'contact': return sName.trim().length > 0 && sPhone.trim().length > 0 && (isPassenger || (rName.trim().length > 0 && rPhone.trim().length > 0))
+      case 'confirm': return true
+    }
+  }
+
+  async function handleNext() {
+    if (currentStep === 'confirm') {
+      if (!userId) {
+        savePendingBookingDraft(buildDraft())
+        setPendingSubmit(true)
+        setShowAuth(true)
+        return
+      }
+      setSubmitting(true)
+      await doSaveBooking(userId)
+      setSubmitting(false)
       return
     }
-    await doSaveBooking(userId)
+    if (canProceed()) setStepIdx(i => i + 1)
   }
+
+  function handleBack() {
+    if (stepIdx > 0) setStepIdx(i => i - 1)
+  }
+
+  const price = calcPrice()
+  const meta = STEP_META[currentStep]
+
+  const chipBtn = (active: boolean, disabled = false): React.CSSProperties => ({
+    padding: '10px 16px', borderRadius: 10, cursor: disabled ? 'not-allowed' : 'pointer',
+    border: `1.5px solid ${active ? '#22c55e' : 'rgba(255,255,255,0.12)'}`,
+    background: active ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)',
+    color: disabled ? 'rgba(255,255,255,0.25)' : active ? '#22c55e' : 'rgba(255,255,255,0.65)',
+    fontSize: '0.9rem', fontWeight: 700, fontFamily: 'inherit',
+    transition: 'all 0.15s', opacity: disabled ? 0.5 : 1,
+  })
 
   return (
     <>
       {showAuth && (
         <AuthModal
-          reason="Du behöver logga in för att skicka en bokningsförfrågan"
+          reason="Logga in för att skicka bokningsförfrågan"
           defaultTab="login"
           onClose={() => setShowAuth(false)}
           onSuccess={() => setShowAuth(false)}
         />
       )}
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed', inset: 0, zIndex: 300,
-          background: 'rgba(0,0,0,0.55)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: isMobile ? 10 : 20,
-        }}
-      >
-        <div
-          onClick={e => e.stopPropagation()}
-          style={{
-            background: 'rgba(10,10,10,0.95)',
-            border: '1px solid rgba(255,255,255,0.14)',
-            borderRadius: isMobile ? 18 : 24,
-            width: '100%',
-            maxWidth: 500,
-            maxHeight: isMobile ? '94vh' : '92vh',
-            overflowY: 'auto',
-            boxShadow: '0 32px 72px rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-          }}
-        >
-          <div style={{
-            padding: isMobile ? '16px 16px 14px' : '20px 24px 16px',
-            borderBottom: '1px solid var(--border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-            position: 'sticky', top: 0,
-            background: 'rgba(10,10,10,0.95)',
-            borderRadius: isMobile ? '18px 18px 0 0' : '24px 24px 0 0',
-            zIndex: 1,
-          }}>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? 10 : 20 }}>
+        <div onClick={e => e.stopPropagation()} style={{ background: 'rgba(10,10,10,0.97)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: isMobile ? 20 : 24, width: '100%', maxWidth: 480, boxShadow: '0 32px 72px rgba(0,0,0,0.65)', display: 'flex', flexDirection: 'column', maxHeight: isMobile ? '96vh' : '92vh', overflow: 'hidden' }}>
+
+          {/* Sticky header */}
+          <div style={{ padding: isMobile ? '14px 16px' : '18px 22px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <div>
-              <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.48)', marginBottom: 3 }}>Boka resa med {trip.carrier}</p>
-              <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.02em' }}>
-                {trip.from} → {trip.to}
-              </h2>
+              <p style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.45)', margin: '0 0 2px' }}>Boka med {trip.carrier}</p>
+              <p style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>{trip.from} → {trip.to}</p>
             </div>
-            <button
-              onClick={onClose}
-              style={{ width: 32, height: 32, borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.55)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-            >
-              <X size={14} />
+            <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <X size={13} />
             </button>
           </div>
 
-          {done ? (
-              <div style={{ padding: isMobile ? '32px 16px' : '48px 24px', textAlign: 'center' }}>
-              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--accent-soft)', border: '1px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '1.5rem' }}>
-                ✓
+          {/* Scrollable body */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '20px 16px 24px' : '24px 22px 28px' }}>
+            {done ? (
+              <div style={{ textAlign: 'center', paddingTop: 20 }}>
+                <div style={{ fontSize: '3rem', marginBottom: 16 }}>🎉</div>
+                <h3 style={{ fontWeight: 800, fontSize: '1.1rem', color: '#fff', marginBottom: 8 }}>Förfrågan skickad!</h3>
+                <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, marginBottom: 24 }}>
+                  {trip.carrier} ser din bokning och svarar snart.
+                </p>
+                {userId && (
+                  <a href="/profil" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '11px 22px', borderRadius: 10, background: '#22c55e', color: '#0a0a0a', fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none' }}>
+                    Följ din bokning →
+                  </a>
+                )}
               </div>
-              <h3 style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text)', marginBottom: 8 }}>Förfrågan skickad!</h3>
-              <p style={{ fontSize: '0.83rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: 20 }}>
-                {trip.carrier} ser din bokning och väljer om de vill ta uppdraget.
-              </p>
-              {userId && (
-                <a href="/profil" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: '#22c55e', color: '#0a0a0a', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none' }}>
-                  Följ din bokning →
-                </a>
-              )}
-            </div>
-          ) : (
-            <form onSubmit={submit} style={{ padding: isMobile ? '16px 16px 18px' : '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))',
-                gap: 10,
-              }}>
-                {[
-                  { label: 'Pris', value: `${priceEstimate} kr` },
-                  { label: 'Rutt', value: `${trip.from} → ${trip.to}` },
-                  { label: isPassenger ? 'Säten kvar' : 'Vikt kvar', value: isPassenger ? `${trip.seatsLeft ?? '-'} st` : `${trip.weightLeftKg ?? '-'} kg` },
-                ].map((item) => (
-                  <div key={item.label} style={{
-                    padding: isMobile ? '12px 12px' : '13px 14px',
-                    borderRadius: 16,
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    background: 'rgba(255,255,255,0.06)',
-                    minWidth: 0,
-                  }}>
-                    <p style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.48)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
-                      {item.label}
-                    </p>
-                    <strong style={{ display: 'block', fontSize: isMobile ? '0.92rem' : '0.96rem', color: '#ffffff', lineHeight: 1.3 }}>
-                      {item.value}
-                    </strong>
+            ) : (
+              <>
+                {/* Progress dots */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 28 }}>
+                  {steps.map((s, i) => (
+                    <div key={s} style={{ width: i === stepIdx ? 20 : 6, height: 6, borderRadius: 99, background: i === stepIdx ? '#22c55e' : i < stepIdx ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.15)', transition: 'all 0.25s' }} />
+                  ))}
+                </div>
+
+                {/* Step header */}
+                <div style={{ textAlign: 'center', marginBottom: 28 }}>
+                  <div style={{ fontSize: '2.2rem', marginBottom: 10 }}>{meta.emoji}</div>
+                  <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', margin: '0 0 6px', letterSpacing: '-0.02em' }}>{meta.title(type)}</h2>
+                  <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', margin: 0 }}>{meta.sub(type)}</p>
+                </div>
+
+                {/* ── Step: Profile ─────────────────────────────────── */}
+                {currentStep === 'profile' && (
+                  <div>
+                    <CarrierProfile
+                      name={trip.carrier}
+                      carrierId={trip.carrier_id}
+                      tripId={trip.id}
+                      variant="full"
+                      tripFrom={trip.from}
+                      tripTo={trip.to}
+                    />
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
+                      {trip.vehicleType && (
+                        <span style={{ padding: '5px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', fontWeight: 600 }}>
+                          {trip.vehicleType === 'car' ? '🚗 Bil' : trip.vehicleType === 'train' ? '🚆 Tåg' : trip.vehicleType === 'bus' ? '🚌 Buss' : trip.vehicleType}
+                        </span>
+                      )}
+                      {typeof trip.seatsLeft === 'number' && (
+                        <span style={{ padding: '5px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', fontWeight: 600 }}>
+                          {trip.seatsLeft} platser kvar
+                        </span>
+                      )}
+                      {typeof trip.weightLeftKg === 'number' && (
+                        <span style={{ padding: '5px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', fontWeight: 600 }}>
+                          {trip.weightLeftKg} kg utrymme
+                        </span>
+                      )}
+                    </div>
                   </div>
-                ))}
-              </div>
+                )}
 
-              <CarrierProfile
-                name={trip.carrier}
-                carrierId={trip.carrier_id}
-                tripId={trip.id}
-                variant={isPassenger ? 'full' : 'light'}
-                tripFrom={trip.from}
-                tripTo={trip.to}
-              />
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {vehicleLabel && (
-                  <span style={{ padding: '6px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: '#ffffff', fontSize: '0.72rem', fontWeight: 700 }}>
-                    {vehicleLabel}
-                  </span>
-                )}
-                {trip.vehiclePlate && (
-                  <span style={{ padding: '6px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: '#ffffff', fontSize: '0.72rem', fontWeight: 700 }}>
-                    Regnr {trip.vehiclePlate}
-                  </span>
-                )}
-                {typeof trip.acceptedPassengers === 'number' && trip.acceptedPassengers > 0 && (
-                  <span style={{ padding: '6px 10px', borderRadius: 999, border: '1px solid rgba(34,197,94,0.28)', background: 'rgba(34,197,94,0.12)', color: '#22c55e', fontSize: '0.72rem', fontWeight: 700 }}>
-                    {trip.acceptedPassengers} passagerare redan bekräftade
-                  </span>
-                )}
-                {typeof trip.seatsLeft === 'number' && (
-                  <span style={{ padding: '6px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: '#ffffff', fontSize: '0.72rem', fontWeight: 700 }}>
-                    {trip.seatsLeft} säten kvar
-                  </span>
-                )}
-                {typeof trip.vehicleSeatsTotal === 'number' && (
-                  <span style={{ padding: '6px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: '#ffffff', fontSize: '0.72rem', fontWeight: 700 }}>
-                    {trip.vehicleSeatsTotal} totalt i bilen
-                  </span>
-                )}
-                {trip.myBookingStatus && (
-                  <span style={{ padding: '6px 10px', borderRadius: 999, border: '1px solid rgba(59,130,246,0.16)', background: 'rgba(59,130,246,0.08)', color: '#93c5fd', fontSize: '0.72rem', fontWeight: 700 }}>
-                    {trip.myBookingStatus === 'accepted' ? 'Din förfrågan är accepterad' : trip.myBookingStatus === 'pending' ? 'Du väntar på svar' : 'Tidigare svar finns'}
-                  </span>
-                )}
-              </div>
-
-              <div style={sectionStyle}>
-                <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.48)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Typ av uppdrag</p>
-                {lockType ? (
-                  <div
-                    style={{
-                      padding: '12px 14px',
-                      borderRadius: 12,
-                      border: '1px solid rgba(34,197,94,0.28)',
-                      background: 'rgba(34,197,94,0.12)',
-                      color: '#22c55e',
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {SERVICE_TYPES.find((item) => item.key === type)?.label ?? 'Passagerare'}
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 8 }}>
-                    {SERVICE_TYPES.map(({ key, icon: Icon, label }) => (
+                {/* ── Step: Type ─────────────────────────────────────── */}
+                {currentStep === 'type' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {SERVICE_TYPES.map(({ key, icon: Icon, label, desc: d }) => (
                       <button key={key} type="button" onClick={() => setType(key)} style={{
-                        padding: '10px 6px', borderRadius: 10,
-                        border: `1px solid ${type === key ? '#22c55e' : 'rgba(255,255,255,0.1)'}`,
-                        background: type === key ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)',
-                        color: type === key ? '#22c55e' : 'rgba(255,255,255,0.55)',
-                        cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 500,
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                        display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
+                        borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                        border: `1.5px solid ${type === key ? '#22c55e' : 'rgba(255,255,255,0.1)'}`,
+                        background: type === key ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.05)',
                         transition: 'all 0.15s',
                       }}>
-                        <Icon size={14} /> {label}
+                        <div style={{ width: 40, height: 40, borderRadius: 10, border: `1px solid ${type === key ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.1)'}`, background: type === key ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: type === key ? '#22c55e' : 'rgba(255,255,255,0.5)' }}>
+                          <Icon size={18} />
+                        </div>
+                        <div>
+                          <p style={{ fontSize: '0.92rem', fontWeight: 700, color: type === key ? '#22c55e' : '#fff', margin: '0 0 2px' }}>{label}</p>
+                          <p style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>{d}</p>
+                        </div>
+                        {type === key && <div style={{ marginLeft: 'auto', width: 18, height: 18, borderRadius: '50%', background: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '0.65rem', color: '#0a0a0a', fontWeight: 900 }}>✓</div>}
                       </button>
                     ))}
                   </div>
                 )}
-              </div>
 
-              {!isPassenger && (
-                <div style={sectionStyle}>
-                  <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.48)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Vikt</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {WEIGHT_PRESETS.map(w => (
-                      <button key={w} type="button" onClick={() => setWeight(w)} style={{
-                        padding: '7px 14px', borderRadius: 8,
-                        border: `1px solid ${weight === w ? '#22c55e' : 'rgba(255,255,255,0.1)'}`,
-                        background: weight === w ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)',
-                        color: weight === w ? '#22c55e' : 'rgba(255,255,255,0.55)',
-                        fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
-                      }}>
-                        {w < 20 ? `${w} kg` : '20+ kg'}
-                      </button>
-                    ))}
+                {/* ── Step: Details (weight / seats) ─────────────────── */}
+                {currentStep === 'details' && !isPassenger && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                      {WEIGHT_PRESETS.map(w => (
+                        <button key={w} type="button" onClick={() => setWeight(w)} style={{ ...chipBtn(weight === w), minWidth: 70, textAlign: 'center' }}>
+                          {w < 20 ? `${w} kg` : '20+ kg'}
+                        </button>
+                      ))}
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Beskrivning (valfritt)</label>
+                      <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="T.ex. kläder, elektronik, böcker..." rows={2}
+                        style={{ ...fieldStyle, paddingLeft: 14, resize: 'none', lineHeight: 1.5 }}
+                        onFocus={e => (e.target.style.borderColor = '#22c55e')}
+                        onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.12)')} />
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {isPassenger && (
-                <div style={sectionStyle}>
-                  <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.48)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Antal personer</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {[1, 2, 3, 4].map((count) => {
-                      const disabled = typeof trip.seatsLeft === 'number' && count > trip.seatsLeft
+                {currentStep === 'details' && isPassenger && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
+                    {[1, 2, 3, 4].map(n => {
+                      const disabled = typeof trip.seatsLeft === 'number' && n > trip.seatsLeft
                       return (
-                        <button key={count} type="button" disabled={disabled} onClick={() => setPassengerSeats(count)} style={{
-                          padding: '7px 14px', borderRadius: 8,
-                          border: `1px solid ${passengerSeats === count ? '#22c55e' : 'rgba(255,255,255,0.1)'}`,
-                          background: passengerSeats === count ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)',
-                          color: disabled ? 'rgba(255,255,255,0.22)' : passengerSeats === count ? '#22c55e' : 'rgba(255,255,255,0.55)',
-                          fontSize: '0.8rem', cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', opacity: disabled ? 0.55 : 1,
-                        }}>
-                          {count} st
+                        <button key={n} type="button" disabled={disabled} onClick={() => !disabled && setSeats(n)}
+                          style={{ ...chipBtn(seats === n, disabled), minWidth: 80, textAlign: 'center', fontSize: '1.1rem' }}>
+                          {n} st
                         </button>
                       )
                     })}
+                    {typeof trip.seatsLeft === 'number' && (
+                      <p style={{ width: '100%', textAlign: 'center', fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', marginTop: 8 }}>
+                        {trip.seatsLeft} lediga platser kvar
+                      </p>
+                    )}
                   </div>
-                </div>
+                )}
+
+                {/* ── Step: Addresses ────────────────────────────────── */}
+                {currentStep === 'addresses' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Upphämtning</label>
+                      <InputField icon={MapPin} value={pickup} onChange={e => setPickup(e.target.value)} placeholder={`Adress i ${trip.from}`} autoFocus />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Avlämning</label>
+                      <InputField icon={MapPin} value={dropoff} onChange={e => setDropoff(e.target.value)} placeholder={`Adress i ${trip.to}`} />
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Step: Contact ──────────────────────────────────── */}
+                {currentStep === 'contact' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
+                        {isPassenger ? 'Dina uppgifter' : 'Avsändare'}
+                      </p>
+                      <InputField icon={User} value={sName} onChange={e => setSName(e.target.value)} placeholder="Namn" autoFocus />
+                      <InputField icon={Phone} value={sPhone} onChange={e => setSPhone(e.target.value)} placeholder="Telefon" type="tel" />
+                    </div>
+                    {!isPassenger && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Mottagare</p>
+                        <InputField icon={User} value={rName} onChange={e => setRName(e.target.value)} placeholder="Namn" />
+                        <InputField icon={Phone} value={rPhone} onChange={e => setRPhone(e.target.value)} placeholder="Telefon" type="tel" />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Step: Confirm ──────────────────────────────────── */}
+                {currentStep === 'confirm' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <CarrierProfile name={trip.carrier} carrierId={trip.carrier_id} tripId={trip.id} variant="light" tripFrom={trip.from} tripTo={trip.to} />
+                    {[
+                      { label: 'Typ', value: SERVICE_TYPES.find(s => s.key === type)?.label ?? type },
+                      isPassenger
+                        ? { label: 'Passagerare', value: `${seats} st` }
+                        : { label: 'Vikt', value: `${weight} kg` },
+                      { label: 'Upphämtning', value: pickup },
+                      { label: 'Avlämning', value: dropoff },
+                      { label: isPassenger ? 'Passagerare' : 'Avsändare', value: `${sName} · ${sPhone}` },
+                      ...(!isPassenger ? [{ label: 'Mottagare', value: `${rName} · ${rPhone}` }] : []),
+                      { label: 'Pris', value: `${price} kr` },
+                    ].map(row => (
+                      <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                        <span style={{ fontSize: '0.75rem', color: row.label === 'Pris' ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.4)', fontWeight: 600, flexShrink: 0 }}>{row.label}</span>
+                        <span style={{ fontSize: row.label === 'Pris' ? '1.1rem' : '0.82rem', color: row.label === 'Pris' ? '#22c55e' : '#fff', fontWeight: row.label === 'Pris' ? 900 : 600, textAlign: 'right' }}>{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Sticky footer — back/next */}
+          {!done && (
+            <div style={{ padding: isMobile ? '12px 16px 20px' : '14px 22px 20px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 10, flexShrink: 0 }}>
+              {stepIdx > 0 && (
+                <button type="button" onClick={handleBack} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.85rem', fontWeight: 600, flexShrink: 0 }}>
+                  <ChevronLeft size={15} /> Tillbaka
+                </button>
               )}
-
-              <div style={sectionStyle}>
-                <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Adresser</p>
-                <div style={{ position: 'relative' }}>
-                  <MapPin size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
-                  <input value={pickup} onChange={e => setPickup(e.target.value)} placeholder={`Upphämtning i ${trip.from}`} required style={inp} onFocus={e => (e.target.style.borderColor = '#22c55e')} onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <MapPin size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
-                  <input value={dropoff} onChange={e => setDropoff(e.target.value)} placeholder={`Avlämning i ${trip.to}`} required style={inp} onFocus={e => (e.target.style.borderColor = '#22c55e')} onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
-                </div>
-              </div>
-
-              <div style={sectionStyle}>
-                <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.48)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Beskrivning (valfritt)</p>
-                <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Beskriv kort vad som ska skickas..." rows={2}
-                  style={{ ...inp, paddingLeft: 12, resize: 'none', lineHeight: 1.5, color: '#ffffff' }}
-                  onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
-                  onBlur={e => (e.target.style.borderColor = 'var(--border)')}
-                />
-              </div>
-
-              <div style={sectionStyle}>
-                <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                  {isPassenger ? 'Passagerare' : 'Avsändare'}
-                </p>
-                <Field icon={User} value={sName} onChange={e => setSName(e.target.value)} placeholder="Namn" required />
-                <Field icon={Phone} value={sPhone} onChange={e => setSPhone(e.target.value)} placeholder="Telefon *" type="tel" required />
-                <Field icon={Mail} value={sEmail} onChange={e => setSEmail(e.target.value)} placeholder="E-post (valfritt)" type="email" />
-              </div>
-
-              {!isPassenger && (
-                <div style={sectionStyle}>
-                  <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Mottagare</p>
-                  <Field icon={User} value={rName} onChange={e => setRName(e.target.value)} placeholder="Namn" required />
-                  <Field icon={Phone} value={rPhone} onChange={e => setRPhone(e.target.value)} placeholder="Telefon *" type="tel" required />
-                  <Field icon={Mail} value={rEmail} onChange={e => setREmail(e.target.value)} placeholder="E-post (valfritt)" type="email" />
-                </div>
-              )}
-
-              {tooManySeats && (
-                <p style={{ fontSize: '0.74rem', color: '#fca5a5' }}>
-                  Det finns inte tillräckligt många lediga säten kvar för den här förfrågan.
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={tooManySeats}
-                style={{
-                  width: '100%', padding: '13px', borderRadius: 10, border: 'none',
-                  background: 'var(--accent)', color: '#0a0a0a',
-                  fontSize: '0.9rem', fontWeight: 700, cursor: tooManySeats ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
-                  transition: 'opacity 0.15s', opacity: tooManySeats ? 0.45 : 1,
-                }}
-                onMouseEnter={e => { if (!tooManySeats) (e.currentTarget as HTMLElement).style.opacity = '0.85' }}
-                onMouseLeave={e => { if (!tooManySeats) (e.currentTarget as HTMLElement).style.opacity = '1' }}
-              >
-                Skicka bokningsförfrågan →
+              <button type="button" onClick={handleNext} disabled={!canProceed() || submitting} style={{
+                flex: 1, padding: '13px', borderRadius: 10, border: 'none',
+                background: canProceed() && !submitting ? '#22c55e' : 'rgba(34,197,94,0.3)',
+                color: canProceed() && !submitting ? '#0a0a0a' : 'rgba(255,255,255,0.3)',
+                fontSize: '0.92rem', fontWeight: 800, cursor: canProceed() && !submitting ? 'pointer' : 'not-allowed',
+                fontFamily: 'inherit', transition: 'all 0.15s',
+              }}>
+                {submitting ? 'Skickar...' : currentStep === 'confirm' ? 'Skicka bokningsförfrågan →' : currentStep === 'profile' ? `Boka med ${trip.carrier.split(' ')[0]} →` : 'Nästa →'}
               </button>
-            </form>
+            </div>
           )}
         </div>
       </div>

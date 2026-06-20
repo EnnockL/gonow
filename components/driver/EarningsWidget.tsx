@@ -1,22 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-
-interface Pricing {
-  base_fee: number
-  per_km: number
-  per_kg: number
-  commission_pct: number
-}
+import { useEffect, useState, useMemo } from 'react'
+import { calculateTripPotential } from '@/lib/pricing'
 
 export default function EarningsWidget() {
   const [isMobile, setIsMobile] = useState(false)
   const [km, setKm] = useState(480)
   const [packages, setPackages] = useState(3)
   const [passengers, setPassengers] = useState(1)
-  const [pricePerKg, setPricePerKg] = useState(15)
-  const [pricePerSeat] = useState(150)
-  const [pricing, setPricing] = useState<Pricing | null>(null)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -25,29 +16,16 @@ export default function EarningsWidget() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const { createClient } = await import('@/lib/supabase')
-        const { data } = await createClient().from('pricing').select('*').single()
-        if (data) {
-          setPricing(data as Pricing)
-          setPricePerKg(data.per_kg ?? 15)
-        }
-      } catch {
-        // use defaults
-      }
-    }
-    load()
-  }, [])
+  const result = useMemo(() => calculateTripPotential({
+    distanceKm: km,
+    packageCount: packages,
+    avgWeightKg: 3,
+    passengerCount: passengers,
+  }), [km, packages, passengers])
 
-  const avgKgPerPackage = 3
-  const commission = pricing?.commission_pct ?? 15
-
-  const pkgRevenue = packages * pricePerKg * avgKgPerPackage
-  const liftRevenue = passengers * pricePerSeat
-  const total = pkgRevenue + liftRevenue
-  const payout = Math.round(total * (1 - commission / 100))
+  const { packageEarnings, liftEarnings, totalGross, totalCarrierPayout } = result
+  const commission = Math.round(totalGross * 0.15)
+  const payout = totalCarrierPayout
 
   const sliders = [
     { label: 'Avstånd', val: km, setVal: setKm, min: 50, max: 2000, step: 10, unit: 'km' },
@@ -114,7 +92,7 @@ export default function EarningsWidget() {
             alignSelf: isMobile ? 'flex-start' : 'auto',
           }}
         >
-          {100 - commission}% till dig
+          80% till dig
         </div>
       </div>
 
@@ -138,18 +116,21 @@ export default function EarningsWidget() {
         ))}
 
         <div style={{ borderRadius: 16, background: 'var(--surface)', border: '1px solid var(--border)', padding: '16px 18px' }}>
-          {[
-            [`Paket (${packages} × ~${avgKgPerPackage} kg × ${pricePerKg} kr/kg)`, `${Math.round(pkgRevenue)} kr`],
-            [`Passagerare (${passengers} × ${pricePerSeat} kr)`, `${Math.round(liftRevenue)} kr`],
-          ].map(([k, v]) => (
-            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, fontSize: '0.77rem', color: 'var(--muted-2)', marginBottom: 7 }}>
-              <span style={{ flex: 1 }}>{k}</span>
-              <span style={{ flexShrink: 0 }}>{v}</span>
+          {packages > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, fontSize: '0.77rem', color: 'var(--muted-2)', marginBottom: 7 }}>
+              <span style={{ flex: 1 }}>Paket ({packages} × ~3 kg · {km} km)</span>
+              <span style={{ flexShrink: 0 }}>{Math.round(packageEarnings)} kr</span>
             </div>
-          ))}
+          )}
+          {passengers > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, fontSize: '0.77rem', color: 'var(--muted-2)', marginBottom: 7 }}>
+              <span style={{ flex: 1 }}>Passagerare ({passengers} × {km} km)</span>
+              <span style={{ flexShrink: 0 }}>{Math.round(liftEarnings)} kr</span>
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, fontSize: '0.77rem', color: 'var(--muted)', marginBottom: 12 }}>
-            <span>Gonow-avgift ({commission}%)</span>
-            <span style={{ flexShrink: 0 }}>-{Math.round(total * commission / 100)} kr</span>
+            <span>Gonow-avgift (15%) + försäkring (5%)</span>
+            <span style={{ flexShrink: 0 }}>-{commission + Math.round(totalGross * 0.05)} kr</span>
           </div>
           <div
             style={{

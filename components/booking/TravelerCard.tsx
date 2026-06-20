@@ -102,12 +102,13 @@ export default function TravelerCard({
       }}
     >
       <div className="traveler-card__head" style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-        <button
+        <div
           onClick={(e) => {
             e.stopPropagation()
             onViewProfile?.()
           }}
           title="Se profil"
+          role={onViewProfile ? 'button' : undefined}
           style={{
             width: 52,
             height: 52,
@@ -136,7 +137,7 @@ export default function TravelerCard({
           }}
         >
           {initials}
-        </button>
+        </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
@@ -169,26 +170,24 @@ export default function TravelerCard({
                 <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{routeLabel}</span>
               </p>
               {onViewProfile && (
-                <button
+                <span
                   onClick={(e) => {
                     e.stopPropagation()
                     onViewProfile()
                   }}
+                  role="button"
                   style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
+                    display: 'inline-block',
                     marginTop: 6,
                     fontSize: '0.7rem',
                     color: 'var(--muted)',
                     cursor: 'pointer',
-                    fontFamily: 'inherit',
                     textDecoration: 'underline',
                     textUnderlineOffset: 2,
                   }}
                 >
                   Se profil
-                </button>
+                </span>
               )}
             </div>
 

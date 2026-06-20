@@ -91,9 +91,9 @@ export default function PackageCard({ pkg, recommended, onErbjud }: PackageCardP
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <p style={{ fontSize: '1.3rem', fontWeight: 900, color: '#22c55e', margin: 0, lineHeight: 1, letterSpacing: '-0.03em' }}>
-            +{pkg.payout} kr
+            upp till {pkg.payout} kr
           </p>
-          <p style={{ fontSize: '0.62rem', color: 'var(--muted)', margin: '2px 0 0' }}>ersättning</p>
+          <p style={{ fontSize: '0.62rem', color: 'var(--muted)', margin: '2px 0 0' }}>pristak</p>
         </div>
       </div>
 

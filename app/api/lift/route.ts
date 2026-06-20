@@ -9,20 +9,64 @@ export async function GET(req: NextRequest) {
     const date = searchParams.get('date')
     const supabase = createServiceClient()
 
+    const passengerId = searchParams.get('passenger_id')
+    const carrierId = searchParams.get('carrier_id')
+
     let query = supabase
       .from('lift_requests')
-      .select('*, users(name, rating_avg, avatar_url)')
-      .eq('status', 'open')
-      .gt('expires_at', new Date().toISOString())
+      .select('*')
       .order('travel_date', { ascending: true })
+
+    if (carrierId) {
+      query = query.eq('carrier_id', carrierId)
+    } else if (passengerId) {
+      query = query.eq('passenger_id', passengerId)
+    } else {
+      query = query.eq('status', 'open').gt('expires_at', new Date().toISOString())
+    }
 
     if (from) query = query.ilike('from_city', `%${from}%`)
     if (to) query = query.ilike('to_city', `%${to}%`)
     if (date) query = query.eq('travel_date', date)
 
-    const { data, error } = await query
+    const { data: liftData, error } = await query
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ lift_requests: data ?? [] })
+    if (!liftData || liftData.length === 0) {
+      return NextResponse.json({ lift_requests: [] })
+    }
+
+    // Batch-fetch user info for passengers and carriers without relying on FK relations
+    const userIds = [
+      ...new Set([
+        ...liftData.map((l: { passenger_id: string | null }) => l.passenger_id).filter(Boolean) as string[],
+        ...liftData.map((l: { carrier_id: string | null }) => l.carrier_id).filter(Boolean) as string[],
+      ]),
+    ]
+
+    // Include phone only for personal queries (passenger or carrier filtered)
+    const includePhone = !!(passengerId || carrierId)
+    const userSelect = includePhone
+      ? 'id, name, rating_avg, avatar_url, phone'
+      : 'id, name, rating_avg, avatar_url'
+
+    const usersMap = new Map<string, { id: string; name: string; rating_avg: number; avatar_url: string | null; phone?: string | null }>()
+    if (userIds.length > 0) {
+      const { data: usersData } = await supabase
+        .from('users')
+        .select(userSelect)
+        .in('id', userIds)
+      for (const u of usersData ?? []) {
+        usersMap.set(u.id, u)
+      }
+    }
+
+    const enriched = liftData.map((l: { passenger_id: string | null; carrier_id: string | null }) => ({
+      ...l,
+      users: l.passenger_id ? (usersMap.get(l.passenger_id) ?? null) : null,
+      carrier: l.carrier_id ? (usersMap.get(l.carrier_id) ?? null) : null,
+    }))
+
+    return NextResponse.json({ lift_requests: enriched })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
@@ -32,7 +76,6 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
-    // Validate travel_date not in the past
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const travelDate = new Date(body.travel_date)

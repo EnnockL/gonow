@@ -5,6 +5,7 @@ import { Car, Train, Bus, Plane, CheckCircle2, Loader2, ArrowRight, MapPin, Phon
 import { saveTrip } from './MyTrips'
 import { useAuth } from '@/hooks/useAuth'
 import { loadUserProfileMeta, saveUserProfileMeta } from '@/lib/profile-meta'
+import { calculateTripPotential } from '@/lib/pricing'
 
 const vehicles = [
   { value: 'car',    icon: Car,   label: 'Bil'  },
@@ -119,11 +120,13 @@ export default function TripRegistration() {
     }))
   }, [userId])
 
-  const estEarnings = route
-    ? Math.round(
-        (form.price_per_kg * 5 * (form.allows_packages ? 1 : 0)
-          + form.price_per_seat * form.seats_available) * 0.85
-      )
+  const tripPotential = route
+    ? calculateTripPotential({
+        distanceKm: route.distance_km,
+        packageCount: form.allows_packages ? 3 : 0,
+        avgWeightKg: 5,
+        passengerCount: form.allows_passengers ? form.seats_available : 0,
+      })
     : null
 
   async function handleSubmit(e: React.FormEvent) {
@@ -499,19 +502,33 @@ export default function TripRegistration() {
         </div>
       </div>
 
-      {/* Earnings preview */}
-      {route && (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: 10 }}>
-          <div>
-            <p style={{ fontSize: '0.72rem', color: 'var(--muted)', marginBottom: 4 }}>Uppskattad utbetalning</p>
-            <p style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--success)', letterSpacing: '-0.03em' }}>
-              {estEarnings} kr
-            </p>
+      {/* Potential earnings box */}
+      {route && tripPotential && (
+        <div style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0.04) 100%)', border: '2px solid rgba(34,197,94,0.3)', borderRadius: 14, padding: '16px 18px' }}>
+          <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#22c55e', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px' }}>
+            Din resa kan bli värd upp till {tripPotential.totalCarrierPayout} kr
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {form.allows_packages && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
+                <span style={{ color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}><PkgIcon size={13} style={{ color: '#22c55e' }} /> Paket (upp till 3 st)</span>
+                <span style={{ fontWeight: 700, color: 'var(--text)' }}>{Math.round(tripPotential.packageEarnings * 0.8)} kr</span>
+              </div>
+            )}
+            {form.allows_passengers && form.seats_available > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
+                <span style={{ color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}><Users size={13} style={{ color: '#3b82f6' }} /> Lift ({form.seats_available} platser)</span>
+                <span style={{ fontWeight: 700, color: 'var(--text)' }}>{Math.round(tripPotential.liftEarnings * 0.8)} kr</span>
+              </div>
+            )}
+            <div style={{ borderTop: '1px solid rgba(34,197,94,0.2)', paddingTop: 8, marginTop: 2, display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
+              <span style={{ color: 'var(--text)', fontWeight: 600 }}>Total möjlig intäkt</span>
+              <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#22c55e' }}>{tripPotential.totalCarrierPayout} kr</span>
+            </div>
           </div>
-          <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--muted)', lineHeight: 1.6 }}>
-            <p>85% av intäkten</p>
-            <p>går direkt till dig</p>
-          </div>
+          <p style={{ fontSize: '0.68rem', color: 'var(--muted)', margin: '10px 0 0', lineHeight: 1.5 }}>
+            Baserat på {route.distance_km} km. 80% utbetalas direkt till dig.
+          </p>
         </div>
       )}
 

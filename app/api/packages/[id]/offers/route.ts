@@ -39,8 +39,8 @@ export async function POST(
 
     if (pkg && body.offered_price && body.offered_price > pkg.price_ceiling) {
       return NextResponse.json(
-        { error: 'Erbjudet pris får inte överstiga pristak.' },
-        { status: 422 }
+        { error: 'Erbjudandet får inte överstiga Gonows maxpris.' },
+        { status: 400 }
       )
     }
 
