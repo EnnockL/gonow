@@ -177,6 +177,7 @@ function SkickaPageContent() {
   const [liftDate, setLiftDate]         = useState('')
   const [liftPassengers, setLiftPassengers] = useState(1)
   const [isMobile, setIsMobile]         = useState(false)
+  const [mobileLiveTab, setMobileLiveTab] = useState(false)
 
   const [sender, setSender]       = useState<ContactInfo>({ name: '', phone: '', email: '' })
   const [recipient, setRecipient] = useState<ContactInfo>({ name: '', phone: '', email: '' })
@@ -474,12 +475,20 @@ function SkickaPageContent() {
                   {([['skicka', 'Skicka paket'], ['lift', 'Boka lift']] as const).map(([key, label]) => (
                     <button
                       key={key}
-                      className={`sk-tab ${tabMode === key ? 'sk-tab-active' : ''}`}
-                      onClick={() => switchTab(key)}
+                      className={`sk-tab ${tabMode === key && !mobileLiveTab ? 'sk-tab-active' : ''}`}
+                      onClick={() => { setMobileLiveTab(false); switchTab(key) }}
                     >
                       {label}
                     </button>
                   ))}
+                  {isMobile && (
+                    <button
+                      className={`sk-tab ${mobileLiveTab ? 'sk-tab-active' : ''}`}
+                      onClick={() => setMobileLiveTab(true)}
+                    >
+                      Live-resor
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -488,7 +497,7 @@ function SkickaPageContent() {
                 <div className="sk-simple-inner">
 
                   {/* Left: form */}
-                  <div className="sk-simple-left">
+                  <div className="sk-simple-left" style={isMobile && mobileLiveTab ? { display: 'none' } : undefined}>
 
                     <p className="sk-eyebrow">{tabMode === 'lift' ? 'Samåkning' : 'Skicka paket'}</p>
                     <h2 className="sk-simple-title">
@@ -506,11 +515,11 @@ function SkickaPageContent() {
                       {(tabMode === 'lift'
                         ? [
                             { icon: <Calendar size={13} />, label: liftDate ? new Date(liftDate).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }) : 'Flexibelt datum' },
-                            { icon: <Users size={13} />, label: `${liftPassengers} pass.` },
+                            ...(!isMobile ? [{ icon: <Users size={13} />, label: `${liftPassengers} pass.` }] : []),
                             { icon: <Shield size={13} />, label: 'Verifierade resor' },
                           ]
                         : [
-                            { icon: <Package size={13} />, label: simpleWeight < 20 ? `${simpleWeight} kg` : '20+ kg' },
+                            ...(!isMobile ? [{ icon: <Package size={13} />, label: simpleWeight < 20 ? `${simpleWeight} kg` : '20+ kg' }] : []),
                             { icon: <Clock size={13} />, label: 'Snabb matchning' },
                             { icon: <Shield size={13} />, label: 'BankID-nätverk' },
                           ]).map((item) => (
@@ -641,7 +650,7 @@ function SkickaPageContent() {
                   </div>
 
                   {/* Right: live trips panel */}
-                  <div className="sk-simple-visual">
+                  <div className="sk-simple-visual" style={isMobile && !mobileLiveTab ? { display: 'none' } : undefined}>
                     {/* Header */}
                     <div className="sk-visual-head">
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1387,6 +1396,7 @@ function SkickaPageContent() {
           border-radius: 12px;
           flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
+          line-height: 1;
           font-size: 0.78rem; font-weight: 700;
           border: 1px solid var(--border);
           background: var(--surface-2);
@@ -2660,11 +2670,11 @@ function SkickaPageContent() {
 
         @media (max-width: 700px) {
           .sk-shell {
-            padding-top: 68px;
+            padding-top: 56px;
             padding-bottom: 44px;
           }
           .sk-wrap {
-            padding: 18px 16px 40px;
+            padding: 10px 16px 40px;
           }
           .sk-chat-grid,
           .sk-layout,
@@ -2676,36 +2686,40 @@ function SkickaPageContent() {
           .sk-stepper {
             flex-wrap: nowrap;
             overflow-x: auto;
-            gap: 6px;
-            padding: 8px 10px;
+            gap: 2px;
+            padding: 5px 6px;
             scrollbar-width: none;
-            border-radius: 14px;
-            margin-bottom: 20px;
+            border-radius: 10px;
+            margin-bottom: 12px;
           }
           .sk-stepper::-webkit-scrollbar { display: none; }
           .sk-step {
-            flex: 0 0 auto;
-            min-width: 56px;
+            flex: 1;
+            min-width: 0;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
+            gap: 2px;
           }
           .sk-step-num {
-            width: 30px;
-            height: 30px;
-            border-radius: 9px;
-            font-size: 0.65rem;
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            font-size: 0.5rem;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
           }
           .sk-step-mobile-copy {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 0;
-            max-width: 72px;
+            max-width: 50px;
           }
           .sk-step-mobile-label {
             display: block;
-            font-size: 0.6rem;
+            font-size: 0.48rem;
             font-weight: 700;
             color: var(--muted);
             text-align: center;
@@ -2721,13 +2735,15 @@ function SkickaPageContent() {
             transform: none;
             width: 100%;
             justify-content: stretch;
-            margin-bottom: 18px;
+            margin-top: 12px;
+            margin-bottom: 12px;
           }
           .sk-tab {
             flex: 1 1 0;
             text-align: center;
-            padding: 10px 12px;
-            border-radius: 12px;
+            padding: 7px 8px;
+            border-radius: 10px;
+            font-size: 0.72rem;
             background: rgba(0,0,0,0.42);
           }
           .sk-tab-active {
@@ -2831,9 +2847,7 @@ function SkickaPageContent() {
             line-height: 1.04;
           }
           .sk-simple-subtitle {
-            font-size: 0.84rem;
-            line-height: 1.62;
-            max-width: none;
+            display: none;
           }
           .sk-lift-panel {
             padding: 12px;
@@ -2928,6 +2942,9 @@ function SkickaPageContent() {
           .sk-card-title,
           .sk-confirm-title {
             overflow-wrap: anywhere;
+          }
+          .sk-weight-row:not(.sk-passenger-row) {
+            display: none;
           }
           .sk-weight-row {
             overflow-x: auto;
