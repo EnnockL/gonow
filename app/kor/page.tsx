@@ -36,7 +36,7 @@ export default function KorPage() {
         minHeight: '100vh',
         paddingTop: isMobile ? 68 : 80,
         paddingBottom: isMobile ? 48 : 96,
-        background: 'linear-gradient(180deg, transparent 0%, rgba(34,197,94,0.05) 100%)',
+        background: 'linear-gradient(180deg, transparent 0%, rgba(74,222,85,0.05) 100%)',
       }}
     >
       <div style={{ maxWidth: 1260, margin: '0 auto', padding: isMobile ? '0 14px' : '0 24px' }}>

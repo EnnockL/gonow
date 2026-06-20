@@ -56,7 +56,7 @@ function Field({
         type={type}
         {...props}
         style={inputStyle}
-        onFocus={(e) => (e.target.style.borderColor = '#22c55e')}
+        onFocus={(e) => (e.target.style.borderColor = '#4ADE55')}
         onBlur={(e) => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
       />
       {rightSlot && (
@@ -222,7 +222,7 @@ export default function AuthModal({
         >
           <div>
             {reason && mode !== 'verify' && (
-              <p style={{ fontSize: '0.7rem', color: 'rgba(34,197,94,0.8)', marginBottom: 4, fontWeight: 500 }}>
+              <p style={{ fontSize: '0.7rem', color: 'rgba(74,222,85,0.8)', marginBottom: 4, fontWeight: 500 }}>
                 {reason}
               </p>
             )}
@@ -268,8 +268,8 @@ export default function AuthModal({
                   fontFamily: 'inherit',
                   fontSize: '0.82rem',
                   fontWeight: 500,
-                  background: mode === tab ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.05)',
-                  color: mode === tab ? '#22c55e' : 'rgba(255,255,255,0.45)',
+                  background: mode === tab ? 'rgba(74,222,85,0.15)' : 'rgba(255,255,255,0.05)',
+                  color: mode === tab ? '#4ADE55' : 'rgba(255,255,255,0.45)',
                   transition: 'all 0.15s',
                 }}
               >
@@ -287,7 +287,7 @@ export default function AuthModal({
             <>
               <div style={{ padding: '8px 0 2px', textAlign: 'center' }}>
                 <div style={{ fontSize: '2rem', marginBottom: 12 }}>✉</div>
-                <p style={{ color: '#22c55e', fontWeight: 600, fontSize: '0.95rem' }}>Öppna mailet och klicka länken</p>
+                <p style={{ color: '#4ADE55', fontWeight: 600, fontSize: '0.95rem' }}>Öppna mailet och klicka länken</p>
                 <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', marginTop: 8, lineHeight: 1.7 }}>
                   Vi skickade ett bekräftelsemail till
                   <br />
@@ -299,7 +299,7 @@ export default function AuthModal({
               </div>
 
               {resent && (
-                <p style={{ fontSize: '0.76rem', color: '#22c55e', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.76rem', color: '#4ADE55', textAlign: 'center' }}>
                   Nytt bekräftelsemail skickat.
                 </p>
               )}
@@ -431,7 +431,7 @@ export default function AuthModal({
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#22c55e',
+                    color: '#4ADE55',
                     cursor: resending ? 'not-allowed' : 'pointer',
                     fontSize: '0.75rem',
                     fontFamily: 'inherit',
@@ -454,7 +454,7 @@ export default function AuthModal({
                   padding: '12px',
                   borderRadius: 10,
                   border: 'none',
-                  background: loading ? 'rgba(34,197,94,0.5)' : '#22c55e',
+                  background: loading ? 'rgba(74,222,85,0.5)' : '#4ADE55',
                   color: '#0a0a0a',
                   fontSize: '0.9rem',
                   fontWeight: 700,
@@ -476,7 +476,7 @@ export default function AuthModal({
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: '#22c55e',
+                        color: '#4ADE55',
                         cursor: 'pointer',
                         fontSize: 'inherit',
                         fontFamily: 'inherit',
@@ -495,7 +495,7 @@ export default function AuthModal({
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: '#22c55e',
+                        color: '#4ADE55',
                         cursor: 'pointer',
                         fontSize: 'inherit',
                         fontFamily: 'inherit',

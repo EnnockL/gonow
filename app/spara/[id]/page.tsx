@@ -29,11 +29,11 @@ const STATUS_ORDER: OrderStatus[] = ['pending', 'matched', 'picked_up', 'in_tran
 
 const STATUS_COLOR: Partial<Record<OrderStatus, { bg: string; color: string; dot: string }>> = {
   pending: { bg: 'rgba(245,158,11,0.08)', color: '#b45309', dot: '#f59e0b' },
-  matched: { bg: 'rgba(34,197,94,0.08)', color: '#15803d', dot: '#22c55e' },
+  matched: { bg: 'rgba(74,222,85,0.08)', color: '#15803d', dot: '#4ADE55' },
   picked_up: { bg: 'rgba(124,58,237,0.08)', color: '#7c3aed', dot: '#7c3aed' },
   in_transit: { bg: 'rgba(14,165,233,0.08)', color: '#0369a1', dot: '#0ea5e9' },
-  delivered: { bg: 'rgba(34,197,94,0.08)', color: '#15803d', dot: '#22c55e' },
-  confirmed: { bg: 'rgba(34,197,94,0.08)', color: '#15803d', dot: '#22c55e' },
+  delivered: { bg: 'rgba(74,222,85,0.08)', color: '#15803d', dot: '#4ADE55' },
+  confirmed: { bg: 'rgba(74,222,85,0.08)', color: '#15803d', dot: '#4ADE55' },
   cancelled: { bg: 'rgba(239,68,68,0.08)', color: '#dc2626', dot: '#ef4444' },
   disputed: { bg: 'rgba(239,68,68,0.08)', color: '#dc2626', dot: '#ef4444' },
 }
@@ -252,7 +252,7 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
         </div>
 
         {paymentState === 'success' && (
-          <div style={{ marginBottom: 16, padding: '14px 18px', borderRadius: 14, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)' }}>
+          <div style={{ marginBottom: 16, padding: '14px 18px', borderRadius: 14, background: 'rgba(74,222,85,0.08)', border: '1px solid rgba(74,222,85,0.25)' }}>
             <p style={{ fontWeight: 700, color: '#15803d', marginBottom: 4 }}>Betalningen gick igenom</p>
             <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Bararen kan nu starta uppdraget.</p>
           </div>
@@ -314,7 +314,7 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
                   <strong style={{ fontSize: '0.88rem', color: 'var(--text)' }}>{progress}% klar</strong>
                 </div>
                 <div style={{ height: 10, borderRadius: 999, background: 'var(--surface-2)', overflow: 'hidden', marginBottom: 12 }}>
-                  <div style={{ width: `${progress}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent), #4ade80)', borderRadius: 999, transition: 'width 0.25s ease' }} />
+                  <div style={{ width: `${progress}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent), #6EEF78)', borderRadius: 999, transition: 'width 0.25s ease' }} />
                 </div>
                 <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6, margin: 0 }}>
                   {nextStepCopy(order.status)}
@@ -362,8 +362,8 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
               </div>
             </div>
 
-            <div style={{ height: isMobile ? 220 : 280, borderRadius: isMobile ? 20 : 18, background: 'linear-gradient(180deg, rgba(34,197,94,0.08), rgba(0,0,0,0.02))', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at top right, rgba(34,197,94,0.14), transparent 40%)', pointerEvents: 'none' }} />
+            <div style={{ height: isMobile ? 220 : 280, borderRadius: isMobile ? 20 : 18, background: 'linear-gradient(180deg, rgba(74,222,85,0.08), rgba(0,0,0,0.02))', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at top right, rgba(74,222,85,0.14), transparent 40%)', pointerEvents: 'none' }} />
               <MapPin size={36} color="var(--accent)" />
               <p style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Live-karta och positionsflode</p>
               <p style={{ fontSize: '0.76rem', color: 'var(--muted)', margin: 0, textAlign: 'center', maxWidth: 360 }}>
@@ -371,7 +371,7 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
               </p>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', padding: '0 16px' }}>
                 {['Startpunkt', 'Checkpoint', 'Ankomst'].map((item, index) => (
-                  <div key={item} style={{ padding: '8px 12px', borderRadius: 999, border: '1px solid rgba(34,197,94,0.25)', background: index <= Math.max(0, currentIdx - 1) ? 'rgba(34,197,94,0.14)' : 'rgba(255,255,255,0.72)', color: index <= Math.max(0, currentIdx - 1) ? '#15803d' : 'var(--muted)', fontSize: '0.72rem', fontWeight: 700 }}>
+                  <div key={item} style={{ padding: '8px 12px', borderRadius: 999, border: '1px solid rgba(74,222,85,0.25)', background: index <= Math.max(0, currentIdx - 1) ? 'rgba(74,222,85,0.14)' : 'rgba(255,255,255,0.72)', color: index <= Math.max(0, currentIdx - 1) ? '#15803d' : 'var(--muted)', fontSize: '0.72rem', fontWeight: 700 }}>
                     {item}
                   </div>
                 ))}
@@ -388,7 +388,7 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {checkpoints.map((item) => (
                   <div key={item.key} style={{ display: 'grid', gridTemplateColumns: '22px 1fr', gap: 12, alignItems: 'start' }}>
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: item.active ? 'rgba(34,197,94,0.16)' : 'var(--surface-2)', border: `1.5px solid ${item.active ? 'rgba(34,197,94,0.45)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: item.active ? 'rgba(74,222,85,0.16)' : 'var(--surface-2)', border: `1.5px solid ${item.active ? 'rgba(74,222,85,0.45)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.active ? 'var(--accent)' : 'var(--border)' }} />
                     </div>
                     <div style={{ paddingBottom: 6 }}>
@@ -411,7 +411,7 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
                   return (
                     <div key={step.status} style={{ display: 'flex', gap: 14 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: done ? '#22c55e' : active ? 'var(--accent)' : 'var(--surface-2)', border: `2px solid ${done ? '#22c55e' : active ? 'var(--accent)' : 'var(--border)'}` }}>
+                        <div style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: done ? '#4ADE55' : active ? 'var(--accent)' : 'var(--surface-2)', border: `2px solid ${done ? '#4ADE55' : active ? 'var(--accent)' : 'var(--border)'}` }}>
                           {done ? (
                             <CheckCircle2 size={14} color="#fff" />
                           ) : active ? (
@@ -420,7 +420,7 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
                             <Circle size={13} color="var(--border)" />
                           )}
                         </div>
-                        {!isLast && <div style={{ width: 2, flex: 1, minHeight: 26, background: done ? '#22c55e' : 'var(--border)', margin: '4px 0' }} />}
+                        {!isLast && <div style={{ width: 2, flex: 1, minHeight: 26, background: done ? '#4ADE55' : 'var(--border)', margin: '4px 0' }} />}
                       </div>
                       <div style={{ paddingBottom: isLast ? 0 : 22 }}>
                         <p style={{ fontSize: '0.9rem', fontWeight: done || active ? 700 : 500, color: done || active ? 'var(--text)' : 'var(--muted)', margin: 0 }}>{step.label}</p>
@@ -480,7 +480,7 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
             </div>
 
             {order.status === 'delivered' && (
-              <div style={{ padding: '20px 22px', borderRadius: 18, background: 'rgba(34,197,94,0.06)', border: '1.5px solid rgba(34,197,94,0.25)' }}>
+              <div style={{ padding: '20px 22px', borderRadius: 18, background: 'rgba(74,222,85,0.06)', border: '1.5px solid rgba(74,222,85,0.25)' }}>
                 <p style={{ fontWeight: 700, color: '#15803d', marginBottom: 6, fontSize: '0.95rem' }}>Paketet ar levererat</p>
                 <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 16 }}>Bekrafta att du tagit emot paketet for att frigora bararens betalning.</p>
                 {confirmError ? <p style={{ fontSize: '0.78rem', color: '#dc2626', marginBottom: 10 }}>{confirmError}</p> : null}
@@ -491,7 +491,7 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
             )}
 
             {order.status === 'confirmed' && (
-              <div style={{ padding: '18px 22px', borderRadius: 18, background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ padding: '18px 22px', borderRadius: 18, background: 'rgba(74,222,85,0.06)', border: '1px solid rgba(74,222,85,0.2)', display: 'flex', alignItems: 'center', gap: 12 }}>
                 <CheckCircle2 size={22} color="#15803d" />
                 <div>
                   <p style={{ fontWeight: 700, color: '#15803d', margin: 0 }}>Leverans bekraftad</p>

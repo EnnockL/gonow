@@ -176,7 +176,7 @@ export default function ChatWidget() {
           )}
           {view === 'thread' && active ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0 }}>
-              <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, rgba(34,197,94,0.35), rgba(34,197,94,0.15))', border: '1.5px solid rgba(34,197,94,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: '#15803d' }}>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, rgba(74,222,85,0.35), rgba(74,222,85,0.15))', border: '1.5px solid rgba(74,222,85,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: '#15803d' }}>
                 {initials(active.other_user_name)}
               </div>
               <span style={{ fontSize: '0.88rem', fontWeight: 700, color: isDark ? '#fafafa' : '#0a0a0a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -198,8 +198,8 @@ export default function ChatWidget() {
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {convs.length === 0 ? (
               <div style={{ padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
-                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(34,197,94,0.15)', border: '1.5px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <MessageCircle size={22} style={{ color: '#22c55e' }} />
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(74,222,85,0.15)', border: '1.5px solid rgba(74,222,85,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MessageCircle size={22} style={{ color: '#4ADE55' }} />
                 </div>
                 <p style={{ fontSize: '0.84rem', fontWeight: 700, color: isDark ? '#fafafa' : '#0a0a0a', margin: 0 }}>
                   Inga konversationer ännu
@@ -207,7 +207,7 @@ export default function ChatWidget() {
                 <p style={{ fontSize: '0.72rem', color: isDark ? '#a3a3a3' : '#737373', margin: 0, lineHeight: 1.5 }}>
                   Hitta en bärare och starta ett samtal via deras profil.
                 </p>
-                <a href="/profil?tab=carriers" onClick={() => setOpen(false)} style={{ marginTop: 6, padding: '9px 20px', borderRadius: 999, background: '#22c55e', color: '#0a0a0a', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>
+                <a href="/profil?tab=carriers" onClick={() => setOpen(false)} style={{ marginTop: 6, padding: '9px 20px', borderRadius: 999, background: '#4ADE55', color: '#0a0a0a', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>
                   Utforska förare
                 </a>
               </div>
@@ -224,7 +224,7 @@ export default function ChatWidget() {
                   onMouseEnter={e => (e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
-                  <div style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, rgba(34,197,94,0.3), rgba(34,197,94,0.12))', border: '1.5px solid rgba(34,197,94,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, color: '#15803d' }}>
+                  <div style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, rgba(74,222,85,0.3), rgba(74,222,85,0.12))', border: '1.5px solid rgba(74,222,85,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, color: '#15803d' }}>
                     {initials(conv.other_user_name)}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -277,7 +277,7 @@ export default function ChatWidget() {
                       <div style={{
                         maxWidth: '78%', padding: '8px 12px',
                         borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                        background: isMe ? '#22c55e' : (isDark ? '#2a2a2a' : '#e4e6eb'),
+                        background: isMe ? '#4ADE55' : (isDark ? '#2a2a2a' : '#e4e6eb'),
                         color: isMe ? '#0a0a0a' : (isDark ? '#fafafa' : '#111'),
                         fontSize: '0.82rem', lineHeight: 1.45,
                         wordBreak: 'break-word',
@@ -314,8 +314,8 @@ export default function ChatWidget() {
                 disabled={!reply.trim() || sending}
                 style={{
                   width: 34, height: 34, flexShrink: 0, borderRadius: '50%', border: 'none',
-                  background: reply.trim() ? (sent ? 'rgba(34,197,94,0.15)' : '#22c55e') : (isDark ? '#222' : '#e5e7eb'),
-                  color: reply.trim() ? (sent ? '#16a34a' : '#0a0a0a') : (isDark ? '#555' : '#aaa'),
+                  background: reply.trim() ? (sent ? 'rgba(74,222,85,0.15)' : '#4ADE55') : (isDark ? '#222' : '#e5e7eb'),
+                  color: reply.trim() ? (sent ? '#34C759' : '#0a0a0a') : (isDark ? '#555' : '#aaa'),
                   cursor: reply.trim() ? 'pointer' : 'not-allowed',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'all 0.15s',
@@ -333,14 +333,14 @@ export default function ChatWidget() {
         onClick={() => open ? setOpen(false) : openWidget()}
         style={{
           width: 52, height: 52, borderRadius: '50%',
-          background: '#22c55e', border: 'none',
-          boxShadow: '0 4px 20px rgba(34,197,94,0.4)',
+          background: '#4ADE55', border: 'none',
+          boxShadow: '0 4px 20px rgba(74,222,85,0.4)',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           position: 'relative', transition: 'transform 0.15s, box-shadow 0.15s',
           flexShrink: 0, pointerEvents: 'auto',
         }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.08)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 24px rgba(34,197,94,0.5)' }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(34,197,94,0.4)' }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.08)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 24px rgba(74,222,85,0.5)' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(74,222,85,0.4)' }}
       >
         {open
           ? <X size={20} style={{ color: '#0a0a0a' }} />

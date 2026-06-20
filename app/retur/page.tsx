@@ -70,7 +70,7 @@ export default function ReturPage() {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '84px 16px 40px' : '80px 24px' }}>
         <div className="mobile-panel" style={{ textAlign: 'center', maxWidth: 420, width: '100%', padding: isMobile ? '26px 18px' : '30px 28px', borderRadius: isMobile ? 24 : 28, background: 'var(--enterprise-panel-bg)', border: '1px solid var(--enterprise-panel-border)', boxShadow: 'var(--shadow-lg)' }}>
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 10px 24px rgba(34,197,94,0.14)' }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 10px 24px rgba(74,222,85,0.14)' }}>
             <CheckCircle2 size={32} style={{ color: 'var(--success)' }} />
           </div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', marginBottom: 10 }}>Retur bokad!</h2>
@@ -223,7 +223,7 @@ export default function ReturPage() {
               ))}
             </div>
 
-            <div className="card-sm mobile-panel" style={{ background: 'var(--accent-softer)', borderColor: 'rgba(34,197,94,0.15)', borderRadius: isMobile ? 18 : undefined }}>
+            <div className="card-sm mobile-panel" style={{ background: 'var(--accent-softer)', borderColor: 'rgba(74,222,85,0.15)', borderRadius: isMobile ? 18 : undefined }}>
               <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent)', marginBottom: 8 }}>Inga postkontor</p>
               <p style={{ fontSize: '0.73rem', color: 'var(--muted)', lineHeight: 1.6 }}>En resenär hämtar upp din retur och lämnar in den.</p>
             </div>

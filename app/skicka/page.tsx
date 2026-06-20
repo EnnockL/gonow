@@ -499,8 +499,8 @@ function SkickaPageContent() {
                     </h2>
                     <p className="sk-simple-subtitle">
                       {tabMode === 'lift'
-                        ? 'SÃ¶k efter resor med lugn, tydlig planering. VÃ¤lj datum, antal passagerare och boka utan att tappa Ã¶verblicken.'
-                        : 'BÃ¶rja med en enkel rutt. Gonow visar aktiva bÃ¤rare direkt och lÃ¥ter AI:n ta Ã¶ver nÃ¤r du behÃ¶ver mer precision.'}
+                        ? 'Sök efter resor med lugn, tydlig planering. Välj datum, antal passagerare och boka utan att tappa överblicken.'
+                        : 'Börja med en enkel rutt. Gonow visar aktiva bärare direkt och låter AI:n ta över när du behöver mer precision.'}
                     </p>
                     <div className="sk-info-strip">
                       {(tabMode === 'lift'
@@ -512,7 +512,7 @@ function SkickaPageContent() {
                         : [
                             { icon: <Package size={13} />, label: simpleWeight < 20 ? `${simpleWeight} kg` : '20+ kg' },
                             { icon: <Clock size={13} />, label: 'Snabb matchning' },
-                            { icon: <Shield size={13} />, label: 'BankID-nÃ¤tverk' },
+                            { icon: <Shield size={13} />, label: 'BankID-nätverk' },
                           ]).map((item) => (
                         <div key={item.label} className="sk-info-pill">
                           {item.icon}
@@ -609,15 +609,15 @@ function SkickaPageContent() {
                     </button>
 
                     <button onClick={() => setAiMode(true)} style={{
-                      marginTop: 14, border: '1px solid rgba(34,197,94,0.45)',
-                      background: 'rgba(34,197,94,0.12)', color: '#d9ffc8',
+                      marginTop: 14, border: '1px solid rgba(74,222,85,0.45)',
+                      background: 'rgba(74,222,85,0.12)', color: '#d9ffc8',
                       borderRadius: 10, padding: '9px 16px', cursor: 'pointer',
                       fontFamily: 'inherit', fontSize: '0.82rem', fontWeight: 600,
                       display: 'inline-flex', alignItems: 'center', gap: 6,
                       transition: 'background 0.15s',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(34,197,94,0.15)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(34,197,94,0.08)')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(74,222,85,0.15)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(74,222,85,0.08)')}
                     >
                       <Zap size={13} /> AI-matchning — beskriv fritt
                     </button>
@@ -687,7 +687,7 @@ function SkickaPageContent() {
                       )}
                       {activeTrips.length > 0 && (
                         <button className="sk-text-link" style={{ fontSize: '0.72rem' }} onClick={() => jumpToTripMatches(activeTrips[0])}>
-                          Full matchningsvy →
+                          Öppna alla matchade resor →
                         </button>
                       )}
                     </div>
@@ -706,11 +706,11 @@ function SkickaPageContent() {
                   {/* Header */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                      <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(34,197,94,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Zap size={14} style={{ color: '#22c55e' }} />
+                      <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(74,222,85,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Zap size={14} style={{ color: '#4ADE55' }} />
                       </div>
                       <div>
-                        <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22c55e', margin: 0 }}>AI-matchning</p>
+                        <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#4ADE55', margin: 0 }}>AI-matchning</p>
                         <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', margin: 0 }}>Beskriv fritt — AI:n hittar rätt bärare</p>
                       </div>
                     </div>
@@ -727,7 +727,7 @@ function SkickaPageContent() {
 
                   {loading && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)' }}>
-                      <Loader2 size={13} style={{ animation: 'sk-spin 1s linear infinite', color: '#22c55e' }} />
+                      <Loader2 size={13} style={{ animation: 'sk-spin 1s linear infinite', color: '#4ADE55' }} />
                       Söker bärare längs din rutt...
                     </div>
                   )}
@@ -915,7 +915,7 @@ function SkickaPageContent() {
                   ))}
                 </div>
                 <div className="sk-summary-actions">
-                  <span className="sk-summary-tip">Välj ett kort för att låsa bokningen till rätt bärare.</span>
+                  <span className="sk-summary-tip">Välj först rätt kapacitet och tempo. Öppna sedan bokningen mot den bärare som passar bäst.</span>
                   <button onClick={() => setStep('chat')} className="sk-text-link">
                     ← Ändra sökning
                   </button>
@@ -936,8 +936,8 @@ function SkickaPageContent() {
                   <div className="sk-card-top" style={{ marginBottom: 16 }}>
                     <div>
                       <p className="sk-eyebrow">Matchade resor</p>
-                      <h2 className="sk-card-title">{trips.length} bärare passar din rutt</h2>
-                      <p className="sk-match-list-subtitle">Jämför först kapacitet och status. Öppna sedan bokningen med den bärare som känns tryggast.</p>
+                      <h2 className="sk-card-title">{trips.length} bärare kan ta din leverans</h2>
+                      <p className="sk-match-list-subtitle">Det här är din live-vy. Jämför kvalitet, plats och pris utan att tappa överblicken.</p>
                     </div>
                   </div>
                   <div className="sk-match-list">
@@ -961,9 +961,9 @@ function SkickaPageContent() {
             <aside>
                 <div className="sk-booking-card" style={{ position: 'sticky', top: 88 }}>
                   {/* Price hero */}
-                <div className="sk-price-hero" style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0.04) 100%)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 16, padding: '18px 20px', marginBottom: 20, textAlign: 'center' }}>
+                <div className="sk-price-hero" style={{ background: 'linear-gradient(135deg, rgba(74,222,85,0.1) 0%, rgba(74,222,85,0.04) 100%)', border: '1px solid rgba(74,222,85,0.2)', borderRadius: 16, padding: '18px 20px', marginBottom: 20, textAlign: 'center' }}>
                   <p style={{ fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--muted)', marginBottom: 6 }}>Beräknat pris</p>
-                  <p style={{ fontSize: '2.2rem', fontWeight: 900, color: '#22c55e', letterSpacing: '-0.04em', lineHeight: 1, margin: 0 }}>
+                  <p style={{ fontSize: '2.2rem', fontWeight: 900, color: '#4ADE55', letterSpacing: '-0.04em', lineHeight: 1, margin: 0 }}>
                     {routePrice ? routePrice.price : parsed.estimated_price_sek} <span style={{ fontSize: '1rem', fontWeight: 700 }}>kr</span>
                   </p>
                   {routePrice && (
@@ -1159,7 +1159,7 @@ function SkickaPageContent() {
                     fontSize: '0.75rem',
                     fontWeight: 700,
                     background: createdBookingStatus === 'accepted'
-                      ? 'rgba(34,197,94,0.12)'
+                      ? 'rgba(74,222,85,0.12)'
                       : createdBookingStatus === 'pending'
                         ? 'rgba(59,130,246,0.08)'
                         : 'rgba(148,163,184,0.12)',
@@ -1169,7 +1169,7 @@ function SkickaPageContent() {
                         ? '#2563eb'
                         : 'var(--muted)',
                     border: `1px solid ${createdBookingStatus === 'accepted'
-                      ? 'rgba(34,197,94,0.22)'
+                      ? 'rgba(74,222,85,0.22)'
                       : createdBookingStatus === 'pending'
                         ? 'rgba(59,130,246,0.16)'
                         : 'var(--border)'}`,
@@ -1254,12 +1254,12 @@ function SkickaPageContent() {
         .sk-glow-l {
           width: 360px; height: 360px;
           top: 60px; left: -100px;
-          background: radial-gradient(circle, rgba(34,197,94,0.09) 0%, transparent 70%);
+          background: radial-gradient(circle, rgba(74,222,85,0.09) 0%, transparent 70%);
         }
         .sk-glow-r {
           width: 420px; height: 420px;
           top: 280px; right: -130px;
-          background: radial-gradient(circle, rgba(34,197,94,0.07) 0%, transparent 70%);
+          background: radial-gradient(circle, rgba(74,222,85,0.07) 0%, transparent 70%);
         }
 
         .sk-wrap {
@@ -1320,7 +1320,7 @@ function SkickaPageContent() {
 
         .sk-stat-accent {
           background: var(--accent-softer);
-          border-color: rgba(34,197,94,0.25);
+          border-color: rgba(74,222,85,0.25);
         }
 
         .sk-stat-val {
@@ -1349,10 +1349,10 @@ function SkickaPageContent() {
           padding: 18px 22px;
           border: 1px solid rgba(0,0,0,0.08);
           border-radius: 20px;
-          background: rgba(0,0,0,0.08);
+          background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,250,252,0.92));
           backdrop-filter: blur(18px);
           -webkit-backdrop-filter: blur(18px);
-          box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+          box-shadow: 0 18px 50px rgba(15,23,42,0.08);
           margin-bottom: 40px;
           gap: 0;
         }
@@ -1379,14 +1379,15 @@ function SkickaPageContent() {
 
         .sk-step-active .sk-step-num {
           background: var(--accent-soft);
-          border-color: rgba(34,197,94,0.35);
-          color: var(--accent);
+          border-color: rgba(74,222,85,0.35);
+          color: #166534;
+          box-shadow: 0 10px 24px rgba(34,197,94,0.16);
         }
 
         .sk-step-done .sk-step-num {
-          background: rgba(34,197,94,0.1);
-          border-color: rgba(34,197,94,0.25);
-          color: var(--success);
+          background: rgba(74,222,85,0.1);
+          border-color: rgba(74,222,85,0.25);
+          color: #166534;
         }
 
         .sk-step-title {
@@ -1418,7 +1419,7 @@ function SkickaPageContent() {
           border-radius: 2px;
           transition: background 0.2s;
         }
-        .sk-step-line-done { background: rgba(34,197,94,0.4); }
+        .sk-step-line-done { background: rgba(74,222,85,0.4); }
 
         /* ── Tab switcher — absolutely centered over card, aligned with title ── */
         .sk-tab-row {
@@ -1767,7 +1768,7 @@ function SkickaPageContent() {
           color: #0a0a0a;
         }
         .sk-simple-left .sk-find-btn {
-          background: #22c55e;
+          background: #4ADE55;
           color: #0a0a0a;
         }
 
@@ -1798,7 +1799,7 @@ function SkickaPageContent() {
           font-size: 3rem;
           font-weight: 900;
           letter-spacing: -0.06em;
-          color: #22c55e;
+          color: #4ADE55;
           line-height: 1;
         }
 
@@ -1837,20 +1838,20 @@ function SkickaPageContent() {
         }
 
         .sk-visual-route-btn:hover {
-          background: rgba(34,197,94,0.08);
-          border-color: rgba(34,197,94,0.2);
+          background: rgba(74,222,85,0.08);
+          border-color: rgba(74,222,85,0.2);
         }
 
         .sk-vr-dot {
           width: 6px; height: 6px; border-radius: 50%;
-          background: #22c55e;
+          background: #4ADE55;
           flex-shrink: 0;
         }
 
         .sk-vr-from  { font-size: 0.78rem; font-weight: 700; color: #fff; }
         .sk-vr-arrow { font-size: 0.7rem; color: rgba(255,255,255,0.3); flex-shrink: 0; }
         .sk-vr-to    { font-size: 0.78rem; color: rgba(255,255,255,0.55); flex: 1; }
-        .sk-vr-price { font-size: 0.78rem; font-weight: 700; color: #22c55e; flex-shrink: 0; }
+        .sk-vr-price { font-size: 0.78rem; font-weight: 700; color: #4ADE55; flex-shrink: 0; }
 
         .sk-visual-footer {
           display: flex;
@@ -1957,7 +1958,7 @@ function SkickaPageContent() {
           flex-direction: column;
           justify-content: center;
           gap: 14px;
-          background: rgba(34,197,94,0.06);
+          background: rgba(74,222,85,0.06);
           border-right: 1px solid var(--border);
         }
 
@@ -1999,7 +2000,7 @@ function SkickaPageContent() {
 
         /* dark mode AI left panel */
         :global(html.dark) .sk-ai-left {
-          background: rgba(34,197,94,0.04);
+          background: rgba(74,222,85,0.04);
         }
 
         @media (max-width: 700px) {
@@ -2020,8 +2021,8 @@ function SkickaPageContent() {
 
         .sk-badge-live {
           color: #86efac;
-          border-color: rgba(34,197,94,0.22);
-          background: rgba(34,197,94,0.08);
+          border-color: rgba(74,222,85,0.22);
+          background: rgba(74,222,85,0.08);
         }
 
         /* ── Live panel ── */
@@ -2042,15 +2043,15 @@ function SkickaPageContent() {
 
         .sk-live-pulse {
           width: 9px; height: 9px; border-radius: 50%;
-          background: #22c55e;
-          box-shadow: 0 0 10px #22c55e88;
+          background: #4ADE55;
+          box-shadow: 0 0 10px #4ADE5588;
           display: inline-block;
         }
 
         .sk-operational-pill {
           padding: 5px 11px; border-radius: 999px;
           border: 1px solid rgba(134,239,172,0.22);
-          background: rgba(34,197,94,0.1);
+          background: rgba(74,222,85,0.1);
           color: #86efac;
           font-size: 0.68rem; font-weight: 800;
           letter-spacing: 0.07em; text-transform: uppercase;
@@ -2071,19 +2072,19 @@ function SkickaPageContent() {
           cursor: pointer; font-family: inherit; text-align: left;
           transition: background 0.15s;
         }
-        .sk-live-row:hover { background: rgba(34,197,94,0.04); }
+        .sk-live-row:hover { background: rgba(74,222,85,0.04); }
 
         .sk-route-indicator {
           display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0;
         }
         .sk-route-dot {
           width: 8px; height: 8px; border-radius: 50%;
-          background: rgba(34,197,94,0.6);
+          background: rgba(74,222,85,0.6);
         }
         .sk-route-dot.own { background: #bef264; }
         .sk-route-line {
           width: 1px; height: 20px;
-          background: linear-gradient(to bottom, #22c55e, #22c55e);
+          background: linear-gradient(to bottom, #4ADE55, #4ADE55);
         }
 
         .sk-live-from {
@@ -2159,7 +2160,7 @@ function SkickaPageContent() {
 
         .sk-aside-card-trust {
           background: rgba(0,0,0,0.10);
-          border-color: rgba(34,197,94,0.25);
+          border-color: rgba(74,222,85,0.25);
         }
 
         .sk-aside-title {
@@ -2180,7 +2181,7 @@ function SkickaPageContent() {
           display: flex; align-items: center; justify-content: center;
           font-size: 0.68rem; font-weight: 800;
           background: var(--accent-softer);
-          border: 1px solid rgba(34,197,94,0.2);
+          border: 1px solid rgba(74,222,85,0.2);
           color: var(--accent);
         }
 
@@ -2215,7 +2216,7 @@ function SkickaPageContent() {
           border: 1px solid var(--border);
           border-radius: 18px;
           background:
-            linear-gradient(180deg, rgba(34,197,94,0.035), transparent 80%),
+            linear-gradient(180deg, rgba(74,222,85,0.035), transparent 80%),
             var(--surface);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
@@ -2248,8 +2249,8 @@ function SkickaPageContent() {
         .sk-summary-pill {
           display: inline-flex; align-items: center; gap: 6px;
           padding: 6px 12px; border-radius: 999px;
-          border: 1px solid rgba(34,197,94,0.2);
-          background: rgba(34,197,94,0.06);
+          border: 1px solid rgba(74,222,85,0.2);
+          background: rgba(74,222,85,0.06);
           font-size: 0.74rem; font-weight: 600; color: var(--text);
         }
 
@@ -2261,8 +2262,8 @@ function SkickaPageContent() {
           border-radius: 22px;
           border: 1px solid var(--border);
           background:
-            radial-gradient(circle at top right, rgba(34,197,94,0.12), transparent 34%),
-            linear-gradient(180deg, rgba(34,197,94,0.04), rgba(34,197,94,0.015)),
+            radial-gradient(circle at top right, rgba(74,222,85,0.12), transparent 34%),
+            linear-gradient(180deg, rgba(74,222,85,0.04), rgba(74,222,85,0.015)),
             var(--surface);
           box-shadow: 0 16px 40px rgba(0,0,0,0.06);
         }
@@ -2297,8 +2298,8 @@ function SkickaPageContent() {
         .sk-match-stat {
           padding: 14px;
           border-radius: 16px;
-          border: 1px solid rgba(34,197,94,0.16);
-          background: rgba(34,197,94,0.08);
+          border: 1px solid rgba(74,222,85,0.16);
+          background: rgba(74,222,85,0.08);
           display: flex;
           flex-direction: column;
           gap: 6px;
@@ -2327,8 +2328,11 @@ function SkickaPageContent() {
         .sk-match-card {
           padding-top: 20px;
           background:
-            linear-gradient(180deg, rgba(34,197,94,0.025), transparent 24%),
+            radial-gradient(circle at top right, rgba(74,222,85,0.12), transparent 38%),
+            linear-gradient(180deg, rgba(74,222,85,0.025), transparent 24%),
             var(--surface);
+          border-color: rgba(74,222,85,0.14);
+          box-shadow: 0 20px 48px rgba(15,23,42,0.06);
         }
 
         .sk-match-list-subtitle {
@@ -2370,7 +2374,7 @@ function SkickaPageContent() {
         .sk-price-hero-stat {
           padding: 10px 12px;
           border-radius: 12px;
-          border: 1px solid rgba(34,197,94,0.16);
+          border: 1px solid rgba(74,222,85,0.16);
           background: rgba(255,255,255,0.34);
           display: flex;
           flex-direction: column;
@@ -2446,14 +2450,14 @@ function SkickaPageContent() {
 
         .sk-spinner-ring {
           width: 64px; height: 64px; border-radius: 50%;
-          border: 2px solid rgba(34,197,94,0.2);
+          border: 2px solid rgba(74,222,85,0.2);
           display: flex; align-items: center; justify-content: center;
         }
 
         .sk-success-ring {
           width: 72px; height: 72px; border-radius: 50%;
           background: var(--success-soft);
-          border: 1px solid rgba(34,197,94,0.25);
+          border: 1px solid rgba(74,222,85,0.25);
           display: flex; align-items: center; justify-content: center;
           margin-bottom: 4px;
         }
@@ -2469,29 +2473,29 @@ function SkickaPageContent() {
 
         /* ── Light mode accent touches ── */
         html:not(.dark) .sk-stat {
-          border-top: 2px solid rgba(34,197,94,0.18);
+          border-top: 2px solid rgba(74,222,85,0.18);
         }
 
         html:not(.dark) .sk-stat-accent {
-          border-top: 2px solid rgba(34,197,94,0.65);
-          background: linear-gradient(135deg, rgba(34,197,94,0.13) 0%, rgba(34,197,94,0.06) 100%);
-          box-shadow: 0 6px 20px rgba(34,197,94,0.12);
+          border-top: 2px solid rgba(74,222,85,0.65);
+          background: linear-gradient(135deg, rgba(74,222,85,0.13) 0%, rgba(74,222,85,0.06) 100%);
+          box-shadow: 0 6px 20px rgba(74,222,85,0.12);
         }
 
         html:not(.dark) .sk-card {
-          border-top: 2px solid rgba(34,197,94,0.3);
+          border-top: 2px solid rgba(74,222,85,0.3);
         }
 
         html:not(.dark) .sk-stepper {
-          border-left: 3px solid rgba(34,197,94,0.5);
+          border-left: 3px solid rgba(74,222,85,0.5);
         }
 
         html:not(.dark) .sk-aside-card:not(.sk-aside-card-trust) {
-          border-left: 3px solid rgba(34,197,94,0.28);
+          border-left: 3px solid rgba(74,222,85,0.28);
         }
 
         html:not(.dark) .sk-aside-card-trust {
-          border-left: 3px solid rgba(34,197,94,0.55);
+          border-left: 3px solid rgba(74,222,85,0.55);
         }
 
         html:not(.dark) .sk-price-row strong {
@@ -2503,12 +2507,12 @@ function SkickaPageContent() {
         }
 
         html:not(.dark) .sk-booking-card {
-          border-top: 2px solid rgba(34,197,94,0.3);
+          border-top: 2px solid rgba(74,222,85,0.3);
         }
 
         html:not(.dark) .sk-summary-bar {
-          border-top: 2px solid rgba(34,197,94,0.28);
-          background: linear-gradient(to bottom, rgba(34,197,94,0.04) 0%, var(--surface) 100%);
+          border-top: 2px solid rgba(74,222,85,0.28);
+          background: linear-gradient(to bottom, rgba(74,222,85,0.04) 0%, var(--surface) 100%);
         }
 
         html:not(.dark) .sk-eyebrow,
@@ -2531,8 +2535,8 @@ function SkickaPageContent() {
         }
 
         html:not(.dark) .sk-flow-num {
-          background: rgba(34,197,94,0.18);
-          border-color: rgba(34,197,94,0.35);
+          background: rgba(74,222,85,0.18);
+          border-color: rgba(74,222,85,0.35);
         }
 
         /* ── Dark mode overrides ── */
@@ -2575,18 +2579,19 @@ function SkickaPageContent() {
           .sk-stepper {
             flex-wrap: nowrap;
             overflow-x: auto;
-            gap: 10px;
-            padding: 14px 14px 6px;
+            gap: 12px;
+            padding: 14px 14px 10px;
             scrollbar-width: none;
             border-radius: 18px;
           }
           .sk-stepper::-webkit-scrollbar { display: none; }
           .sk-step {
             flex: 0 0 auto;
-            min-width: 76px;
+            min-width: 96px;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 9px;
+            padding-bottom: 2px;
           }
           .sk-step-num {
             width: 44px;
@@ -2597,26 +2602,26 @@ function SkickaPageContent() {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 3px;
-            max-width: 88px;
+            gap: 4px;
+            max-width: 104px;
           }
           .sk-step-mobile-label {
             display: block;
-            font-size: 0.7rem;
+            font-size: 0.72rem;
             font-weight: 800;
-            color: var(--muted);
+            color: var(--text);
             text-align: center;
             line-height: 1.2;
           }
           .sk-step-mobile-desc {
             display: block;
-            font-size: 0.58rem;
-            line-height: 1.25;
+            font-size: 0.62rem;
+            line-height: 1.35;
             text-align: center;
-            color: var(--muted-2);
+            color: var(--muted);
           }
-          .sk-step-active .sk-step-mobile-label { color: var(--text); }
-          .sk-step-active .sk-step-mobile-desc { color: var(--muted); }
+          .sk-step-active .sk-step-mobile-label { color: #166534; }
+          .sk-step-active .sk-step-mobile-desc { color: var(--text); }
           .sk-step-done .sk-step-mobile-label { color: #15803d; }
           .sk-step-done .sk-step-mobile-desc { color: #15803d; }
           .sk-tab-row {
@@ -2646,6 +2651,9 @@ function SkickaPageContent() {
             gap: 14px;
             padding: 18px 16px;
             border-radius: 18px;
+            background:
+              radial-gradient(circle at top right, rgba(74,222,85,0.12), transparent 42%),
+              var(--surface);
           }
           .sk-match-hero-title {
             font-size: clamp(1.35rem, 6.8vw, 1.9rem);
@@ -2662,6 +2670,7 @@ function SkickaPageContent() {
           .sk-match-stat {
             padding: 12px 10px;
             border-radius: 14px;
+            background: rgba(255,255,255,0.86);
           }
           .sk-match-stat strong {
             font-size: 0.88rem;
@@ -2849,7 +2858,7 @@ function SkickaPageContent() {
             min-height: 52px;
             border-radius: 14px;
             font-size: 0.88rem;
-            box-shadow: 0 12px 28px rgba(34,197,94,0.18);
+            box-shadow: 0 12px 28px rgba(74,222,85,0.18);
           }
           .sk-visual-route {
             grid-template-columns: 1fr auto !important;

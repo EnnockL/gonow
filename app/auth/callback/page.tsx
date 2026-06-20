@@ -200,12 +200,12 @@ export default function AuthCallbackPage() {
             : error}
         </p>
         {resent ? (
-          <p style={{ color: '#22c55e', fontSize: '0.85rem' }}>Ny lank skickad, kolla inkorgen.</p>
+          <p style={{ color: '#4ADE55', fontSize: '0.85rem' }}>Ny lank skickad, kolla inkorgen.</p>
         ) : (
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
             <button
               onClick={resendEmail}
-              style={{ padding: '11px 20px', borderRadius: 10, background: '#22c55e', color: '#0a0a0a', fontWeight: 700, fontSize: '0.85rem', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+              style={{ padding: '11px 20px', borderRadius: 10, background: '#4ADE55', color: '#0a0a0a', fontWeight: 700, fontSize: '0.85rem', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
             >
               Skicka ny lank
             </button>
@@ -220,7 +220,7 @@ export default function AuthCallbackPage() {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: 16 }}>
-      <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid #22c55e', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+      <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid #4ADE55', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
       <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>Loggar in och aterupptar din bokning...</p>
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>

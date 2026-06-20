@@ -153,7 +153,7 @@ export function GonowScoreCard({
             </p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {nextRequirements.map(req => (
-                <div key={req.label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 10, background: req.done ? 'rgba(34,197,94,0.15)' : chipBg, border: `1px solid ${req.done ? 'rgba(34,197,94,0.35)' : chipBd}` }}>
+                <div key={req.label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 10, background: req.done ? 'rgba(74,222,85,0.15)' : chipBg, border: `1px solid ${req.done ? 'rgba(74,222,85,0.35)' : chipBd}` }}>
                   <span style={{ fontSize: '0.78rem' }}>{req.done ? '✅' : req.icon}</span>
                   <div>
                     <p style={{ fontSize: '0.68rem', fontWeight: 600, color: req.done ? muted : txt, textDecoration: req.done ? 'line-through' : 'none', margin: 0 }}>{req.label}</p>

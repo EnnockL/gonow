@@ -256,7 +256,7 @@ export default function Hero() {
                   position: 'absolute',
                   inset: 0,
                   background:
-                    'linear-gradient(135deg, rgba(34,197,94,0.1) 0%, transparent 35%, rgba(10,10,10,0.05) 100%)',
+                    'linear-gradient(135deg, rgba(74,222,85,0.1) 0%, transparent 35%, rgba(10,10,10,0.05) 100%)',
                   pointerEvents: 'none',
                 }}
               />
@@ -286,7 +286,7 @@ export default function Hero() {
                       WebkitBackdropFilter: 'blur(16px)',
                     }}
                   >
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 10px #22c55e' }} />
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ADE55', boxShadow: '0 0 10px #4ADE55' }} />
                     <span style={{ fontSize: '0.76rem', color: '#ffffff', fontWeight: 600 }}>Stockholm live</span>
                   </div>
 
@@ -333,7 +333,7 @@ export default function Hero() {
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block', boxShadow: '0 0 6px #22c55e' }} />
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ADE55', display: 'inline-block', boxShadow: '0 0 6px #4ADE55' }} />
                       <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'rgba(255,255,255,0.92)' }}>Aktiva resor just nu</span>
                     </div>
                     <span
@@ -342,10 +342,10 @@ export default function Hero() {
                         fontWeight: 700,
                         letterSpacing: '0.08em',
                         color: '#86efac',
-                        background: 'rgba(34,197,94,0.12)',
+                        background: 'rgba(74,222,85,0.12)',
                         padding: '3px 10px',
                         borderRadius: 100,
-                        border: '1px solid rgba(34,197,94,0.22)',
+                        border: '1px solid rgba(74,222,85,0.22)',
                       }}
                     >
                       LIVE
@@ -366,20 +366,20 @@ export default function Hero() {
                         cursor: 'pointer',
                         transition: 'background 0.15s',
                       }}
-                      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(34,197,94,0.07)')}
+                      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(74,222,85,0.07)')}
                       onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: trip.isReal ? '#22c55e' : 'rgba(34,197,94,0.55)', display: 'block' }} />
-                          <span style={{ width: 1, height: 16, background: 'linear-gradient(to bottom, #22c55e, #22c55e)', display: 'block' }} />
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: trip.isReal ? '#4ADE55' : 'rgba(74,222,85,0.55)', display: 'block' }} />
+                          <span style={{ width: 1, height: 16, background: 'linear-gradient(to bottom, #4ADE55, #4ADE55)', display: 'block' }} />
                           <MapPin size={8} style={{ color: '#86efac' }} />
                         </div>
                         <div style={{ minWidth: 0 }}>
                           <p style={{ fontSize: isMobile ? '0.8rem' : '0.85rem', fontWeight: 600, color: '#ffffff', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: isMobile ? 'normal' : 'nowrap' }}>{trip.from}</span>
                             {trip.isReal && (
-                              <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(34,197,94,0.2)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', flexShrink: 0 }}>DIN</span>
+                              <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(74,222,85,0.2)', color: '#4ADE55', border: '1px solid rgba(74,222,85,0.3)', flexShrink: 0 }}>DIN</span>
                             )}
                           </p>
                           <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.68)' }}>→ {trip.to}</p>
@@ -395,7 +395,7 @@ export default function Hero() {
                               <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.68)' }}>{trip.rating}</span>
                             </>
                           ) : (
-                            <span style={{ fontSize: '0.62rem', color: 'rgba(34,197,94,0.8)' }}>Ny bärare</span>
+                            <span style={{ fontSize: '0.62rem', color: 'rgba(74,222,85,0.8)' }}>Ny bärare</span>
                           )}
                         </div>
                       </div>

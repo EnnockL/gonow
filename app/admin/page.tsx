@@ -23,7 +23,7 @@ const STATUS_DOT: Record<string, string> = {
   confirmed: '#34d399',
   disputed: '#f87171',
   pending: '#fbbf24',
-  matched: '#22c55e',
+  matched: '#4ADE55',
   in_transit: '#a78bfa',
   delivered: '#34d399',
 }
@@ -73,7 +73,7 @@ export default function AdminPage() {
   }
 
   const statCards = [
-    { icon: Package, label: 'Totala ordrar', value: stats.totalOrders, accent: '#22c55e', delta: '+12%' },
+    { icon: Package, label: 'Totala ordrar', value: stats.totalOrders, accent: '#4ADE55', delta: '+12%' },
     { icon: Users, label: 'Aktiva resor', value: stats.activeTrips, accent: '#7bf0a8', delta: '+5%' },
     { icon: TrendingUp, label: 'Väntande utbet.', value: stats.pendingPayouts, accent: '#34d399', delta: null },
     { icon: AlertTriangle, label: 'Tvister', value: stats.disputed, accent: '#f87171', delta: stats.disputed > 0 ? `${stats.disputed} aktiva` : null },

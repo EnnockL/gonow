@@ -72,7 +72,7 @@ export default function AllTripsModal({ trips, onBook, onClose }: Props) {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flexWrap: 'wrap' }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block', boxShadow: '0 0 8px #22c55e' }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ADE55', display: 'inline-block', boxShadow: '0 0 8px #4ADE55' }} />
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'rgba(255,255,255,0.92)' }}>Aktiva resor just nu</span>
             <span
               style={{
@@ -80,10 +80,10 @@ export default function AllTripsModal({ trips, onBook, onClose }: Props) {
                 fontWeight: 700,
                 letterSpacing: '0.08em',
                 color: '#86efac',
-                background: 'rgba(34,197,94,0.12)',
+                background: 'rgba(74,222,85,0.12)',
                 padding: '2px 8px',
                 borderRadius: 100,
-                border: '1px solid rgba(34,197,94,0.22)',
+                border: '1px solid rgba(74,222,85,0.22)',
               }}
             >
               LIVE
@@ -124,8 +124,8 @@ export default function AllTripsModal({ trips, onBook, onClose }: Props) {
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, width: '100%' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: trip.isReal ? '#22c55e' : 'rgba(34,197,94,0.5)', display: 'block' }} />
-                  <span style={{ width: 1, height: 20, background: 'linear-gradient(to bottom, #22c55e, #22c55e)', display: 'block' }} />
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: trip.isReal ? '#4ADE55' : 'rgba(74,222,85,0.5)', display: 'block' }} />
+                  <span style={{ width: 1, height: 20, background: 'linear-gradient(to bottom, #4ADE55, #4ADE55)', display: 'block' }} />
                   <MapPin size={9} style={{ color: '#86efac' }} />
                 </div>
 
@@ -133,7 +133,7 @@ export default function AllTripsModal({ trips, onBook, onClose }: Props) {
                   <p style={{ fontSize: '0.88rem', fontWeight: 600, color: '#ffffff', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: isMobile ? 'normal' : 'nowrap' }}>{trip.from}</span>
                     {trip.isReal && (
-                      <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(34,197,94,0.2)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', flexShrink: 0 }}>DIN</span>
+                      <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(74,222,85,0.2)', color: '#4ADE55', border: '1px solid rgba(74,222,85,0.3)', flexShrink: 0 }}>DIN</span>
                     )}
                   </p>
                   <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)', marginTop: 2 }}>{'\u2192'} {trip.to}</p>
@@ -145,7 +145,7 @@ export default function AllTripsModal({ trips, onBook, onClose }: Props) {
                         {trip.rating}
                       </span>
                     ) : (
-                      <span style={{ fontSize: '0.65rem', color: 'rgba(34,197,94,0.75)' }}>Ny bärare</span>
+                      <span style={{ fontSize: '0.65rem', color: 'rgba(74,222,85,0.75)' }}>Ny bärare</span>
                     )}
                   </div>
                 </div>
@@ -174,7 +174,7 @@ export default function AllTripsModal({ trips, onBook, onClose }: Props) {
                   style={{
                     padding: '8px 14px',
                     borderRadius: 8,
-                    background: '#22c55e',
+                    background: '#4ADE55',
                     color: '#0a0a0a',
                     fontSize: '0.75rem',
                     fontWeight: 700,

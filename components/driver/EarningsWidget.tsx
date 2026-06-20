@@ -105,8 +105,8 @@ export default function EarningsWidget() {
           style={{
             padding: '7px 12px',
             borderRadius: 999,
-            border: '1px solid rgba(34,197,94,0.18)',
-            background: 'rgba(34,197,94,0.08)',
+            border: '1px solid rgba(74,222,85,0.18)',
+            background: 'rgba(74,222,85,0.08)',
             fontSize: '0.76rem',
             fontWeight: 700,
             color: 'var(--success)',

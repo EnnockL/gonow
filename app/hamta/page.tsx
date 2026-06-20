@@ -157,7 +157,7 @@ export default function HamtaPage() {
               ))}
             </div>
 
-            <div className="card-sm" style={{ background: 'var(--accent-softer)', borderColor: 'rgba(34,197,94,0.15)' }}>
+            <div className="card-sm" style={{ background: 'var(--accent-softer)', borderColor: 'rgba(74,222,85,0.15)' }}>
               <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent)', marginBottom: 10 }}>Hur det fungerar</p>
               {[
                 { icon: FileText, text: 'Du anger butik och ordernummer' },
