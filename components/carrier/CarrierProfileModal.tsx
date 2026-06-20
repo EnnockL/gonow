@@ -165,11 +165,11 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
         margin: isMobile ? '0 12px' : 0,
       }}>
         {/* Header — always visible */}
-        <div style={{ background: 'linear-gradient(135deg, rgba(146,255,99,0.18) 0%, rgba(146,255,99,0.06) 100%)', borderBottom: '1px solid rgba(146,255,99,0.15)', padding: isMobile ? '18px 14px 12px' : '22px 20px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, position: 'relative', flexShrink: 0 }}>
+        <div style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.18) 0%, rgba(34,197,94,0.06) 100%)', borderBottom: '1px solid rgba(34,197,94,0.15)', padding: isMobile ? '18px 14px 12px' : '22px 20px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, position: 'relative', flexShrink: 0 }}>
           <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--muted)' }}>
             <X size={13} />
           </button>
-          <div style={{ width: 60, height: 60, borderRadius: 16, background: 'linear-gradient(135deg, rgba(146,255,99,0.35), rgba(146,255,99,0.15))', border: '2px solid rgba(146,255,99,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 800, color: '#15803d' }}>
+          <div style={{ width: 60, height: 60, borderRadius: 16, background: 'linear-gradient(135deg, rgba(34,197,94,0.35), rgba(34,197,94,0.15))', border: '2px solid rgba(34,197,94,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 800, color: '#15803d' }}>
             {loading ? '…' : initials}
           </div>
           {!loading && (
@@ -192,7 +192,7 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           {TABS.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)} style={{ flex: 1, padding: '11px 0', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.8rem', border: 'none', cursor: 'pointer', background: 'transparent', color: tab === t.key ? 'var(--text)' : 'var(--muted)', borderBottom: `2px solid ${tab === t.key ? '#92ff63' : 'transparent'}`, transition: 'all 0.15s' }}>
+            <button key={t.key} onClick={() => setTab(t.key)} style={{ flex: 1, padding: '11px 0', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.8rem', border: 'none', cursor: 'pointer', background: 'transparent', color: tab === t.key ? 'var(--text)' : 'var(--muted)', borderBottom: `2px solid ${tab === t.key ? '#22c55e' : 'transparent'}`, transition: 'all 0.15s' }}>
               {t.label}
             </button>
           ))}
@@ -288,7 +288,7 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
                             {isMe ? 'Du' : profile?.name?.split(' ')[0] ?? ''}
                           </span>
                         )}
-                        <div style={{ maxWidth: '78%', padding: '8px 12px', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px', background: isMe ? '#92ff63' : (isDark ? '#2a2a2a' : '#e4e6eb'), color: isMe ? '#0a0a0a' : (isDark ? '#fafafa' : '#111'), fontSize: '0.82rem', lineHeight: 1.45, wordBreak: 'break-word' }}>
+                        <div style={{ maxWidth: '78%', padding: '8px 12px', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px', background: isMe ? '#22c55e' : (isDark ? '#2a2a2a' : '#e4e6eb'), color: isMe ? '#0a0a0a' : (isDark ? '#fafafa' : '#111'), fontSize: '0.82rem', lineHeight: 1.45, wordBreak: 'break-word' }}>
                           {msg.content}
                         </div>
                       </div>
@@ -312,7 +312,7 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
                   type="button"
                   onClick={handleSend}
                   disabled={!message.trim() || sending || !userId}
-                  style={{ width: 34, height: 34, flexShrink: 0, borderRadius: '50%', border: 'none', background: message.trim() ? '#92ff63' : 'var(--border)', color: message.trim() ? '#0a0a0a' : 'var(--muted)', cursor: message.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                  style={{ width: 34, height: 34, flexShrink: 0, borderRadius: '50%', border: 'none', background: message.trim() ? '#22c55e' : 'var(--border)', color: message.trim() ? '#0a0a0a' : 'var(--muted)', cursor: message.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
                 >
                   <Send size={14} />
                 </button>

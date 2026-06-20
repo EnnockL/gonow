@@ -232,7 +232,7 @@ export default function TripRegistration() {
 
       {/* Route preview */}
       {(routeLoading || route) && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--accent-softer)', borderRadius: 10, border: '1px solid rgba(146,255,99,0.2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--accent-softer)', borderRadius: 10, border: '1px solid rgba(34,197,94,0.2)' }}>
           {routeLoading
             ? <><Loader2 size={13} style={{ color: 'var(--accent)', animation: 'spin 1s linear infinite' }} /><span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Beräknar rutt...</span></>
             : route && <>
@@ -264,7 +264,7 @@ export default function TripRegistration() {
             <button key={v.value} type="button" onClick={() => set('vehicle_type', v.value)} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '10px 4px',
               borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.72rem', fontWeight: 500,
-              border: `1px solid ${form.vehicle_type === v.value ? 'rgba(146,255,99,0.5)' : 'var(--border)'}`,
+              border: `1px solid ${form.vehicle_type === v.value ? 'rgba(34,197,94,0.5)' : 'var(--border)'}`,
               background: form.vehicle_type === v.value ? 'var(--accent-soft)' : 'var(--surface)',
               color: form.vehicle_type === v.value ? 'var(--accent)' : 'var(--muted)',
               transition: 'all 0.15s',
@@ -362,7 +362,7 @@ export default function TripRegistration() {
           {toggles.map(({ key, label }) => (
             <button key={key} type="button" onClick={() => set(key, !form[key])} style={{
               padding: '7px 14px', borderRadius: 100, fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
-              border: `1px solid ${form[key] ? 'rgba(146,255,99,0.4)' : 'var(--border)'}`,
+              border: `1px solid ${form[key] ? 'rgba(34,197,94,0.4)' : 'var(--border)'}`,
               background: form[key] ? 'var(--accent-soft)' : 'transparent',
               color: form[key] ? 'var(--accent)' : 'var(--muted)',
               transition: 'all 0.15s',

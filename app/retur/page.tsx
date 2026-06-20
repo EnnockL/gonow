@@ -223,7 +223,7 @@ export default function ReturPage() {
               ))}
             </div>
 
-            <div className="card-sm mobile-panel" style={{ background: 'var(--accent-softer)', borderColor: 'rgba(146,255,99,0.15)', borderRadius: isMobile ? 18 : undefined }}>
+            <div className="card-sm mobile-panel" style={{ background: 'var(--accent-softer)', borderColor: 'rgba(34,197,94,0.15)', borderRadius: isMobile ? 18 : undefined }}>
               <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--accent)', marginBottom: 8 }}>Inga postkontor</p>
               <p style={{ fontSize: '0.73rem', color: 'var(--muted)', lineHeight: 1.6 }}>En resenär hämtar upp din retur och lämnar in den.</p>
             </div>

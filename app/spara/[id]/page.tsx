@@ -362,8 +362,8 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
               </div>
             </div>
 
-            <div style={{ height: isMobile ? 220 : 280, borderRadius: isMobile ? 20 : 18, background: 'linear-gradient(180deg, rgba(146,255,99,0.08), rgba(0,0,0,0.02))', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at top right, rgba(146,255,99,0.14), transparent 40%)', pointerEvents: 'none' }} />
+            <div style={{ height: isMobile ? 220 : 280, borderRadius: isMobile ? 20 : 18, background: 'linear-gradient(180deg, rgba(34,197,94,0.08), rgba(0,0,0,0.02))', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at top right, rgba(34,197,94,0.14), transparent 40%)', pointerEvents: 'none' }} />
               <MapPin size={36} color="var(--accent)" />
               <p style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Live-karta och positionsflode</p>
               <p style={{ fontSize: '0.76rem', color: 'var(--muted)', margin: 0, textAlign: 'center', maxWidth: 360 }}>
@@ -371,7 +371,7 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
               </p>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', padding: '0 16px' }}>
                 {['Startpunkt', 'Checkpoint', 'Ankomst'].map((item, index) => (
-                  <div key={item} style={{ padding: '8px 12px', borderRadius: 999, border: '1px solid rgba(146,255,99,0.25)', background: index <= Math.max(0, currentIdx - 1) ? 'rgba(146,255,99,0.14)' : 'rgba(255,255,255,0.72)', color: index <= Math.max(0, currentIdx - 1) ? '#15803d' : 'var(--muted)', fontSize: '0.72rem', fontWeight: 700 }}>
+                  <div key={item} style={{ padding: '8px 12px', borderRadius: 999, border: '1px solid rgba(34,197,94,0.25)', background: index <= Math.max(0, currentIdx - 1) ? 'rgba(34,197,94,0.14)' : 'rgba(255,255,255,0.72)', color: index <= Math.max(0, currentIdx - 1) ? '#15803d' : 'var(--muted)', fontSize: '0.72rem', fontWeight: 700 }}>
                     {item}
                   </div>
                 ))}
@@ -388,7 +388,7 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {checkpoints.map((item) => (
                   <div key={item.key} style={{ display: 'grid', gridTemplateColumns: '22px 1fr', gap: 12, alignItems: 'start' }}>
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: item.active ? 'rgba(146,255,99,0.16)' : 'var(--surface-2)', border: `1.5px solid ${item.active ? 'rgba(146,255,99,0.45)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: item.active ? 'rgba(34,197,94,0.16)' : 'var(--surface-2)', border: `1.5px solid ${item.active ? 'rgba(34,197,94,0.45)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.active ? 'var(--accent)' : 'var(--border)' }} />
                     </div>
                     <div style={{ paddingBottom: 6 }}>

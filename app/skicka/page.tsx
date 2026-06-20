@@ -609,15 +609,15 @@ function SkickaPageContent() {
                     </button>
 
                     <button onClick={() => setAiMode(true)} style={{
-                      marginTop: 14, border: '1px solid rgba(146,255,99,0.45)',
-                      background: 'rgba(146,255,99,0.12)', color: '#d9ffc8',
+                      marginTop: 14, border: '1px solid rgba(34,197,94,0.45)',
+                      background: 'rgba(34,197,94,0.12)', color: '#d9ffc8',
                       borderRadius: 10, padding: '9px 16px', cursor: 'pointer',
                       fontFamily: 'inherit', fontSize: '0.82rem', fontWeight: 600,
                       display: 'inline-flex', alignItems: 'center', gap: 6,
                       transition: 'background 0.15s',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(146,255,99,0.15)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(146,255,99,0.08)')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(34,197,94,0.15)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(34,197,94,0.08)')}
                     >
                       <Zap size={13} /> AI-matchning — beskriv fritt
                     </button>
@@ -706,11 +706,11 @@ function SkickaPageContent() {
                   {/* Header */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                      <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(146,255,99,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Zap size={14} style={{ color: '#92ff63' }} />
+                      <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(34,197,94,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Zap size={14} style={{ color: '#22c55e' }} />
                       </div>
                       <div>
-                        <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#92ff63', margin: 0 }}>AI-matchning</p>
+                        <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#22c55e', margin: 0 }}>AI-matchning</p>
                         <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', margin: 0 }}>Beskriv fritt — AI:n hittar rätt bärare</p>
                       </div>
                     </div>
@@ -727,7 +727,7 @@ function SkickaPageContent() {
 
                   {loading && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)' }}>
-                      <Loader2 size={13} style={{ animation: 'sk-spin 1s linear infinite', color: '#92ff63' }} />
+                      <Loader2 size={13} style={{ animation: 'sk-spin 1s linear infinite', color: '#22c55e' }} />
                       Söker bärare längs din rutt...
                     </div>
                   )}
@@ -876,41 +876,50 @@ function SkickaPageContent() {
                     {parsed.from_city.split(',')[0]} → {parsed.to_city.split(',')[0]}
                   </h2>
                   <p className="sk-match-hero-sub">
-                    Välj en resa med rätt kapacitet, tydlig status och rätt pris direkt. Alla kort visar hur full bilen är innan du skickar förfrågan.
+                    Välj en resa med rätt kapacitet, tydlig status och rätt pris direkt. Här ser du vilka bärare som
+                    faktiskt kan ta din leverans just nu, innan du skickar förfrågan.
                   </p>
                 </div>
                 <div className="sk-match-hero-stats">
                   <div className="sk-match-stat">
                     <span className="sk-match-stat-k">Matchningar</span>
                     <strong>{trips.length}</strong>
+                    <small>aktiva val på denna rutt</small>
                   </div>
                   <div className="sk-match-stat">
-                    <span className="sk-match-stat-k">Prisnivå</span>
+                    <span className="sk-match-stat-k">Startpris</span>
                     <strong>{routePrice ? routePrice.price : parsed.estimated_price_sek} kr</strong>
+                    <small>estimat innan checkout</small>
                   </div>
                   <div className="sk-match-stat">
-                    <span className="sk-match-stat-k">Mode</span>
+                    <span className="sk-match-stat-k">Typ</span>
                     <strong>{parsed.type === 'lift' ? 'Lift' : parsed.type === 'return' ? 'Retur' : 'Paket'}</strong>
+                    <small>flöde och kapacitet</small>
                   </div>
                 </div>
               </div>
 
               {/* Summary pills */}
               <div className="sk-summary-bar">
-                {[
-                  { icon: MapPin,   text: `${parsed.from_city.split(',')[0]} → ${parsed.to_city.split(',')[0]}` },
-                  { icon: Package,  text: parsed.description?.slice(0, 28) || 'Paket' },
-                  ...(parsed.weight_kg ? [{ icon: Scale, text: `${parsed.weight_kg} kg` }] : []),
-                  ...(routePrice    ? [{ icon: Route, text: `${routePrice.distance_km} km` }] : []),
-                  ...(parsed.departure_date ? [{ icon: Calendar, text: parsed.departure_date }] : []),
-                ].map(({ icon: Icon, text }) => (
-                  <span key={text} className="sk-summary-pill">
-                    <Icon size={12} style={{ color: 'var(--accent)' }} /> {text}
-                  </span>
-                ))}
-                <button onClick={() => setStep('chat')} className="sk-text-link" style={{ marginLeft: 'auto' }}>
-                  ← Ändra sökning
-                </button>
+                <div className="sk-summary-group">
+                  {[
+                    { icon: MapPin, text: `${parsed.from_city.split(',')[0]} → ${parsed.to_city.split(',')[0]}` },
+                    { icon: Package, text: parsed.description?.slice(0, 28) || 'Paket' },
+                    ...(parsed.weight_kg ? [{ icon: Scale, text: `${parsed.weight_kg} kg` }] : []),
+                    ...(routePrice ? [{ icon: Route, text: `${routePrice.distance_km} km` }] : []),
+                    ...(parsed.departure_date ? [{ icon: Calendar, text: parsed.departure_date }] : []),
+                  ].map(({ icon: Icon, text }) => (
+                    <span key={text} className="sk-summary-pill">
+                      <Icon size={12} style={{ color: 'var(--accent)' }} /> {text}
+                    </span>
+                  ))}
+                </div>
+                <div className="sk-summary-actions">
+                  <span className="sk-summary-tip">Välj ett kort för att låsa bokningen till rätt bärare.</span>
+                  <button onClick={() => setStep('chat')} className="sk-text-link">
+                    ← Ändra sökning
+                  </button>
+                </div>
               </div>
 
               {trips.length === 0 ? (
@@ -928,6 +937,7 @@ function SkickaPageContent() {
                     <div>
                       <p className="sk-eyebrow">Matchade resor</p>
                       <h2 className="sk-card-title">{trips.length} bärare passar din rutt</h2>
+                      <p className="sk-match-list-subtitle">Jämför först kapacitet och status. Öppna sedan bokningen med den bärare som känns tryggast.</p>
                     </div>
                   </div>
                   <div className="sk-match-list">
@@ -949,11 +959,11 @@ function SkickaPageContent() {
 
             {/* Booking sidebar */}
             <aside>
-              <div className="sk-booking-card" style={{ position: 'sticky', top: 88 }}>
-                {/* Price hero */}
-                <div style={{ background: 'linear-gradient(135deg, rgba(146,255,99,0.1) 0%, rgba(146,255,99,0.04) 100%)', border: '1px solid rgba(146,255,99,0.2)', borderRadius: 16, padding: '18px 20px', marginBottom: 20, textAlign: 'center' }}>
+                <div className="sk-booking-card" style={{ position: 'sticky', top: 88 }}>
+                  {/* Price hero */}
+                <div className="sk-price-hero" style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0.04) 100%)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 16, padding: '18px 20px', marginBottom: 20, textAlign: 'center' }}>
                   <p style={{ fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--muted)', marginBottom: 6 }}>Beräknat pris</p>
-                  <p style={{ fontSize: '2.2rem', fontWeight: 900, color: '#92ff63', letterSpacing: '-0.04em', lineHeight: 1, margin: 0 }}>
+                  <p style={{ fontSize: '2.2rem', fontWeight: 900, color: '#22c55e', letterSpacing: '-0.04em', lineHeight: 1, margin: 0 }}>
                     {routePrice ? routePrice.price : parsed.estimated_price_sek} <span style={{ fontSize: '1rem', fontWeight: 700 }}>kr</span>
                   </p>
                   {routePrice && (
@@ -961,6 +971,16 @@ function SkickaPageContent() {
                       {routePrice.breakdown.base_fee} kr start + {routePrice.breakdown.km_fee} kr/km + {routePrice.breakdown.kg_fee} kr/kg
                     </p>
                   )}
+                  <div className="sk-price-hero-stats">
+                    <div className="sk-price-hero-stat">
+                      <span>Distans</span>
+                      <strong>{routePrice ? `${routePrice.distance_km} km` : '—'}</strong>
+                    </div>
+                    <div className="sk-price-hero-stat">
+                      <span>Leverans</span>
+                      <strong>{parsed.urgency === 'today' ? 'Idag' : parsed.urgency === 'tomorrow' ? 'Imorgon' : 'Flexibel'}</strong>
+                    </div>
+                  </div>
                 </div>
                 <p className="sk-aside-title">Bokningssammanfattning</p>
 
@@ -1234,12 +1254,12 @@ function SkickaPageContent() {
         .sk-glow-l {
           width: 360px; height: 360px;
           top: 60px; left: -100px;
-          background: radial-gradient(circle, rgba(146,255,99,0.09) 0%, transparent 70%);
+          background: radial-gradient(circle, rgba(34,197,94,0.09) 0%, transparent 70%);
         }
         .sk-glow-r {
           width: 420px; height: 420px;
           top: 280px; right: -130px;
-          background: radial-gradient(circle, rgba(146,255,99,0.07) 0%, transparent 70%);
+          background: radial-gradient(circle, rgba(34,197,94,0.07) 0%, transparent 70%);
         }
 
         .sk-wrap {
@@ -1300,7 +1320,7 @@ function SkickaPageContent() {
 
         .sk-stat-accent {
           background: var(--accent-softer);
-          border-color: rgba(146,255,99,0.25);
+          border-color: rgba(34,197,94,0.25);
         }
 
         .sk-stat-val {
@@ -1359,7 +1379,7 @@ function SkickaPageContent() {
 
         .sk-step-active .sk-step-num {
           background: var(--accent-soft);
-          border-color: rgba(146,255,99,0.35);
+          border-color: rgba(34,197,94,0.35);
           color: var(--accent);
         }
 
@@ -1747,7 +1767,7 @@ function SkickaPageContent() {
           color: #0a0a0a;
         }
         .sk-simple-left .sk-find-btn {
-          background: #92ff63;
+          background: #22c55e;
           color: #0a0a0a;
         }
 
@@ -1778,7 +1798,7 @@ function SkickaPageContent() {
           font-size: 3rem;
           font-weight: 900;
           letter-spacing: -0.06em;
-          color: #92ff63;
+          color: #22c55e;
           line-height: 1;
         }
 
@@ -1817,20 +1837,20 @@ function SkickaPageContent() {
         }
 
         .sk-visual-route-btn:hover {
-          background: rgba(146,255,99,0.08);
-          border-color: rgba(146,255,99,0.2);
+          background: rgba(34,197,94,0.08);
+          border-color: rgba(34,197,94,0.2);
         }
 
         .sk-vr-dot {
           width: 6px; height: 6px; border-radius: 50%;
-          background: #92ff63;
+          background: #22c55e;
           flex-shrink: 0;
         }
 
         .sk-vr-from  { font-size: 0.78rem; font-weight: 700; color: #fff; }
         .sk-vr-arrow { font-size: 0.7rem; color: rgba(255,255,255,0.3); flex-shrink: 0; }
         .sk-vr-to    { font-size: 0.78rem; color: rgba(255,255,255,0.55); flex: 1; }
-        .sk-vr-price { font-size: 0.78rem; font-weight: 700; color: #92ff63; flex-shrink: 0; }
+        .sk-vr-price { font-size: 0.78rem; font-weight: 700; color: #22c55e; flex-shrink: 0; }
 
         .sk-visual-footer {
           display: flex;
@@ -1861,6 +1881,12 @@ function SkickaPageContent() {
         .sk-visual-book-btn:hover {
           background: rgba(255,255,255,0.08);
           border-color: rgba(255,255,255,0.4);
+        }
+
+        .sk-visual-footer .sk-text-link {
+          color: rgba(190,242,100,0.92);
+          font-size: 0.74rem !important;
+          font-weight: 700;
         }
 
         .sk-visual-stats {
@@ -1931,7 +1957,7 @@ function SkickaPageContent() {
           flex-direction: column;
           justify-content: center;
           gap: 14px;
-          background: rgba(146,255,99,0.06);
+          background: rgba(34,197,94,0.06);
           border-right: 1px solid var(--border);
         }
 
@@ -1973,7 +1999,7 @@ function SkickaPageContent() {
 
         /* dark mode AI left panel */
         :global(html.dark) .sk-ai-left {
-          background: rgba(146,255,99,0.04);
+          background: rgba(34,197,94,0.04);
         }
 
         @media (max-width: 700px) {
@@ -2045,19 +2071,19 @@ function SkickaPageContent() {
           cursor: pointer; font-family: inherit; text-align: left;
           transition: background 0.15s;
         }
-        .sk-live-row:hover { background: rgba(146,255,99,0.04); }
+        .sk-live-row:hover { background: rgba(34,197,94,0.04); }
 
         .sk-route-indicator {
           display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0;
         }
         .sk-route-dot {
           width: 8px; height: 8px; border-radius: 50%;
-          background: rgba(146,255,99,0.6);
+          background: rgba(34,197,94,0.6);
         }
         .sk-route-dot.own { background: #bef264; }
         .sk-route-line {
           width: 1px; height: 20px;
-          background: linear-gradient(to bottom, #92ff63, #22c55e);
+          background: linear-gradient(to bottom, #22c55e, #22c55e);
         }
 
         .sk-live-from {
@@ -2133,7 +2159,7 @@ function SkickaPageContent() {
 
         .sk-aside-card-trust {
           background: rgba(0,0,0,0.10);
-          border-color: rgba(146,255,99,0.25);
+          border-color: rgba(34,197,94,0.25);
         }
 
         .sk-aside-title {
@@ -2154,7 +2180,7 @@ function SkickaPageContent() {
           display: flex; align-items: center; justify-content: center;
           font-size: 0.68rem; font-weight: 800;
           background: var(--accent-softer);
-          border: 1px solid rgba(146,255,99,0.2);
+          border: 1px solid rgba(34,197,94,0.2);
           color: var(--accent);
         }
 
@@ -2181,20 +2207,49 @@ function SkickaPageContent() {
 
         /* ── Matches step ── */
         .sk-summary-bar {
-          display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
-          padding: 14px 20px;
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 16px 18px;
           border: 1px solid var(--border);
-          border-radius: 16px;
-          background: var(--surface);
+          border-radius: 18px;
+          background:
+            linear-gradient(180deg, rgba(34,197,94,0.035), transparent 80%),
+            var(--surface);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
+        }
+
+        .sk-summary-group {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 8px;
+          min-width: 0;
+        }
+
+        .sk-summary-actions {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 8px;
+          flex-shrink: 0;
+        }
+
+        .sk-summary-tip {
+          font-size: 0.72rem;
+          color: var(--muted);
+          max-width: 220px;
+          text-align: right;
+          line-height: 1.5;
         }
 
         .sk-summary-pill {
           display: inline-flex; align-items: center; gap: 6px;
           padding: 6px 12px; border-radius: 999px;
-          border: 1px solid rgba(146,255,99,0.2);
-          background: rgba(146,255,99,0.06);
+          border: 1px solid rgba(34,197,94,0.2);
+          background: rgba(34,197,94,0.06);
           font-size: 0.74rem; font-weight: 600; color: var(--text);
         }
 
@@ -2206,8 +2261,8 @@ function SkickaPageContent() {
           border-radius: 22px;
           border: 1px solid var(--border);
           background:
-            radial-gradient(circle at top right, rgba(146,255,99,0.12), transparent 34%),
-            linear-gradient(180deg, rgba(146,255,99,0.04), rgba(146,255,99,0.015)),
+            radial-gradient(circle at top right, rgba(34,197,94,0.12), transparent 34%),
+            linear-gradient(180deg, rgba(34,197,94,0.04), rgba(34,197,94,0.015)),
             var(--surface);
           box-shadow: 0 16px 40px rgba(0,0,0,0.06);
         }
@@ -2242,8 +2297,8 @@ function SkickaPageContent() {
         .sk-match-stat {
           padding: 14px;
           border-radius: 16px;
-          border: 1px solid rgba(146,255,99,0.16);
-          background: rgba(146,255,99,0.08);
+          border: 1px solid rgba(34,197,94,0.16);
+          background: rgba(34,197,94,0.08);
           display: flex;
           flex-direction: column;
           gap: 6px;
@@ -2263,11 +2318,25 @@ function SkickaPageContent() {
           line-height: 1.2;
         }
 
+        .sk-match-stat small {
+          font-size: 0.68rem;
+          line-height: 1.45;
+          color: var(--muted);
+        }
+
         .sk-match-card {
           padding-top: 20px;
           background:
-            linear-gradient(180deg, rgba(146,255,99,0.025), transparent 24%),
+            linear-gradient(180deg, rgba(34,197,94,0.025), transparent 24%),
             var(--surface);
+        }
+
+        .sk-match-list-subtitle {
+          margin-top: 6px;
+          font-size: 0.8rem;
+          line-height: 1.55;
+          color: var(--muted);
+          max-width: 540px;
         }
 
         .sk-match-list {
@@ -2289,6 +2358,36 @@ function SkickaPageContent() {
           padding: 24px;
           box-shadow: 0 16px 48px rgba(0,0,0,0.07);
           overflow: hidden;
+        }
+
+        .sk-price-hero-stats {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+          margin-top: 14px;
+        }
+
+        .sk-price-hero-stat {
+          padding: 10px 12px;
+          border-radius: 12px;
+          border: 1px solid rgba(34,197,94,0.16);
+          background: rgba(255,255,255,0.34);
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .sk-price-hero-stat span {
+          font-size: 0.62rem;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: var(--muted);
+        }
+
+        .sk-price-hero-stat strong {
+          font-size: 0.84rem;
+          font-weight: 800;
+          color: var(--text);
         }
 
         .sk-booking-rows { display: flex; flex-direction: column; gap: 0; margin-bottom: 16px; }
@@ -2347,7 +2446,7 @@ function SkickaPageContent() {
 
         .sk-spinner-ring {
           width: 64px; height: 64px; border-radius: 50%;
-          border: 2px solid rgba(146,255,99,0.2);
+          border: 2px solid rgba(34,197,94,0.2);
           display: flex; align-items: center; justify-content: center;
         }
 
@@ -2370,25 +2469,25 @@ function SkickaPageContent() {
 
         /* ── Light mode accent touches ── */
         html:not(.dark) .sk-stat {
-          border-top: 2px solid rgba(146,255,99,0.18);
+          border-top: 2px solid rgba(34,197,94,0.18);
         }
 
         html:not(.dark) .sk-stat-accent {
-          border-top: 2px solid rgba(146,255,99,0.65);
-          background: linear-gradient(135deg, rgba(146,255,99,0.13) 0%, rgba(146,255,99,0.06) 100%);
-          box-shadow: 0 6px 20px rgba(146,255,99,0.12);
+          border-top: 2px solid rgba(34,197,94,0.65);
+          background: linear-gradient(135deg, rgba(34,197,94,0.13) 0%, rgba(34,197,94,0.06) 100%);
+          box-shadow: 0 6px 20px rgba(34,197,94,0.12);
         }
 
         html:not(.dark) .sk-card {
-          border-top: 2px solid rgba(146,255,99,0.3);
+          border-top: 2px solid rgba(34,197,94,0.3);
         }
 
         html:not(.dark) .sk-stepper {
-          border-left: 3px solid rgba(146,255,99,0.5);
+          border-left: 3px solid rgba(34,197,94,0.5);
         }
 
         html:not(.dark) .sk-aside-card:not(.sk-aside-card-trust) {
-          border-left: 3px solid rgba(146,255,99,0.28);
+          border-left: 3px solid rgba(34,197,94,0.28);
         }
 
         html:not(.dark) .sk-aside-card-trust {
@@ -2404,12 +2503,12 @@ function SkickaPageContent() {
         }
 
         html:not(.dark) .sk-booking-card {
-          border-top: 2px solid rgba(146,255,99,0.3);
+          border-top: 2px solid rgba(34,197,94,0.3);
         }
 
         html:not(.dark) .sk-summary-bar {
-          border-top: 2px solid rgba(146,255,99,0.28);
-          background: linear-gradient(to bottom, rgba(146,255,99,0.04) 0%, var(--surface) 100%);
+          border-top: 2px solid rgba(34,197,94,0.28);
+          background: linear-gradient(to bottom, rgba(34,197,94,0.04) 0%, var(--surface) 100%);
         }
 
         html:not(.dark) .sk-eyebrow,
@@ -2432,8 +2531,8 @@ function SkickaPageContent() {
         }
 
         html:not(.dark) .sk-flow-num {
-          background: rgba(146,255,99,0.18);
-          border-color: rgba(146,255,99,0.35);
+          background: rgba(34,197,94,0.18);
+          border-color: rgba(34,197,94,0.35);
         }
 
         /* ── Dark mode overrides ── */
@@ -2567,17 +2666,39 @@ function SkickaPageContent() {
           .sk-match-stat strong {
             font-size: 0.88rem;
           }
+          .sk-match-stat small {
+            font-size: 0.62rem;
+            line-height: 1.35;
+          }
           .sk-match-list {
             gap: 12px;
           }
           .sk-summary-bar {
             padding: 12px 14px;
             border-radius: 16px;
+            gap: 10px;
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .sk-summary-group {
             gap: 8px;
+          }
+          .sk-summary-actions {
+            align-items: flex-start;
+            gap: 6px;
+          }
+          .sk-summary-tip {
+            max-width: none;
+            text-align: left;
+            font-size: 0.7rem;
           }
           .sk-summary-pill {
             font-size: 0.7rem;
             padding: 7px 10px;
+          }
+          .sk-match-list-subtitle {
+            font-size: 0.76rem;
+            line-height: 1.5;
           }
           .sk-card-top { flex-direction: column; }
           .sk-live-carrier { display: none; }
@@ -2654,6 +2775,9 @@ function SkickaPageContent() {
           .sk-live-price-col p {
             font-size: 0.95rem;
           }
+          .sk-price-hero-stats {
+            grid-template-columns: 1fr;
+          }
           .sk-live-footer {
             padding: 16px 14px;
             font-size: 0.82rem;
@@ -2725,7 +2849,7 @@ function SkickaPageContent() {
             min-height: 52px;
             border-radius: 14px;
             font-size: 0.88rem;
-            box-shadow: 0 12px 28px rgba(146,255,99,0.18);
+            box-shadow: 0 12px 28px rgba(34,197,94,0.18);
           }
           .sk-visual-route {
             grid-template-columns: 1fr auto !important;

@@ -98,8 +98,8 @@ export default function AIChat({ onParsed }: AIChatProps) {
         {messages.map((m, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
             {m.role === 'assistant' && (
-              <div style={{ width: 24, height: 24, borderRadius: 7, background: 'rgba(146,255,99,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 8, alignSelf: 'flex-end' }}>
-                <Zap size={11} style={{ color: '#92ff63' }} />
+              <div style={{ width: 24, height: 24, borderRadius: 7, background: 'rgba(34,197,94,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 8, alignSelf: 'flex-end' }}>
+                <Zap size={11} style={{ color: '#22c55e' }} />
               </div>
             )}
             <div style={{
@@ -109,7 +109,7 @@ export default function AIChat({ onParsed }: AIChatProps) {
               fontSize: '0.82rem',
               lineHeight: 1.6,
               whiteSpace: 'pre-wrap',
-              background: m.role === 'user' ? '#92ff63' : 'rgba(255,255,255,0.1)',
+              background: m.role === 'user' ? '#22c55e' : 'rgba(255,255,255,0.1)',
               color: m.role === 'user' ? '#0a0a0a' : 'rgba(255,255,255,0.9)',
               border: m.role === 'assistant' ? '1px solid rgba(255,255,255,0.1)' : 'none',
               fontWeight: m.role === 'user' ? 600 : 400,
@@ -121,8 +121,8 @@ export default function AIChat({ onParsed }: AIChatProps) {
         ))}
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <div style={{ width: 24, height: 24, borderRadius: 7, background: 'rgba(146,255,99,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
-              <Zap size={11} style={{ color: '#92ff63' }} />
+            <div style={{ width: 24, height: 24, borderRadius: 7, background: 'rgba(34,197,94,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
+              <Zap size={11} style={{ color: '#22c55e' }} />
             </div>
             <div style={{ display: 'flex', gap: 4, alignItems: 'center', padding: '9px 13px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px 12px 12px 4px' }}>
               {[0, 1, 2].map((n) => (
@@ -154,9 +154,9 @@ export default function AIChat({ onParsed }: AIChatProps) {
               }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLElement
-                el.style.color = '#92ff63'
-                el.style.borderColor = 'rgba(146,255,99,0.35)'
-                el.style.background = 'rgba(146,255,99,0.08)'
+                el.style.color = '#22c55e'
+                el.style.borderColor = 'rgba(34,197,94,0.35)'
+                el.style.background = 'rgba(34,197,94,0.08)'
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLElement
@@ -181,7 +181,7 @@ export default function AIChat({ onParsed }: AIChatProps) {
         padding: '6px 8px',
         transition: 'border-color 0.15s',
       }}
-        onFocusCapture={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#92ff63' }}
+        onFocusCapture={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#22c55e' }}
         onBlurCapture={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.15)' }}
       >
         <input type="file" ref={fileRef} style={{ display: 'none' }} accept="image/*" onChange={handleFile} />
@@ -189,7 +189,7 @@ export default function AIChat({ onParsed }: AIChatProps) {
           onClick={() => fileRef.current?.click()}
           style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: 'transparent', color: 'rgba(255,255,255,0.35)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'color 0.15s' }}
           title="Bifoga bild"
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#92ff63' }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#22c55e' }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.35)' }}
         >
           <Paperclip size={15} />
@@ -208,7 +208,7 @@ export default function AIChat({ onParsed }: AIChatProps) {
           disabled={loading || !input.trim()}
           style={{
             width: 36, height: 36, borderRadius: 8, border: 'none',
-            background: input.trim() ? '#92ff63' : 'rgba(255,255,255,0.08)',
+            background: input.trim() ? '#22c55e' : 'rgba(255,255,255,0.08)',
             color: input.trim() ? '#0a0a0a' : 'rgba(255,255,255,0.3)',
             cursor: input.trim() ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,

@@ -843,7 +843,7 @@ export default function ProfilPage() {
   const initials = user.name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
 
   return (
-    <div style={{ minHeight: '100vh', paddingTop: isMobile ? 56 : 88, paddingBottom: isMobile ? 32 : 88, background: isMobile ? (isDark ? '#0a0a0a' : '#f2f2f7') : (isDark ? 'linear-gradient(180deg, transparent 0%, rgba(146,255,99,0.04) 100%)' : '#f8f8f8'), overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', paddingTop: isMobile ? 56 : 88, paddingBottom: isMobile ? 32 : 88, background: isMobile ? (isDark ? '#0a0a0a' : '#f2f2f7') : (isDark ? 'linear-gradient(180deg, transparent 0%, rgba(34,197,94,0.04) 100%)' : '#f8f8f8'), overflowX: 'hidden' }}>
 
       {/* ── MOBILE: compact app header ── */}
       {isMobile && (
@@ -868,9 +868,9 @@ export default function ProfilPage() {
             const badge = tab.key === 'assignments' ? activeAssignments.length : tab.key === 'requests' ? pendingIncoming : 0
             const isActive = activeTab === tab.key
             return (
-              <button key={tab.key} onClick={() => handleTabChange(tab.key)} style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '15px 15px 12px', border: 'none', borderBottom: `2.5px solid ${isActive ? '#92ff63' : 'transparent'}`, background: 'none', color: isActive ? 'var(--text)' : 'var(--muted)', fontWeight: isActive ? 700 : 500, fontSize: '0.81rem', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'color 0.15s', marginBottom: -1 }}>
+              <button key={tab.key} onClick={() => handleTabChange(tab.key)} style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '15px 15px 12px', border: 'none', borderBottom: `2.5px solid ${isActive ? '#22c55e' : 'transparent'}`, background: 'none', color: isActive ? 'var(--text)' : 'var(--muted)', fontWeight: isActive ? 700 : 500, fontSize: '0.81rem', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'color 0.15s', marginBottom: -1 }}>
                 {tab.label}
-                {badge > 0 && <span style={{ fontSize: '0.58rem', fontWeight: 800, minWidth: 15, height: 15, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', background: '#92ff63', color: '#0a0a0a' }}>{badge}</span>}
+                {badge > 0 && <span style={{ fontSize: '0.58rem', fontWeight: 800, minWidth: 15, height: 15, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', background: '#22c55e', color: '#0a0a0a' }}>{badge}</span>}
               </button>
             )
           })}
@@ -1107,7 +1107,7 @@ export default function ProfilPage() {
                         <p style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text)' }}>{activeCarrierTrips}</p>
                       </div>
                     </div>
-                    <div style={{ marginTop: 16, padding: 16, borderRadius: 18, background: 'var(--accent-soft)', border: '1px solid rgba(146,255,99,0.2)' }}>
+                    <div style={{ marginTop: 16, padding: 16, borderRadius: 18, background: 'var(--accent-soft)', border: '1px solid rgba(34,197,94,0.2)' }}>
                       <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginBottom: 8 }}>N\u00e4sta enterprise-steg</p>
                       <p style={{ fontSize: '0.84rem', color: 'var(--text)', lineHeight: 1.7 }}>
                         N\u00e4r Stripe Connect \u00e4r inkopplat kan `Tillg\u00e4ngligt saldo` driva en riktig payout-knapp, payout-schema och exporthistorik.
@@ -1477,7 +1477,7 @@ export default function ProfilPage() {
                                 disabled={markingPaidId === payout.id}
                                 style={{
                                   padding: '11px 16px', borderRadius: 12, border: 'none',
-                                  background: markingPaidId === payout.id ? 'rgba(146,255,99,0.5)' : '#92ff63',
+                                  background: markingPaidId === payout.id ? 'rgba(34,197,94,0.5)' : '#22c55e',
                                   color: '#0a0a0a', cursor: markingPaidId === payout.id ? 'not-allowed' : 'pointer',
                                   fontFamily: 'inherit', fontWeight: 700, fontSize: '0.84rem', whiteSpace: 'nowrap',
                                 }}
@@ -1603,7 +1603,7 @@ export default function ProfilPage() {
                                 {updatingOrderId === order.id ? 'Sparar...' : 'Bekräfta leverans'}
                               </button>
                             ) : (
-                              <Link href={`/spara/${order.id}`} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 14px', borderRadius: 10, border: '1px solid #92ff63', color: '#92ff63', background: '#0a0a0a', fontWeight: 700, fontSize: '0.78rem', textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap', width: isMobile ? '100%' : 'auto' }}>
+                              <Link href={`/spara/${order.id}`} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 14px', borderRadius: 10, border: '1px solid #22c55e', color: '#22c55e', background: '#0a0a0a', fontWeight: 700, fontSize: '0.78rem', textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap', width: isMobile ? '100%' : 'auto' }}>
                                 <MapPin size={12} /> Spåra
                               </Link>
                             )}
@@ -1747,7 +1747,7 @@ export default function ProfilPage() {
                       const pending = item.status === 'pending'
                       const senderInitials = item.sender_name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '?'
                       return (
-                        <div key={item.id} style={{ padding: 16, borderRadius: isMobile ? 18 : 16, background: 'var(--surface-2)', border: `1px solid ${pending ? 'rgba(146,255,99,0.2)' : 'var(--border)'}` }}>
+                        <div key={item.id} style={{ padding: 16, borderRadius: isMobile ? 18 : 16, background: 'var(--surface-2)', border: `1px solid ${pending ? 'rgba(34,197,94,0.2)' : 'var(--border)'}` }}>
                           {/* Sender row */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
                             <button
@@ -1756,8 +1756,8 @@ export default function ProfilPage() {
                               title="Se profil"
                               style={{
                                 width: 42, height: 42, borderRadius: 12, flexShrink: 0,
-                                background: 'linear-gradient(135deg, rgba(146,255,99,0.2), rgba(146,255,99,0.08))',
-                                border: '1.5px solid rgba(146,255,99,0.3)',
+                                background: 'linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.08))',
+                                border: '1.5px solid rgba(34,197,94,0.3)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 fontSize: '0.82rem', fontWeight: 800, color: '#15803d',
                                 cursor: item.sender_id ? 'pointer' : 'default',
@@ -1896,7 +1896,7 @@ export default function ProfilPage() {
                               style={{
                                 padding: '9px 16px', borderRadius: 999, cursor: 'pointer',
                                 fontFamily: 'inherit', fontWeight: 600, fontSize: '0.82rem',
-                                border: `1px solid ${selected ? 'rgba(146,255,99,0.4)' : 'var(--border)'}`,
+                                border: `1px solid ${selected ? 'rgba(34,197,94,0.4)' : 'var(--border)'}`,
                                 background: selected ? 'var(--accent-soft)' : 'var(--surface-2)',
                                 color: selected ? 'var(--text)' : 'var(--muted)',
                                 transition: 'all 0.15s',
@@ -1934,7 +1934,7 @@ export default function ProfilPage() {
                           style={{
                             padding: '9px 14px',
                             borderRadius: 999,
-                            border: `1px solid ${meta.role_intent === value ? 'rgba(146,255,99,0.38)' : 'var(--border)'}`,
+                            border: `1px solid ${meta.role_intent === value ? 'rgba(34,197,94,0.38)' : 'var(--border)'}`,
                             background: meta.role_intent === value ? 'var(--accent-soft)' : 'var(--surface-2)',
                             color: meta.role_intent === value ? 'var(--text)' : 'var(--muted)',
                             cursor: 'pointer',

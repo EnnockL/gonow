@@ -191,7 +191,7 @@ function TripCard({ trip, onDelete }: { trip: SavedTrip; onDelete: () => void })
 
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 14, background: 'var(--surface)', overflow: 'hidden', transition: 'border-color 0.15s' }}
-      onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(146,255,99,0.3)')}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(34,197,94,0.3)')}
       onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
     >
       {/* Header row — always visible */}
@@ -217,7 +217,7 @@ function TripCard({ trip, onDelete }: { trip: SavedTrip; onDelete: () => void })
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           {pendingCount > 0 && (
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: 'rgba(146,255,99,0.15)', color: 'var(--accent)', border: '1px solid rgba(146,255,99,0.3)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: 'rgba(34,197,94,0.15)', color: 'var(--accent)', border: '1px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', gap: 4 }}>
               <Inbox size={10} /> {pendingCount}
             </span>
           )}
@@ -275,7 +275,7 @@ function TripCard({ trip, onDelete }: { trip: SavedTrip; onDelete: () => void })
           {/* Tillåter */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {allowedTags.map(({ icon: Icon, label }) => (
-              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', padding: '4px 10px', borderRadius: 100, border: '1px solid rgba(146,255,99,0.25)', background: 'var(--accent-softer)', color: 'var(--accent)', fontWeight: 500 }}>
+              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', padding: '4px 10px', borderRadius: 100, border: '1px solid rgba(34,197,94,0.25)', background: 'var(--accent-softer)', color: 'var(--accent)', fontWeight: 500 }}>
                 <Icon size={10} /> {label}
               </span>
             ))}

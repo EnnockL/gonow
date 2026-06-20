@@ -131,7 +131,7 @@ export default function AIFeature() {
               width: 300,
               height: 300,
               borderRadius: '50%',
-              background: 'rgba(146,255,99,0.28)',
+              background: 'rgba(34,197,94,0.28)',
               filter: 'blur(60px)',
               pointerEvents: 'none',
             }}
@@ -144,7 +144,7 @@ export default function AIFeature() {
               width: 180,
               height: 180,
               borderRadius: '50%',
-              background: 'rgba(146,255,99,0.18)',
+              background: 'rgba(34,197,94,0.18)',
               filter: 'blur(40px)',
               pointerEvents: 'none',
             }}
@@ -180,8 +180,8 @@ export default function AIFeature() {
             >
               <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, paddingTop: 3, flexShrink: 0 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#92ff63', border: '2px solid var(--text)' }} />
-                  <div style={{ width: 1.5, height: 26, background: 'rgba(146,255,99,0.5)' }} />
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', border: '2px solid var(--text)' }} />
+                  <div style={{ width: 1.5, height: 26, background: 'rgba(34,197,94,0.5)' }} />
                   <MapPin size={9} fill="currentColor" style={{ color: 'var(--text)' }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -215,7 +215,7 @@ export default function AIFeature() {
                   width: 36,
                   height: 36,
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg,#92ff63,#68db43)',
+                  background: 'linear-gradient(135deg,#22c55e,#16a34a)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -264,7 +264,7 @@ export default function AIFeature() {
             <div
               style={{
                 width: '100%',
-                background: '#92ff63',
+                background: '#22c55e',
                 borderRadius: 10,
                 padding: '13px 0',
                 fontSize: '0.875rem',

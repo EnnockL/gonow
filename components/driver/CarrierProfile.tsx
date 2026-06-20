@@ -154,7 +154,7 @@ export default function CarrierProfile({ name, carrierId, tripId, mutedBadge }: 
               border: 'none', cursor: 'pointer',
               background: tab === t.key ? 'var(--surface)' : 'transparent',
               color: tab === t.key ? 'var(--text)' : 'var(--muted)',
-              borderBottom: `2px solid ${tab === t.key ? '#92ff63' : 'transparent'}`,
+              borderBottom: `2px solid ${tab === t.key ? '#22c55e' : 'transparent'}`,
               transition: 'all 0.15s',
             }}
           >
@@ -234,7 +234,7 @@ export default function CarrierProfile({ name, carrierId, tripId, mutedBadge }: 
                 type="button"
                 onClick={handleSend}
                 disabled={!message.trim() || sending || !userId}
-                style={{ width: '100%', padding: '11px', borderRadius: 11, border: 'none', background: message.trim() && userId ? '#92ff63' : 'var(--surface-2)', color: message.trim() && userId ? '#0a0a0a' : 'var(--muted)', cursor: message.trim() && userId ? 'pointer' : 'not-allowed', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.86rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all 0.15s' }}
+                style={{ width: '100%', padding: '11px', borderRadius: 11, border: 'none', background: message.trim() && userId ? '#22c55e' : 'var(--surface-2)', color: message.trim() && userId ? '#0a0a0a' : 'var(--muted)', cursor: message.trim() && userId ? 'pointer' : 'not-allowed', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.86rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all 0.15s' }}
               >
                 <Send size={13} /> {sending ? 'Skickar...' : 'Skicka meddelande'}
               </button>

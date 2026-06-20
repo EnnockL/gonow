@@ -55,8 +55,8 @@ export default function ChatModal({ receiverId, receiverName, tripId, onClose }:
         <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-            background: 'linear-gradient(135deg, rgba(146,255,99,0.25), rgba(146,255,99,0.1))',
-            border: '1.5px solid rgba(146,255,99,0.3)',
+            background: 'linear-gradient(135deg, rgba(34,197,94,0.25), rgba(34,197,94,0.1))',
+            border: '1.5px solid rgba(34,197,94,0.3)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '0.82rem', fontWeight: 800, color: '#15803d',
           }}>
@@ -112,7 +112,7 @@ export default function ChatModal({ receiverId, receiverName, tripId, onClose }:
                 style={{
                   width: '100%', marginTop: 10, padding: '12px',
                   borderRadius: 12, border: 'none',
-                  background: message.trim() && userId ? '#92ff63' : 'var(--surface-2)',
+                  background: message.trim() && userId ? '#22c55e' : 'var(--surface-2)',
                   color: message.trim() && userId ? '#0a0a0a' : 'var(--muted)',
                   cursor: message.trim() && userId ? 'pointer' : 'not-allowed',
                   fontFamily: 'inherit', fontWeight: 700, fontSize: '0.88rem',
