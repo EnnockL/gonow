@@ -441,8 +441,9 @@ function SkickaPageContent() {
                   </p>
                   <p className="sk-step-desc">{s.desc}</p>
                 </div>
-                <div className="sk-step-mobile-label">
-                  {s.label}
+                <div className="sk-step-mobile-copy">
+                  <div className="sk-step-mobile-label">{s.label}</div>
+                  <div className="sk-step-mobile-desc">{s.desc}</div>
                 </div>
               </div>
               {i < STEPS.length - 1 && (
@@ -641,22 +642,29 @@ function SkickaPageContent() {
                           key={t.id}
                           className="sk-visual-route sk-visual-route-btn"
                           onClick={() => openTripFromActive(t)}
+                          style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}
                         >
-                          <span className="sk-vr-dot" />
-                          <span className="sk-vr-from">{t.from_city.split(',')[0]}</span>
-                          <span className="sk-vr-arrow">→</span>
-                          <span className="sk-vr-to">{t.to_city.split(',')[0]}</span>
-                          {activeTripMeta[t.id]?.myBookingStatus && (
-                            <span style={{ fontSize: '0.66rem', color: activeTripMeta[t.id].myBookingStatus === 'accepted' ? '#86efac' : '#93c5fd', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
-                              {activeTripMeta[t.id].myBookingStatus === 'accepted' ? 'accepterad' : 'väntar'}
-                            </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
+                            <span className="sk-vr-dot" />
+                            <span className="sk-vr-from">{t.from_city.split(',')[0]}</span>
+                            <span className="sk-vr-arrow">→</span>
+                            <span className="sk-vr-to">{t.to_city.split(',')[0]}</span>
+                            <span className="sk-vr-price" style={{ marginLeft: 'auto' }}>{estimateTripPrice(t)} kr</span>
+                          </div>
+                          {(activeTripMeta[t.id]?.myBookingStatus || typeof activeTripMeta[t.id]?.seatsLeft === 'number') && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 14 }}>
+                              {activeTripMeta[t.id]?.myBookingStatus && (
+                                <span style={{ fontSize: '0.66rem', color: activeTripMeta[t.id].myBookingStatus === 'accepted' ? '#86efac' : '#93c5fd' }}>
+                                  {activeTripMeta[t.id].myBookingStatus === 'accepted' ? 'accepterad' : 'väntar'}
+                                </span>
+                              )}
+                              {typeof activeTripMeta[t.id]?.seatsLeft === 'number' && (
+                                <span style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.45)' }}>
+                                  {activeTripMeta[t.id].seatsLeft} säten kvar
+                                </span>
+                              )}
+                            </div>
                           )}
-                          {typeof activeTripMeta[t.id]?.seatsLeft === 'number' && (
-                            <span style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.45)', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
-                              {activeTripMeta[t.id].seatsLeft} säten kvar
-                            </span>
-                          )}
-                          <span className="sk-vr-price">{estimateTripPrice(t)} kr</span>
                         </button>
                       ))}
                     </div>
@@ -913,7 +921,7 @@ function SkickaPageContent() {
                       <h2 className="sk-card-title">{trips.length} bärare passar din rutt</h2>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div className="sk-match-list">
                     {trips.map(trip => (
                       <TravelerCard
                         key={trip.id}
@@ -1367,7 +1375,9 @@ function SkickaPageContent() {
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
 
-        .sk-step-mobile-label {
+        .sk-step-mobile-copy,
+        .sk-step-mobile-label,
+        .sk-step-mobile-desc {
           display: none;
         }
 
@@ -2251,6 +2261,12 @@ function SkickaPageContent() {
             var(--surface);
         }
 
+        .sk-match-list {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+
         .sk-empty-card {
           display: flex; flex-direction: column; align-items: center;
           padding: 56px 24px; text-align: center;
@@ -2469,17 +2485,32 @@ function SkickaPageContent() {
             height: 44px;
             border-radius: 14px;
           }
+          .sk-step-mobile-copy {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            max-width: 88px;
+          }
           .sk-step-mobile-label {
             display: block;
-            font-size: 0.66rem;
-            font-weight: 700;
+            font-size: 0.7rem;
+            font-weight: 800;
             color: var(--muted);
             text-align: center;
+            line-height: 1.2;
+          }
+          .sk-step-mobile-desc {
+            display: block;
+            font-size: 0.58rem;
             line-height: 1.25;
-            max-width: 72px;
+            text-align: center;
+            color: var(--muted-2);
           }
           .sk-step-active .sk-step-mobile-label { color: var(--text); }
+          .sk-step-active .sk-step-mobile-desc { color: var(--muted); }
           .sk-step-done .sk-step-mobile-label { color: #15803d; }
+          .sk-step-done .sk-step-mobile-desc { color: #15803d; }
           .sk-tab-row {
             position: static;
             top: auto;
@@ -2526,6 +2557,9 @@ function SkickaPageContent() {
           }
           .sk-match-stat strong {
             font-size: 0.88rem;
+          }
+          .sk-match-list {
+            gap: 12px;
           }
           .sk-summary-bar {
             padding: 12px 14px;
