@@ -176,9 +176,17 @@ function SkickaPageContent() {
   const [liftTo, setLiftTo]             = useState('')
   const [liftDate, setLiftDate]         = useState('')
   const [liftPassengers, setLiftPassengers] = useState(1)
+  const [isMobile, setIsMobile]         = useState(false)
 
   const [sender, setSender]       = useState<ContactInfo>({ name: '', phone: '', email: '' })
   const [recipient, setRecipient] = useState<ContactInfo>({ name: '', phone: '', email: '' })
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     if (!profile) return
@@ -541,8 +549,8 @@ function SkickaPageContent() {
                       </div>
                     </div>
 
-                    {tabMode === 'lift' ? (
-                      /* Lift: date + passengers */
+                    {/* Lift: date + passengers — desktop only */}
+                    {tabMode === 'lift' && !isMobile && (
                       <div className="sk-lift-controls">
                         <div className="sk-lift-card">
                           <div className="sk-lift-card-head">
@@ -571,8 +579,9 @@ function SkickaPageContent() {
                           </div>
                         </div>
                       </div>
-                    ) : (
-                      /* Skicka: weight chips */
+                    )}
+                    {/* Skicka: weight chips */}
+                    {tabMode !== 'lift' && (
                       <div className="sk-weight-row">
                         {[1, 2, 5, 10, 20].map(w => (
                           <button
