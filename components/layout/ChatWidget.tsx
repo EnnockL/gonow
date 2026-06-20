@@ -5,6 +5,7 @@ import { MessageCircle, X, ArrowLeft, Send, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { format, isToday, isYesterday } from 'date-fns'
 import { sv } from 'date-fns/locale'
+import CarrierProfileModal from '@/components/carrier/CarrierProfileModal'
 
 interface Conversation {
   other_user_id: string
@@ -45,6 +46,7 @@ export default function ChatWidget() {
   const [view, setView] = useState<'list' | 'thread'>('list')
   const [convs, setConvs] = useState<Conversation[]>([])
   const [active, setActive] = useState<Conversation | null>(null)
+  const [profileId, setProfileId] = useState<string | null>(null)
   const [thread, setThread] = useState<Message[]>([])
   const [reply, setReply] = useState('')
   const [sending, setSending] = useState(false)
@@ -147,6 +149,7 @@ export default function ChatWidget() {
   const PANEL_H = 440
 
   return (
+    <>
     <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12, pointerEvents: 'none' }}>
 
       {/* Panel */}
@@ -175,14 +178,14 @@ export default function ChatWidget() {
             </button>
           )}
           {view === 'thread' && active ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0 }}>
+            <button onClick={() => setProfileId(active.other_user_id)} style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>
               <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, rgba(34,197,94,0.35), rgba(34,197,94,0.15))', border: '1.5px solid rgba(34,197,94,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: '#15803d' }}>
                 {initials(active.other_user_name)}
               </div>
               <span style={{ fontSize: '0.88rem', fontWeight: 700, color: isDark ? '#fafafa' : '#0a0a0a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {active.other_user_name}
               </span>
-            </div>
+            </button>
           ) : (
             <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 800, color: isDark ? '#fafafa' : '#0a0a0a', letterSpacing: '-0.02em' }}>
               Meddelanden
@@ -360,5 +363,7 @@ export default function ChatWidget() {
         )}
       </button>
     </div>
+    <CarrierProfileModal carrierId={profileId} onClose={() => setProfileId(null)} />
+    </>
   )
 }
