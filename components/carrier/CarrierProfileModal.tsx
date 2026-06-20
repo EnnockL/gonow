@@ -71,6 +71,7 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
   const [threadLoading, setThreadLoading] = useState(false)
   const [isDark, setIsDark] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [kbOffset, setKbOffset] = useState(0)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -86,6 +87,20 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // Track keyboard height via visualViewport so modal slides above keyboard
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => {
+      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      setKbOffset(kb)
+    }
+    update()
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => { vv.removeEventListener('resize', update); vv.removeEventListener('scroll', update) }
   }, [])
 
   useEffect(() => {
@@ -155,13 +170,19 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }} />
 
       <div style={{
-        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+        position: 'fixed',
+        left: '50%',
+        top: isMobile && kbOffset > 50 ? undefined : '50%',
+        bottom: isMobile && kbOffset > 50 ? kbOffset + 12 : undefined,
+        transform: isMobile && kbOffset > 50 ? 'translateX(-50%)' : 'translate(-50%,-50%)',
         zIndex: 10001, width: isMobile ? 'calc(100% - 24px)' : '100%', maxWidth: 380,
         background: 'var(--surface)', borderRadius: isMobile ? 18 : 24,
         border: '1px solid var(--border)',
         boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
-        overflow: 'hidden', maxHeight: '90vh',
+        overflow: 'hidden',
+        maxHeight: isMobile ? `calc(100dvh - ${kbOffset + 32}px)` : '90vh',
         display: 'flex', flexDirection: 'column',
+        transition: 'bottom 0.2s ease, max-height 0.2s ease',
       }}>
         {/* Header — always visible */}
         <div style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.18) 0%, rgba(34,197,94,0.06) 100%)', borderBottom: '1px solid rgba(34,197,94,0.15)', padding: isMobile ? '18px 14px 12px' : '22px 20px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, position: 'relative', flexShrink: 0 }}>
@@ -305,7 +326,7 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
                   placeholder={`Aa`}
                   rows={1}
-                  style={{ flex: 1, padding: '9px 13px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontFamily: 'inherit', fontSize: '0.82rem', resize: 'none', outline: 'none', lineHeight: 1.4, maxHeight: 80, overflowY: 'auto', boxSizing: 'border-box' }}
+                  style={{ flex: 1, padding: '9px 13px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontFamily: 'inherit', fontSize: '16px', resize: 'none', outline: 'none', lineHeight: 1.4, maxHeight: 80, overflowY: 'auto', boxSizing: 'border-box' }}
                 />
                 <button
                   type="button"
