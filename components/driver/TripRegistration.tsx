@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { Car, Train, Bus, Plane, CheckCircle2, Loader2, ArrowRight, MapPin, Phone, Mail } from 'lucide-react'
+import { Car, Train, Bus, Plane, CheckCircle2, Loader2, ArrowRight, MapPin, Phone, Mail, Sparkles, Package as PkgIcon, Users } from 'lucide-react'
 import { saveTrip } from './MyTrips'
 import { useAuth } from '@/hooks/useAuth'
 import { loadUserProfileMeta, saveUserProfileMeta } from '@/lib/profile-meta'
@@ -57,6 +57,14 @@ export default function TripRegistration() {
   const [route, setRoute] = useState<{ distance_km: number; duration_min: number } | null>(null)
   const [routeLoading, setRouteLoading] = useState(false)
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [recommendation, setRecommendation] = useState<{
+    recommended_packages: string[]
+    recommended_lifts: string[]
+    total_earnings: number
+    carrier_payout: number
+    reasoning_sv: string
+  } | null>(null)
+  const [recLoading, setRecLoading] = useState(false)
 
   function set(key: string, value: unknown) {
     setForm(p => ({ ...p, [key]: value }))
@@ -170,6 +178,29 @@ export default function TripRegistration() {
 
       window.dispatchEvent(new Event('gonow_trips_updated'))
       setStatus('success')
+
+      // Fetch AI recommendation after trip is saved
+      setRecLoading(true)
+      try {
+        const recRes = await fetch('/api/ai-recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            trip_id: persistedTripId ?? 'draft',
+            from_city: form.from_city,
+            to_city: form.to_city,
+            departure_at: form.departure_at,
+            weight_capacity_kg: form.weight_capacity_kg,
+            seats_available: form.seats_available,
+          }),
+        })
+        if (recRes.ok) {
+          const recJson = await recRes.json()
+          setRecommendation(recJson)
+        }
+      } catch { /* ignore */ } finally {
+        setRecLoading(false)
+      }
     } catch {
       setStatus('success') // still show success in demo
     }
@@ -177,20 +208,74 @@ export default function TripRegistration() {
 
   if (status === 'success') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '48px 0', textAlign: 'center' }}>
-        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <CheckCircle2 size={28} style={{ color: 'var(--success)' }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '32px 0 16px' }}>
+        {/* Success header */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>
+          <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <CheckCircle2 size={26} style={{ color: 'var(--success)' }} />
+          </div>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Resa registrerad!</h3>
+          <p style={{ fontSize: '0.82rem', color: 'var(--muted)', maxWidth: 340, lineHeight: 1.6, margin: 0 }}>
+            AI skannar nu öppna paket och passagerare längs din rutt.
+          </p>
         </div>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>Resa registrerad!</h3>
-        <p style={{ fontSize: '0.82rem', color: 'var(--muted)', maxWidth: 340, lineHeight: 1.6 }}>
-          Vi matchar dig med paket och passagerare längs rutten och meddelar dig via SMS när ett uppdrag är tillgängligt.
-        </p>
-        <button
-          onClick={() => { setStatus('idle'); setRoute(null); setForm(f => ({ ...f, from_city: '', to_city: '', departure_at: '' })) }}
-          style={{ fontSize: '0.8rem', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', marginTop: 4 }}
-        >
-          + Registrera en till resa
-        </button>
+
+        {/* AI Recommendation */}
+        {recLoading ? (
+          <div style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0.04) 100%)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 14, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Loader2 size={18} style={{ color: '#22c55e', animation: 'spin 1s linear infinite' }} />
+            <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: 0 }}>AI scannar paket och passagerare längs rutten...</p>
+          </div>
+        ) : recommendation && recommendation.total_earnings > 0 ? (
+          <div style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.12) 0%, rgba(34,197,94,0.05) 100%)', border: '2px solid rgba(34,197,94,0.4)', borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Sparkles size={16} style={{ color: '#22c55e', flexShrink: 0 }} />
+              <p style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>
+                AI hittade en kombination som ger dig <span style={{ color: '#22c55e' }}>+{recommendation.carrier_payout} kr</span>
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {recommendation.recommended_packages.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 8, padding: '5px 10px' }}>
+                  <PkgIcon size={13} style={{ color: '#22c55e' }} />
+                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)' }}>
+                    {recommendation.recommended_packages.length} paket
+                  </span>
+                </div>
+              )}
+              {recommendation.recommended_lifts.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 8, padding: '5px 10px' }}>
+                  <Users size={13} style={{ color: '#3b82f6' }} />
+                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)' }}>
+                    {recommendation.recommended_lifts.length} passagerare
+                  </span>
+                </div>
+              )}
+              <div style={{ fontSize: '0.75rem', color: 'var(--muted)', display: 'flex', alignItems: 'center' }}>
+                Totalt {recommendation.total_earnings} kr · Gonow tar 20%
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: 0, lineHeight: 1.6, fontStyle: 'italic' }}>
+              "{recommendation.reasoning_sv}"
+            </p>
+          </div>
+        ) : recommendation && recommendation.total_earnings === 0 ? (
+          <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Sparkles size={15} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+            <p style={{ fontSize: '0.82rem', color: 'var(--muted)', margin: 0 }}>{recommendation.reasoning_sv}</p>
+          </div>
+        ) : null}
+
+        <div style={{ textAlign: 'center' }}>
+          <button
+            onClick={() => { setStatus('idle'); setRoute(null); setRecommendation(null); setForm(f => ({ ...f, from_city: '', to_city: '', departure_at: '' })) }}
+            style={{ fontSize: '0.8rem', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            + Registrera en till resa
+          </button>
+        </div>
       </div>
     )
   }

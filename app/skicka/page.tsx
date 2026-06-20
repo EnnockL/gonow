@@ -728,7 +728,7 @@ function SkickaPageContent() {
                 </div>
               ) : (
                 /* ── AI mode — clean chatbox ── */
-                <div style={{ padding: '22px 26px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ padding: isMobile ? '14px 16px' : '22px 26px', display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {/* Header */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>

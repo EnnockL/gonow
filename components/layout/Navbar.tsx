@@ -58,9 +58,9 @@ function applyTheme(dark: boolean) {
 
 const links = [
   { href: '/skicka', label: 'Skicka' },
-  { href: '/hamta', label: 'Hämta' },
-  { href: '/retur', label: 'Retur' },
-  { href: '/skicka?tab=lift', label: 'Lift' },
+  { href: '/lift', label: 'Lift' },
+  { href: '/resor', label: 'Resor' },
+  { href: '/uppdrag', label: 'Uppdrag' },
   { href: '/kor', label: 'Kör & tjäna' },
 ]
 
@@ -328,27 +328,61 @@ export default function Navbar() {
           margin: '8px 12px 0',
           background: pillBg,
           boxShadow: pillShadow,
-          borderRadius: 18,
-          padding: '12px 14px 16px',
+          borderRadius: 22,
+          padding: '14px 14px 16px',
           backdropFilter: 'blur(22px)',
           WebkitBackdropFilter: 'blur(22px)',
+          border: '1px solid var(--border)',
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              padding: '4px 4px 12px',
+              marginBottom: 6,
+              borderBottom: '1px solid var(--border)',
+            }}>
+              <div>
+                <p style={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 4 }}>
+                  Gonow meny
+                </p>
+                <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em' }}>
+                  Snabb navigation
+                </p>
+              </div>
+              <div style={{
+                padding: '7px 10px',
+                borderRadius: 999,
+                background: 'var(--accent-soft)',
+                color: 'var(--accent)',
+                fontSize: '0.68rem',
+                fontWeight: 800,
+              }}>
+                LIVE
+              </div>
+            </div>
             <button type="button" onClick={toggleTheme} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              width: '100%', padding: '10px 12px', marginBottom: 6,
-              borderRadius: 10, border: '1px solid var(--border)',
+              width: '100%', padding: '12px 14px', marginBottom: 8,
+              borderRadius: 14, border: '1px solid var(--border)',
               background: 'var(--surface)', color: 'var(--text)',
               fontSize: '0.875rem', fontFamily: 'inherit', cursor: 'pointer',
             }}>
-              <span>{dark ? 'Light mode' : 'Dark mode'}</span>
+              <span>{dark ? 'Ljust läge' : 'Mörkt läge'}</span>
               {dark ? <Sun size={15} /> : <Moon size={15} />}
             </button>
             {links.map((l) => (
               <Link key={l.href} href={l.href} onClick={() => setOpen(false)} style={{
-                fontSize: '0.9rem', color: path === l.href ? 'var(--text)' : 'var(--muted)',
-                fontWeight: path === l.href ? 500 : 400,
-                padding: '10px 12px', borderRadius: 8, display: 'block', textDecoration: 'none',
+                fontSize: '0.92rem', color: path === l.href ? 'var(--text)' : 'var(--muted)',
+                fontWeight: path === l.href ? 700 : 500,
+                padding: '12px 14px',
+                borderRadius: 14,
+                display: 'block',
+                textDecoration: 'none',
+                background: path === l.href ? 'var(--accent-soft)' : 'transparent',
+                border: `1px solid ${path === l.href ? 'rgba(34,197,94,0.22)' : 'transparent'}`,
               }}>
                 {l.label}
               </Link>

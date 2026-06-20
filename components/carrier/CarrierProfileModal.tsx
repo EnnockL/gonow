@@ -152,11 +152,11 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
 
   return (
     <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 900, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }} />
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }} />
 
       <div style={{
         position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-        zIndex: 901, width: '100%', maxWidth: 380,
+        zIndex: 10001, width: '100%', maxWidth: 380,
         background: 'var(--surface)', borderRadius: isMobile ? 18 : 24,
         border: '1px solid var(--border)',
         boxShadow: '0 24px 64px rgba(0,0,0,0.2)',

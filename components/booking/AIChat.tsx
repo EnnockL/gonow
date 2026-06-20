@@ -21,9 +21,17 @@ export default function AIChat({ onParsed }: AIChatProps) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [imageBase64, setImageBase64] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 700)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -55,7 +63,7 @@ export default function AIChat({ onParsed }: AIChatProps) {
             content: `Perfekt! Jag hittade det här:\n\n**${typeLabel}** · ${r.from_city} → ${r.to_city}${r.weight_kg ? ` · ${r.weight_kg} kg` : ''}${r.departure_date ? ` · ${r.departure_date}` : ''}\n\nUppskattat pris: **${r.estimated_price_sek} SEK**\n\nSöker tillgängliga bärare...`,
           },
         ])
-        onParsed(r)
+        setTimeout(() => onParsed(r), 10000)
       } else {
         setMessages((prev) => [
           ...prev,
@@ -84,16 +92,17 @@ export default function AIChat({ onParsed }: AIChatProps) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, width: '100%' }}>
       {/* Chat window */}
       <div style={{
-        height: 260,
+        height: isMobile ? 200 : 260,
         overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
         gap: 10,
         padding: '0 0 8px',
         marginBottom: 10,
+        width: '100%',
       }}>
         {messages.map((m, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
@@ -180,6 +189,8 @@ export default function AIChat({ onParsed }: AIChatProps) {
         borderRadius: 12,
         padding: '6px 8px',
         transition: 'border-color 0.15s',
+        width: '100%',
+        boxSizing: 'border-box',
       }}
         onFocusCapture={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#22c55e' }}
         onBlurCapture={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.15)' }}

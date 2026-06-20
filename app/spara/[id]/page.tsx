@@ -17,12 +17,12 @@ import { createClient } from '@/lib/supabase'
 import { Order, OrderStatus } from '@/lib/types'
 
 const STEPS: { status: OrderStatus; label: string; desc: string }[] = [
-  { status: 'pending', label: 'Accepterad', desc: 'Bararen har accepterat uppdraget' },
-  { status: 'matched', label: 'Betald', desc: 'Betalning bekraftad' },
-  { status: 'picked_up', label: 'Upphamtad', desc: 'Paketet ar hamtat av bararen' },
-  { status: 'in_transit', label: 'Pa vag', desc: 'Leveransen ar i transit' },
+  { status: 'pending', label: 'Accepterad', desc: 'Bäraren har accepterat uppdraget' },
+  { status: 'matched', label: 'Betald', desc: 'Betalning bekräftad' },
+  { status: 'picked_up', label: 'Upphämtad', desc: 'Paketet är hämtat av bäraren' },
+  { status: 'in_transit', label: 'På väg', desc: 'Leveransen är i transit' },
   { status: 'delivered', label: 'Levererad', desc: 'Framme hos mottagaren' },
-  { status: 'confirmed', label: 'Bekraftad', desc: 'Mottagaren har bekräftat leveransen' },
+  { status: 'confirmed', label: 'Bekräftad', desc: 'Mottagaren har bekräftat leveransen' },
 ]
 
 const STATUS_ORDER: OrderStatus[] = ['pending', 'matched', 'picked_up', 'in_transit', 'delivered', 'confirmed']
@@ -49,21 +49,21 @@ function timeAgo(ts: string) {
 function nextStepCopy(status: OrderStatus) {
   switch (status) {
     case 'pending':
-      return 'Vantar pa att kunden slutför betalningen innan uppdraget går vidare.'
+      return 'Väntar på att kunden slutför betalningen innan uppdraget går vidare.'
     case 'matched':
-      return 'Betalningen ar klar. Nu kan bararen starta uppdraget.'
+      return 'Betalningen är klar. Nu kan bäraren starta uppdraget.'
     case 'picked_up':
-      return 'Paketet ar upphamtat och redo att markeras som pa vag.'
+      return 'Paketet är upphämtat och redo att markeras som på väg.'
     case 'in_transit':
-      return 'Leveransen ar aktiv. Har kommer senare ETA och GPS att kunna visas.'
+      return 'Leveransen är aktiv. Här kommer senare ETA och GPS att kunna visas.'
     case 'delivered':
-      return 'Invantar att mottagaren bekräftar leveransen sa att utbetalningen kan frigöras.'
+      return 'Inväntar att mottagaren bekräftar leveransen så att utbetalningen kan frigöras.'
     case 'confirmed':
-      return 'Flodet ar helt klart. Den har sidan fungerar nu som ett kvitto over hela leveransen.'
+      return 'Flödet är helt klart. Den här sidan fungerar nu som ett kvitto över hela leveransen.'
     case 'cancelled':
-      return 'Ordern ar avbruten och kommer inte att fortsatta till payout.'
+      return 'Ordern är avbruten och kommer inte att fortsätta till payout.'
     default:
-      return 'Status uppdateras lopande har.'
+      return 'Status uppdateras löpande här.'
   }
 }
 
@@ -80,13 +80,13 @@ function etaLabel(status: OrderStatus) {
     case 'matched':
       return 'Kan starta idag'
     case 'picked_up':
-      return 'Ca 1-2 h till nasta steg'
+      return 'Ca 1-2 h till nästa steg'
     case 'in_transit':
       return 'ETA 45-90 min'
     case 'delivered':
-      return 'Levererad, invantar kvittens'
+      return 'Levererad, inväntar kvittens'
     case 'confirmed':
-      return 'Slutford'
+      return 'Slutförd'
     case 'cancelled':
       return 'Avslutad'
     default:
@@ -96,11 +96,11 @@ function etaLabel(status: OrderStatus) {
 
 function checkpointFeed(status: OrderStatus) {
   const feed = [
-    { key: 'accepted', title: 'Uppdrag accepterat', body: 'En barare har tagit uppdraget och reservkapacitet ar satt.', active: true },
-    { key: 'payment', title: 'Betalning och escrow', body: 'Pengar lases innan leveransen startar och slapps forst efter kvittens.', active: ['matched', 'picked_up', 'in_transit', 'delivered', 'confirmed'].includes(status) },
-    { key: 'pickup', title: 'Upphamtning', body: 'Paketet markeras som upphamtat nar bararen startat den fysiska hanteringen.', active: ['picked_up', 'in_transit', 'delivered', 'confirmed'].includes(status) },
-    { key: 'route', title: 'Pa vag', body: 'Har kommer GPS, ETA och kontrollpunkter senare att synkas in i samma vy.', active: ['in_transit', 'delivered', 'confirmed'].includes(status) },
-    { key: 'proof', title: 'Leverans och bevis', body: 'Mottagaren kvitterar och payout kan frigoras till bararen.', active: ['delivered', 'confirmed'].includes(status) },
+    { key: 'accepted', title: 'Uppdrag accepterat', body: 'En bärare har tagit uppdraget och reservkapacitet är satt.', active: true },
+    { key: 'payment', title: 'Betalning och escrow', body: 'Pengar låses innan leveransen startar och släpps först efter kvittens.', active: ['matched', 'picked_up', 'in_transit', 'delivered', 'confirmed'].includes(status) },
+    { key: 'pickup', title: 'Upphämtning', body: 'Paketet markeras som upphämtat när bäraren startat den fysiska hanteringen.', active: ['picked_up', 'in_transit', 'delivered', 'confirmed'].includes(status) },
+    { key: 'route', title: 'På väg', body: 'Här kommer GPS, ETA och kontrollpunkter senare att synkas in i samma vy.', active: ['in_transit', 'delivered', 'confirmed'].includes(status) },
+    { key: 'proof', title: 'Leverans och bevis', body: 'Mottagaren kvitterar och payout kan frigöras till bäraren.', active: ['delivered', 'confirmed'].includes(status) },
   ]
 
   return feed
@@ -176,10 +176,10 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
         body: JSON.stringify({ status: 'confirmed' }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Kunde inte bekrafta leveransen.')
+      if (!res.ok) throw new Error(data.error || 'Kunde inte bekräfta leveransen.')
       setOrder((prev) => (prev ? { ...prev, ...data.order } : prev))
     } catch (err) {
-      setConfirmError(err instanceof Error ? err.message : 'Kunde inte bekrafta.')
+      setConfirmError(err instanceof Error ? err.message : 'Kunde inte bekräfta.')
     } finally {
       setConfirming(false)
     }
@@ -221,47 +221,55 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
       icon: <Package size={16} color="var(--accent)" />,
     },
     {
-      label: 'Barare',
+      label: 'Bärare',
       value: carrier?.name ?? 'Tilldelad',
       hint: order.trips?.departure_at
-        ? `Avgang ${new Date(order.trips.departure_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}`
+        ? `Avgång ${new Date(order.trips.departure_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}`
         : 'Resa registrerad i systemet',
       icon: <ShieldCheck size={16} color="var(--accent)" />,
     },
     {
       label: 'Senast uppdaterad',
       value: timeAgo(lastUpdated),
-      hint: 'Poll och realtime pa samma vy',
+      hint: 'Poll och realtime på samma vy',
       icon: <Clock3 size={16} color="var(--accent)" />,
     },
   ]
 
   return (
-    <div style={{ minHeight: '100vh', padding: isMobile ? '82px 16px 36px' : '96px 24px 60px', background: 'var(--bg)' }}>
+    <div style={{ minHeight: '100vh', padding: isMobile ? '82px 16px 36px' : '96px 24px 60px', background: 'linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, var(--accent) 5%, var(--bg)) 100%)' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: 20, padding: isMobile ? '18px 16px' : '24px 24px', borderRadius: isMobile ? 22 : 28, background: 'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(240,253,244,0.96) 100%)', border: '1px solid rgba(34,197,94,0.16)', boxShadow: '0 22px 54px rgba(34,197,94,0.08)' }}>
           <p style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 4 }}>
-            Spara · #{id.slice(0, 8).toUpperCase()}
+            Spåra · #{id.slice(0, 8).toUpperCase()}
           </p>
           <h1 style={{ fontSize: isMobile ? '1.35rem' : '1.72rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.03em' }}>
-            Folj leveransen steg for steg
+            Följ leveransen steg för steg
           </h1>
           <p style={{ fontSize: isMobile ? '0.82rem' : '0.76rem', color: 'var(--muted)', marginTop: 8, lineHeight: 1.65, maxWidth: 760 }}>
-            {routeLabel}. Den har vyn ar byggd som en gemensam sanningskalla for kund, barare och support.
+            {routeLabel}. Den här vyn är byggd som en gemensam sanningskälla för kund, bärare och support.
           </p>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
+            <div style={{ padding: '9px 12px', borderRadius: 999, background: statusStyle.bg, border: `1px solid ${statusStyle.dot}33`, fontSize: '0.74rem', fontWeight: 700, color: statusStyle.color }}>
+              {currentStep?.label ?? order.status}
+            </div>
+            <div style={{ padding: '9px 12px', borderRadius: 999, background: 'rgba(255,255,255,0.78)', border: '1px solid rgba(34,197,94,0.16)', fontSize: '0.74rem', fontWeight: 700, color: 'var(--text)' }}>
+              {etaLabel(order.status)}
+            </div>
+          </div>
         </div>
 
         {paymentState === 'success' && (
           <div style={{ marginBottom: 16, padding: '14px 18px', borderRadius: 14, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)' }}>
             <p style={{ fontWeight: 700, color: '#15803d', marginBottom: 4 }}>Betalningen gick igenom</p>
-            <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Bararen kan nu starta uppdraget.</p>
+            <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Bäraren kan nu starta uppdraget.</p>
           </div>
         )}
 
         {paymentState === 'cancelled' && (
           <div style={{ marginBottom: 16, padding: '14px 18px', borderRadius: 14, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}>
             <p style={{ fontWeight: 700, color: '#b45309', marginBottom: 4 }}>Betalningen avbrots</p>
-            <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Ga till Mina sidor och starta betalningen igen.</p>
+            <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Gå till Mina sidor och starta betalningen igen.</p>
           </div>
         )}
 
@@ -340,21 +348,21 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
                   <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginTop: 6 }}>{order.pickup_address} → {order.dropoff_address}</p>
                 </div>
                 <div style={{ padding: '14px 16px', borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                  <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Nasta steg</p>
+                  <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Nästa steg</p>
                   <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>{nextStepCopy(order.status)}</p>
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {[
-                  { label: 'Avsandare', name: sender?.name, phone: undefined },
-                  { label: 'Barare', name: carrier?.name, phone: undefined },
+                  { label: 'Avsändare', name: sender?.name, phone: undefined },
+                  { label: 'Bärare', name: carrier?.name, phone: undefined },
                   { label: 'Mottagare', name: recipient?.name, phone: recipient?.phone },
                 ].map(({ label, name, phone }) => (
                   <div key={label} style={{ padding: '14px 16px', borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
                     <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>{label}</p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: phone ? 4 : 0 }}>
                       <User size={14} color="var(--muted)" />
-                      <p style={{ fontSize: '0.88rem', fontWeight: 700, color: name ? 'var(--text)' : 'var(--muted)', margin: 0 }}>{name ?? 'Inte tillganglig an'}</p>
+                      <p style={{ fontSize: '0.88rem', fontWeight: 700, color: name ? 'var(--text)' : 'var(--muted)', margin: 0 }}>{name ?? 'Inte tillgänglig än'}</p>
                     </div>
                     {phone ? <p style={{ fontSize: '0.76rem', color: 'var(--muted)', margin: 0 }}>{phone}</p> : null}
                   </div>
@@ -365,9 +373,9 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
             <div style={{ height: isMobile ? 220 : 280, borderRadius: isMobile ? 20 : 18, background: 'linear-gradient(180deg, rgba(34,197,94,0.08), rgba(0,0,0,0.02))', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at top right, rgba(34,197,94,0.14), transparent 40%)', pointerEvents: 'none' }} />
               <MapPin size={36} color="var(--accent)" />
-              <p style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Live-karta och positionsflode</p>
+              <p style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Live-karta och positionsflöde</p>
               <p style={{ fontSize: '0.76rem', color: 'var(--muted)', margin: 0, textAlign: 'center', maxWidth: 360 }}>
-                Aktiveras nar bararen startar resan. Har finns plats for GPS-push, ETA och kontrollpunkter.
+                Aktiveras när bäraren startar resan. Här finns plats för GPS-push, ETA och kontrollpunkter.
               </p>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', padding: '0 16px' }}>
                 {['Startpunkt', 'Checkpoint', 'Ankomst'].map((item, index) => (
@@ -457,7 +465,7 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
                 <div style={{ paddingTop: 10, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', margin: 0 }}>Driftnotis</p>
                   <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6, margin: 0 }}>
-                    Spårningssidan ar byggd for att fungera som den tydliga sanningskallan mellan kund, barare och framtida supportflode.
+                    Spårningssidan är byggd för att fungera som den tydliga sanningskällan mellan kund, bärare och framtida supportflöde.
                   </p>
                 </div>
               </div>
@@ -467,9 +475,9 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
               <p style={{ fontWeight: 700, color: 'var(--text)', fontSize: '0.92rem', margin: 0 }}>Vad händer nu</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
-                  { title: 'Betalning och escrow', text: 'Nar betalningen har passerat laggs den pa hold tills leveransen ar kvitterad.' },
-                  { title: 'Bararflode', text: 'Bararen markerar upphamtad, pa vag och levererad i sin egen kontrollpanel.' },
-                  { title: 'Kvittens', text: 'Mottagaren bekräftar sist, vilket ar signalen som senare ska trigga payout.' },
+                  { title: 'Betalning och escrow', text: 'När betalningen har passerat läggs den på hold tills leveransen är kvitterad.' },
+                  { title: 'Bärarflöde', text: 'Bäraren markerar upphämtad, på väg och levererad i sin egen kontrollpanel.' },
+                  { title: 'Kvittens', text: 'Mottagaren bekräftar sist, vilket är signalen som senare ska trigga payout.' },
                 ].map((item) => (
                   <div key={item.title} style={{ padding: '12px 14px', borderRadius: 14, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
                     <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>{item.title}</p>
@@ -480,22 +488,22 @@ export default function SparaPage({ params }: { params: Promise<{ id: string }> 
             </div>
 
             {order.status === 'delivered' && (
-              <div style={{ padding: '20px 22px', borderRadius: 18, background: 'rgba(34,197,94,0.06)', border: '1.5px solid rgba(34,197,94,0.25)' }}>
-                <p style={{ fontWeight: 700, color: '#15803d', marginBottom: 6, fontSize: '0.95rem' }}>Paketet ar levererat</p>
-                <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 16 }}>Bekrafta att du tagit emot paketet for att frigora bararens betalning.</p>
+              <div style={{ padding: isMobile ? '18px 16px' : '20px 22px', borderRadius: isMobile ? 20 : 22, background: 'linear-gradient(180deg, rgba(34,197,94,0.08), rgba(240,253,244,0.88))', border: '1.5px solid rgba(34,197,94,0.25)', boxShadow: '0 16px 36px rgba(34,197,94,0.10)' }}>
+                <p style={{ fontWeight: 700, color: '#15803d', marginBottom: 6, fontSize: '0.95rem' }}>Paketet är levererat</p>
+                <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 16 }}>Bekräfta att du tagit emot paketet för att frigöra bärarens betalning.</p>
                 {confirmError ? <p style={{ fontSize: '0.78rem', color: '#dc2626', marginBottom: 10 }}>{confirmError}</p> : null}
                 <button onClick={handleConfirm} disabled={confirming} style={{ width: '100%', padding: '13px 18px', borderRadius: 12, border: 'none', background: '#15803d', color: '#fff', fontFamily: 'inherit', fontWeight: 800, fontSize: '0.9rem', cursor: confirming ? 'not-allowed' : 'pointer', opacity: confirming ? 0.7 : 1 }}>
-                  {confirming ? 'Bekraftar...' : 'Bekrafta leverans'}
+                  {confirming ? 'Bekräftar...' : 'Bekräfta leverans'}
                 </button>
               </div>
             )}
 
             {order.status === 'confirmed' && (
-              <div style={{ padding: '18px 22px', borderRadius: 18, background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ padding: isMobile ? '18px 16px' : '18px 22px', borderRadius: isMobile ? 20 : 18, background: 'linear-gradient(180deg, rgba(34,197,94,0.08), rgba(240,253,244,0.84))', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 14px 30px rgba(34,197,94,0.08)' }}>
                 <CheckCircle2 size={22} color="#15803d" />
                 <div>
-                  <p style={{ fontWeight: 700, color: '#15803d', margin: 0 }}>Leverans bekraftad</p>
-                  <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginTop: 2 }}>Bararens betalning frigors nu.</p>
+                  <p style={{ fontWeight: 700, color: '#15803d', margin: 0 }}>Leverans bekräftad</p>
+                  <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginTop: 2 }}>Bärarens betalning frigörs nu.</p>
                 </div>
               </div>
             )}

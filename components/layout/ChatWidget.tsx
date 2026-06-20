@@ -53,6 +53,7 @@ export default function ChatWidget() {
   const [sent, setSent] = useState(false)
   const [unread, setUnread] = useState(0)
   const [isDark, setIsDark] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -61,6 +62,13 @@ export default function ChatWidget() {
     const obs = new MutationObserver(() => setIsDark(el.classList.contains('dark')))
     obs.observe(el, { attributes: true, attributeFilter: ['class'] })
     return () => obs.disconnect()
+  }, [])
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
   }, [])
 
   const fetchConvs = useCallback(async () => {
@@ -150,11 +158,11 @@ export default function ChatWidget() {
 
   return (
     <>
-    <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12, pointerEvents: 'none' }}>
+    <div style={{ position: 'fixed', bottom: 24, right: isMobile ? '50%' : 24, transform: isMobile ? 'translateX(50%)' : undefined, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: isMobile ? 'center' : 'flex-end', gap: 12, pointerEvents: 'none' }}>
 
       {/* Panel */}
       <div style={{
-        width: PANEL_W, height: PANEL_H,
+        width: isMobile ? 'calc(100vw - 32px)' : PANEL_W, height: PANEL_H,
         background: isDark ? '#111' : '#fff',
         border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)'}`,
         borderRadius: 18,

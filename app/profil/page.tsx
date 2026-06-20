@@ -843,11 +843,35 @@ export default function ProfilPage() {
   const initials = user.name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
 
   return (
-    <div style={{ minHeight: '100vh', paddingTop: isMobile ? 56 : 88, paddingBottom: isMobile ? 32 : 88, background: isMobile ? (isDark ? '#0a0a0a' : '#f2f2f7') : (isDark ? 'linear-gradient(180deg, transparent 0%, rgba(34,197,94,0.04) 100%)' : '#f8f8f8'), overflowX: 'hidden' }}>
+    <div style={{
+      minHeight: '100vh',
+      paddingTop: isMobile ? 56 : 88,
+      paddingBottom: isMobile ? 40 : 96,
+      background: isMobile
+        ? (isDark
+          ? 'linear-gradient(180deg,#0a0a0a 0%,#111111 100%)'
+          : 'linear-gradient(180deg,#f8fafc 0%,#eefbf1 100%)')
+        : (isDark
+          ? 'linear-gradient(180deg, rgba(34,197,94,0.02) 0%, rgba(34,197,94,0.06) 100%)'
+          : 'linear-gradient(180deg,#fcfdfc 0%,#f1faef 100%)'),
+      overflowX: 'hidden',
+    }}>
 
       {/* ── MOBILE: compact app header ── */}
       {isMobile && (
-        <div style={{ background: isDark ? '#111' : '#fff', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 21 }}>
+        <div style={{
+          background: isDark ? 'rgba(17,17,17,0.92)' : 'rgba(255,255,255,0.92)',
+          borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`,
+          backdropFilter: 'blur(18px)',
+          WebkitBackdropFilter: 'blur(18px)',
+          padding: '12px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          position: 'sticky',
+          top: 0,
+          zIndex: 21,
+        }}>
           <div style={{ width: 42, height: 42, borderRadius: 13, background: '#0a0a0a', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.9rem', flexShrink: 0, letterSpacing: '-0.02em' }}>
             {initials}
           </div>
@@ -863,7 +887,7 @@ export default function ProfilPage() {
 
       {/* ── MOBILE: sticky underline tab bar ── */}
       {isMobile && (
-        <div className="mobile-app-tabs" style={{ position: 'sticky', top: 66, zIndex: 20, background: isDark ? '#111' : '#fff', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`, display: 'flex', overflowX: 'auto', scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'], scrollSnapType: 'x proximity' }}>
+        <div className="mobile-app-tabs" style={{ position: 'sticky', top: 66, zIndex: 20, background: isDark ? 'rgba(17,17,17,0.92)' : 'rgba(255,255,255,0.92)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`, display: 'flex', overflowX: 'auto', scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'], scrollSnapType: 'x proximity' }}>
           {TABS.map((tab) => {
             const badge = tab.key === 'assignments' ? activeAssignments.length : tab.key === 'requests' ? pendingIncoming : 0
             const isActive = activeTab === tab.key
@@ -882,7 +906,7 @@ export default function ProfilPage() {
 
         {/* ── DESKTOP ONLY: stepper header ── */}
         {!isMobile && (
-          <div style={{ display: 'flex', alignItems: 'center', padding: '16px 22px', marginBottom: 24, border: '1px solid rgba(0,0,0,0.08)', borderRadius: 20, background: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff', boxShadow: '0 4px 20px rgba(0,0,0,0.06)', gap: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', padding: '18px 24px', marginBottom: 24, border: `1px solid ${isDark ? 'rgba(34,197,94,0.14)' : 'rgba(34,197,94,0.12)'}`, borderRadius: 24, background: isDark ? 'linear-gradient(135deg,rgba(18,22,29,0.96) 0%,rgba(28,33,42,0.98) 100%)' : 'linear-gradient(180deg,#ffffff 0%,#f7fbf6 100%)', boxShadow: isDark ? '0 18px 46px rgba(0,0,0,0.24)' : '0 20px 50px rgba(15,23,42,0.08)', gap: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, marginRight: 'auto' }}>
               <div style={{ width: 36, height: 36, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.82rem', fontWeight: 700, background: '#0a0a0a', color: '#ffffff', border: '1px solid rgba(0,0,0,0.2)' }}>{initials}</div>
               <div>
@@ -915,7 +939,7 @@ export default function ProfilPage() {
 
           {/* Desktop sidebar only */}
           {!isMobile && (
-            <aside style={{ ...panelStyle(false, isDark, isMobile), padding: 16, position: 'sticky', top: 96 }}>
+            <aside style={{ ...panelStyle(false, isDark, isMobile), padding: 16, position: 'sticky', top: 96, borderRadius: 22, boxShadow: isDark ? '0 16px 40px rgba(0,0,0,0.22)' : '0 20px 44px rgba(15,23,42,0.06)' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {TABS.map((tab) => {
                   const badge = tab.key === 'assignments' ? activeAssignments.length : tab.key === 'requests' ? pendingIncoming : 0
@@ -932,7 +956,7 @@ export default function ProfilPage() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 24, minWidth: 0, padding: isMobile ? '18px 14px 32px' : 0 }}>
             {isMobile && (
-              <div style={{ ...panelStyle(true, isDark, isMobile), padding: '18px 16px', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ ...panelStyle(true, isDark, isMobile), padding: '20px 18px', position: 'relative', overflow: 'hidden', borderRadius: 22, boxShadow: isDark ? '0 18px 44px rgba(0,0,0,0.28)' : '0 20px 46px rgba(34,197,94,0.10)' }}>
                 <div style={{ position: 'absolute', right: -48, top: -48, width: 140, height: 140, borderRadius: '50%', background: 'var(--enterprise-panel-glow)', pointerEvents: 'none' }} />
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
                   <div>
@@ -1244,7 +1268,7 @@ export default function ProfilPage() {
                         const recipientPhone = br?.recipient_phone || linkedBooking?.recipient_phone
 
                         return (
-                          <div key={order.id} style={{ padding: 22, borderRadius: 20, background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 18 }}>
+                          <div key={order.id} style={{ padding: isMobile ? 18 : 22, borderRadius: isMobile ? 22 : 24, background: isDark ? 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))' : 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.98))', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 18, boxShadow: isMobile ? 'none' : '0 16px 36px rgba(15,23,42,0.05)' }}>
                             {/* Top row: route + status badge */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
                               <div style={{ minWidth: 0 }}>
@@ -1506,16 +1530,6 @@ export default function ProfilPage() {
                 {isMobile && (
                   <div style={{ marginBottom: 18 }}>
                     <MobileSectionIntro
-                      eyebrow="Förare"
-                      title="Jämför förare som en riktig marknadsplats."
-                      subtitle="Den här vyn ska kännas trygg, sorterad och premium även på liten skärm."
-                      meta={`${carriers.length} profiler`}
-                    />
-                  </div>
-                )}
-                {isMobile && (
-                  <div style={{ marginBottom: 18 }}>
-                    <MobileSectionIntro
                       eyebrow="Bokningar"
                       title="Följ varje leverans utan friktion."
                       subtitle="Här ska det vara självklart om något väntar på betalning, är på väg eller redan är klart."
@@ -1531,7 +1545,7 @@ export default function ProfilPage() {
                     { label: 'På väg', value: orders.filter(o => ['picked_up', 'in_transit'].includes(o.status)).length, hint: 'leveranser i drift' },
                     { label: 'Klara', value: orders.filter(o => ['delivered', 'confirmed'].includes(o.status)).length, hint: 'levererat / bekräftat' },
                   ].map((item) => (
-                    <div key={item.label} style={{ padding: isMobile ? 14 : 16, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                    <div key={item.label} style={{ padding: isMobile ? 14 : 16, borderRadius: 18, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.72)', border: '1px solid var(--border)', boxShadow: isMobile ? 'none' : '0 10px 24px rgba(15,23,42,0.04)' }}>
                       <p style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>{item.label}</p>
                       <p style={{ fontSize: isMobile ? '1.2rem' : '1.4rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em', marginBottom: 4 }}>{item.value}</p>
                       <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>{item.hint}</p>
@@ -1549,7 +1563,7 @@ export default function ProfilPage() {
                       const canPay = order.sender_id === userId && order.status === 'pending'
                       const isCarrierOrder = getOrderCarrierId(order) === userId
                       return (
-                        <div key={order.id} style={{ padding: isMobile ? 16 : 18, borderRadius: isMobile ? 20 : 18, background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', gap: isMobile ? 12 : 16, alignItems: isMobile ? 'flex-start' : 'center' }}>
+                        <div key={order.id} style={{ padding: isMobile ? 16 : 20, borderRadius: isMobile ? 22 : 22, background: isDark ? 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))' : 'linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,252,0.98))', border: '1px solid var(--border)', display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', gap: isMobile ? 12 : 16, alignItems: isMobile ? 'flex-start' : 'center', boxShadow: isMobile ? 'none' : '0 14px 32px rgba(15,23,42,0.05)' }}>
                           <div style={{ minWidth: 0 }}>
                             <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>{order.description || 'Bokning'}</p>
                             <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6 }}>{order.pickup_address} → {order.dropoff_address}</p>
@@ -2050,8 +2064,8 @@ export default function ProfilPage() {
                           <Star size={12} style={{ color: '#f59e0b', fill: '#f59e0b' }} />
                           {carrier.ratingCount} omdömen · {carrier.vehicleType}
                         </div>
-                        <button onClick={() => handleTabChange('orders')} style={{ border: 'none', background: 'none', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                          Utforska
+                        <button onClick={() => setViewProfileUserId(carrier.id)} style={{ border: 'none', background: 'none', color: 'var(--accent)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          Visa profil
                         </button>
                       </div>
                     </div>
