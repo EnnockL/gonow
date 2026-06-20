@@ -142,6 +142,17 @@ export default function TripBookingModal({
     return trip.price ?? 0
   }
 
+  const priceEstimate = calcPriceEst()
+  const sectionStyle: React.CSSProperties = {
+    padding: isMobile ? '14px' : '16px',
+    borderRadius: 16,
+    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'rgba(255,255,255,0.045)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+  }
+
   function buildDraft(): PendingBookingDraft {
     return {
       trip_id: trip.id,
@@ -158,7 +169,7 @@ export default function TripBookingModal({
       recipient_phone: isPassenger ? sPhone : rPhone,
       recipient_email: isPassenger ? sEmail : rEmail,
       status: 'pending',
-      price_est: calcPriceEst(),
+      price_est: priceEstimate,
     }
   }
 
@@ -260,6 +271,33 @@ export default function TripBookingModal({
             </div>
           ) : (
             <form onSubmit={submit} style={{ padding: isMobile ? '16px 16px 18px' : '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))',
+                gap: 10,
+              }}>
+                {[
+                  { label: 'Pris', value: `${priceEstimate} kr` },
+                  { label: 'Rutt', value: `${trip.from} → ${trip.to}` },
+                  { label: isPassenger ? 'Säten kvar' : 'Vikt kvar', value: isPassenger ? `${trip.seatsLeft ?? '-'} st` : `${trip.weightLeftKg ?? '-'} kg` },
+                ].map((item) => (
+                  <div key={item.label} style={{
+                    padding: isMobile ? '12px 12px' : '13px 14px',
+                    borderRadius: 16,
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.06)',
+                    minWidth: 0,
+                  }}>
+                    <p style={{ fontSize: '0.66rem', color: 'rgba(255,255,255,0.48)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
+                      {item.label}
+                    </p>
+                    <strong style={{ display: 'block', fontSize: isMobile ? '0.92rem' : '0.96rem', color: '#ffffff', lineHeight: 1.3 }}>
+                      {item.value}
+                    </strong>
+                  </div>
+                ))}
+              </div>
+
               <CarrierProfile
                 name={trip.carrier}
                 carrierId={trip.carrier_id}
@@ -302,7 +340,7 @@ export default function TripBookingModal({
                 )}
               </div>
 
-              <div>
+              <div style={sectionStyle}>
                 <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.48)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Typ av uppdrag</p>
                 {lockType ? (
                   <div
@@ -338,7 +376,7 @@ export default function TripBookingModal({
               </div>
 
               {!isPassenger && (
-                <div>
+                <div style={sectionStyle}>
                   <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.48)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Vikt</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {WEIGHT_PRESETS.map(w => (
@@ -357,7 +395,7 @@ export default function TripBookingModal({
               )}
 
               {isPassenger && (
-                <div>
+                <div style={sectionStyle}>
                   <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.48)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Antal personer</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {[1, 2, 3, 4].map((count) => {
@@ -378,7 +416,7 @@ export default function TripBookingModal({
                 </div>
               )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={sectionStyle}>
                 <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Adresser</p>
                 <div style={{ position: 'relative' }}>
                   <MapPin size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
@@ -390,7 +428,7 @@ export default function TripBookingModal({
                 </div>
               </div>
 
-              <div>
+              <div style={sectionStyle}>
                 <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.48)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Beskrivning (valfritt)</p>
                 <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Beskriv kort vad som ska skickas..." rows={2}
                   style={{ ...inp, paddingLeft: 12, resize: 'none', lineHeight: 1.5, color: '#ffffff' }}
@@ -399,7 +437,7 @@ export default function TripBookingModal({
                 />
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={sectionStyle}>
                 <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                   {isPassenger ? 'Passagerare' : 'Avsändare'}
                 </p>
@@ -409,7 +447,7 @@ export default function TripBookingModal({
               </div>
 
               {!isPassenger && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={sectionStyle}>
                   <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Mottagare</p>
                   <Field icon={User} value={rName} onChange={e => setRName(e.target.value)} placeholder="Namn" required />
                   <Field icon={Phone} value={rPhone} onChange={e => setRPhone(e.target.value)} placeholder="Telefon *" type="tel" required />

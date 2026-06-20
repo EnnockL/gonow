@@ -70,10 +70,11 @@ function keepSearchFormVisible(target: HTMLElement) {
   if (!window.matchMedia('(max-width: 820px)').matches) return
 
   const form = target.closest('.sk-route-form') as HTMLElement | null
-  const anchor = form ?? target
+  const formSection = target.closest('.sk-simple-left') as HTMLElement | null
+  const anchor = formSection ?? form ?? target
 
   const scrollToAnchor = () => {
-    anchor.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    anchor.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' })
   }
 
   window.setTimeout(scrollToAnchor, 120)
@@ -440,6 +441,9 @@ function SkickaPageContent() {
                   </p>
                   <p className="sk-step-desc">{s.desc}</p>
                 </div>
+                <div className="sk-step-mobile-label">
+                  {s.label}
+                </div>
               </div>
               {i < STEPS.length - 1 && (
                 <div className={`sk-step-line ${i < stepIdx ? 'sk-step-line-done' : ''}`} />
@@ -596,7 +600,7 @@ function SkickaPageContent() {
 
                     <button onClick={() => setAiMode(true)} style={{
                       marginTop: 14, border: '1px solid rgba(146,255,99,0.45)',
-                      background: 'rgba(146,255,99,0.08)', color: '#92ff63',
+                      background: 'rgba(146,255,99,0.12)', color: '#d9ffc8',
                       borderRadius: 10, padding: '9px 16px', cursor: 'pointer',
                       fontFamily: 'inherit', fontSize: '0.82rem', fontWeight: 600,
                       display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -848,6 +852,31 @@ function SkickaPageContent() {
         {step === 'matches' && parsed && (
           <div className="sk-layout">
             <div className="sk-primary">
+              <div className="sk-match-hero">
+                <div className="sk-match-hero-copy">
+                  <p className="sk-eyebrow">Matchade resor</p>
+                  <h2 className="sk-match-hero-title">
+                    {parsed.from_city.split(',')[0]} → {parsed.to_city.split(',')[0]}
+                  </h2>
+                  <p className="sk-match-hero-sub">
+                    Välj en resa med rätt kapacitet, tydlig status och rätt pris direkt. Alla kort visar hur full bilen är innan du skickar förfrågan.
+                  </p>
+                </div>
+                <div className="sk-match-hero-stats">
+                  <div className="sk-match-stat">
+                    <span className="sk-match-stat-k">Matchningar</span>
+                    <strong>{trips.length}</strong>
+                  </div>
+                  <div className="sk-match-stat">
+                    <span className="sk-match-stat-k">Prisnivå</span>
+                    <strong>{routePrice ? routePrice.price : parsed.estimated_price_sek} kr</strong>
+                  </div>
+                  <div className="sk-match-stat">
+                    <span className="sk-match-stat-k">Mode</span>
+                    <strong>{parsed.type === 'lift' ? 'Lift' : parsed.type === 'return' ? 'Retur' : 'Paket'}</strong>
+                  </div>
+                </div>
+              </div>
 
               {/* Summary pills */}
               <div className="sk-summary-bar">
@@ -877,7 +906,7 @@ function SkickaPageContent() {
                   </button>
                 </div>
               ) : (
-                <div className="sk-card">
+                <div className="sk-card sk-match-card">
                   <div className="sk-card-top" style={{ marginBottom: 16 }}>
                     <div>
                       <p className="sk-eyebrow">Matchade resor</p>
@@ -1336,6 +1365,10 @@ function SkickaPageContent() {
           font-size: 0.7rem;
           color: var(--muted);
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+
+        .sk-step-mobile-label {
+          display: none;
         }
 
         .sk-step-line {
@@ -2146,6 +2179,78 @@ function SkickaPageContent() {
           font-size: 0.74rem; font-weight: 600; color: var(--text);
         }
 
+        .sk-match-hero {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 18px;
+          padding: 22px 24px;
+          border-radius: 22px;
+          border: 1px solid var(--border);
+          background:
+            radial-gradient(circle at top right, rgba(146,255,99,0.12), transparent 34%),
+            linear-gradient(180deg, rgba(146,255,99,0.04), rgba(146,255,99,0.015)),
+            var(--surface);
+          box-shadow: 0 16px 40px rgba(0,0,0,0.06);
+        }
+
+        .sk-match-hero-copy {
+          min-width: 0;
+        }
+
+        .sk-match-hero-title {
+          font-size: clamp(1.55rem, 2.8vw, 2.2rem);
+          font-weight: 800;
+          letter-spacing: -0.04em;
+          color: var(--text);
+          margin-bottom: 10px;
+          line-height: 1.02;
+        }
+
+        .sk-match-hero-sub {
+          max-width: 620px;
+          font-size: 0.9rem;
+          line-height: 1.7;
+          color: var(--muted);
+        }
+
+        .sk-match-hero-stats {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px;
+          min-width: min(360px, 100%);
+        }
+
+        .sk-match-stat {
+          padding: 14px;
+          border-radius: 16px;
+          border: 1px solid rgba(146,255,99,0.16);
+          background: rgba(146,255,99,0.08);
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .sk-match-stat-k {
+          font-size: 0.66rem;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          color: var(--muted);
+        }
+
+        .sk-match-stat strong {
+          font-size: 1rem;
+          font-weight: 800;
+          color: var(--text);
+          line-height: 1.2;
+        }
+
+        .sk-match-card {
+          padding-top: 20px;
+          background:
+            linear-gradient(180deg, rgba(146,255,99,0.025), transparent 24%),
+            var(--surface);
+        }
+
         .sk-empty-card {
           display: flex; flex-direction: column; align-items: center;
           padding: 56px 24px; text-align: center;
@@ -2282,6 +2387,25 @@ function SkickaPageContent() {
           background: linear-gradient(to bottom, rgba(146,255,99,0.04) 0%, var(--surface) 100%);
         }
 
+        html:not(.dark) .sk-eyebrow,
+        html:not(.dark) .sk-visual-count,
+        html:not(.dark) .sk-operational-pill,
+        html:not(.dark) .sk-step-active .sk-step-num {
+          color: #15803d;
+        }
+
+        html:not(.dark) .sk-operational-pill,
+        html:not(.dark) .sk-step-active .sk-step-num {
+          border-color: rgba(22,163,74,0.28);
+          background: rgba(22,163,74,0.12);
+        }
+
+        html:not(.dark) .sk-summary-pill,
+        html:not(.dark) .sk-match-stat {
+          border-color: rgba(22,163,74,0.16);
+          background: rgba(22,163,74,0.08);
+        }
+
         html:not(.dark) .sk-flow-num {
           background: rgba(146,255,99,0.18);
           border-color: rgba(146,255,99,0.35);
@@ -2335,8 +2459,27 @@ function SkickaPageContent() {
           .sk-stepper::-webkit-scrollbar { display: none; }
           .sk-step {
             flex: 0 0 auto;
-            min-width: 68px;
+            min-width: 76px;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
           }
+          .sk-step-num {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+          }
+          .sk-step-mobile-label {
+            display: block;
+            font-size: 0.66rem;
+            font-weight: 700;
+            color: var(--muted);
+            text-align: center;
+            line-height: 1.25;
+            max-width: 72px;
+          }
+          .sk-step-active .sk-step-mobile-label { color: var(--text); }
+          .sk-step-done .sk-step-mobile-label { color: #15803d; }
           .sk-tab-row {
             position: static;
             top: auto;
@@ -2359,6 +2502,40 @@ function SkickaPageContent() {
           .sk-stats { grid-template-columns: repeat(3, 1fr); gap: 8px; }
           .sk-step-line { display: none; }
           .sk-step-text { display: none; }
+          .sk-match-hero {
+            grid-template-columns: 1fr;
+            gap: 14px;
+            padding: 18px 16px;
+            border-radius: 18px;
+          }
+          .sk-match-hero-title {
+            font-size: clamp(1.35rem, 6.8vw, 1.9rem);
+            line-height: 1.05;
+          }
+          .sk-match-hero-sub {
+            font-size: 0.82rem;
+            line-height: 1.58;
+          }
+          .sk-match-hero-stats {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            min-width: 0;
+          }
+          .sk-match-stat {
+            padding: 12px 10px;
+            border-radius: 14px;
+          }
+          .sk-match-stat strong {
+            font-size: 0.88rem;
+          }
+          .sk-summary-bar {
+            padding: 12px 14px;
+            border-radius: 16px;
+            gap: 8px;
+          }
+          .sk-summary-pill {
+            font-size: 0.7rem;
+            padding: 7px 10px;
+          }
           .sk-card-top { flex-direction: column; }
           .sk-live-carrier { display: none; }
           .sk-ai-card,
@@ -2382,19 +2559,21 @@ function SkickaPageContent() {
             padding-right: 18px !important;
           }
           .sk-simple-left {
-            gap: 14px;
+            gap: 12px;
             justify-content: flex-start;
+            padding-top: 20px !important;
+            padding-bottom: 18px !important;
           }
           .sk-simple-inner {
             min-height: auto;
           }
           .sk-simple-title {
-            font-size: clamp(1.8rem, 8vw, 2.5rem);
-            line-height: 1.02;
+            font-size: clamp(1.65rem, 7.2vw, 2.2rem);
+            line-height: 1.04;
           }
           .sk-simple-subtitle {
-            font-size: 0.86rem;
-            line-height: 1.68;
+            font-size: 0.84rem;
+            line-height: 1.62;
             max-width: none;
           }
           .sk-info-strip {
@@ -2437,15 +2616,25 @@ function SkickaPageContent() {
             font-size: 0.82rem;
           }
           .sk-route-form {
-            gap: 10px !important;
-            align-items: flex-start !important;
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+            align-items: stretch !important;
+            scroll-margin-top: 126px;
           }
+          .sk-rf-indicator { display: none !important; }
           .sk-rf-inputs {
             min-width: 0;
             border-radius: 16px;
+            padding: 4px 0;
+            background: rgba(255,255,255,0.1);
+            box-shadow: 0 10px 28px rgba(0,0,0,0.16);
           }
           .sk-rf-input {
             font-size: 16px !important;
+            min-height: 50px;
+            padding-top: 14px;
+            padding-bottom: 14px;
           }
           .sk-simple-title,
           .sk-card-title,
@@ -2463,19 +2652,37 @@ function SkickaPageContent() {
             flex: 0 0 auto;
           }
           .sk-lift-controls {
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
             gap: 10px;
+            align-items: stretch;
           }
           .sk-lift-card {
-            padding: 12px;
+            padding: 11px 12px;
             border-radius: 15px;
+            gap: 8px;
+            min-height: 0;
+          }
+          .sk-lift-card-head {
+            margin-bottom: 2px;
+          }
+          .sk-lift-card-label {
+            font-size: 0.67rem;
           }
           .sk-passenger-row .sk-weight-chip {
-            min-width: 52px;
+            min-width: 48px;
+            min-height: 40px;
           }
           .sk-date-input {
-            min-height: 44px;
+            min-height: 40px;
             font-size: 16px !important;
+            padding-top: 9px;
+            padding-bottom: 9px;
+          }
+          .sk-find-btn {
+            min-height: 52px;
+            border-radius: 14px;
+            font-size: 0.88rem;
+            box-shadow: 0 12px 28px rgba(146,255,99,0.18);
           }
           .sk-visual-route {
             grid-template-columns: 1fr auto !important;
@@ -2505,6 +2712,15 @@ function SkickaPageContent() {
           .sk-booking-card[style*='sticky'] {
             position: static !important;
             top: auto !important;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .sk-lift-controls {
+            grid-template-columns: 1fr !important;
+          }
+          .sk-rf-input {
+            min-height: 48px;
           }
         }
       `}</style>

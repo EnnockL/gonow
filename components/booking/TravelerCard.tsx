@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Trip } from '@/lib/types'
 import { Star, Shield, Car, Package, Clock, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { format } from 'date-fns'
@@ -23,6 +24,14 @@ interface TravelerCardProps {
 }
 
 export default function TravelerCard({ trip, price, onSelect, onViewProfile, selected, bookingMeta }: TravelerCardProps) {
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
   const carrier = trip.users
   const initials = carrier?.name?.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'GN'
   const rating = carrier?.rating_avg?.toFixed(1) || '5.0'
@@ -52,7 +61,7 @@ export default function TravelerCard({ trip, price, onSelect, onViewProfile, sel
           : 'var(--surface)',
         border: `1.5px solid ${selected ? '#92ff63' : 'var(--border)'}`,
         borderRadius: 18,
-        padding: '18px 20px',
+        padding: isMobile ? '16px 16px 18px' : '18px 20px',
         cursor: 'pointer',
         fontFamily: 'inherit',
         transition: 'all 0.18s ease',
@@ -76,7 +85,7 @@ export default function TravelerCard({ trip, price, onSelect, onViewProfile, sel
         }
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? 12 : 14 }}>
         <button
           onClick={e => { e.stopPropagation(); onViewProfile?.() }}
           title="Se profil"
@@ -127,7 +136,7 @@ export default function TravelerCard({ trip, price, onSelect, onViewProfile, sel
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 5, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 12, marginTop: 7, flexWrap: 'wrap' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: 'var(--muted)' }}>
               <Star size={12} style={{ color: '#f59e0b', fill: '#f59e0b', flexShrink: 0 }} />
               <strong style={{ color: 'var(--text)', fontWeight: 700 }}>{rating}</strong>
@@ -143,7 +152,7 @@ export default function TravelerCard({ trip, price, onSelect, onViewProfile, sel
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr auto', alignItems: 'center', gap: isMobile ? 10 : 8 }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -172,10 +181,20 @@ export default function TravelerCard({ trip, price, onSelect, onViewProfile, sel
           }}>
             <Package size={10} /> Max {trip.weight_capacity_kg} kg
           </span>
+          {typeof bookingMeta?.weightLeftKg === 'number' ? (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '4px 10px', borderRadius: 999,
+              background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.16)',
+              color: '#2563eb', fontSize: '0.7rem', fontWeight: 700,
+            }}>
+              <Package size={10} /> {bookingMeta.weightLeftKg} kg kvar
+            </span>
+          ) : null}
         </div>
 
         {selected ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#92ff63', fontSize: '0.75rem', fontWeight: 700, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#92ff63', fontSize: '0.75rem', fontWeight: 700, flexShrink: 0, justifyContent: isMobile ? 'flex-start' : 'flex-end' }}>
             <CheckCircle2 size={16} style={{ fill: 'rgba(146,255,99,0.15)' }} /> Vald
           </div>
         ) : (
@@ -185,6 +204,8 @@ export default function TravelerCard({ trip, price, onSelect, onViewProfile, sel
             border: '1px solid var(--border)', background: 'var(--surface-2)',
             color: 'var(--muted)', fontSize: '0.75rem', fontWeight: 600, flexShrink: 0,
             transition: 'all 0.15s',
+            width: isMobile ? '100%' : 'auto',
+            justifyContent: 'center',
           }}>
             Välj <ArrowRight size={12} />
           </div>
