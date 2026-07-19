@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import React, { Suspense, useEffect, useMemo, useState } from 'react'
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowLeft, ArrowRight, Calendar, CheckCircle2, ChevronRight, Loader2, Mail,
@@ -263,6 +263,7 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
   const [sender, setSender]       = useState<ContactInfo>({ name: '', phone: '', email: '' })
   const [recipient, setRecipient] = useState<ContactInfo>({ name: '', phone: '', email: '' })
   const [packageRequestId, setPackageRequestId] = useState(() => crypto.randomUUID())
+  const previousJourneyStage = useRef(journeyStage)
   const [packageType, setPackageType] = useState<'package' | 'large' | 'pallet' | 'document'>('package')
 
   useEffect(() => {
@@ -290,7 +291,17 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
         setCreatedPackageId(journeyPackageId)
         setStep('confirmed')
       }
-      if (!journeyStage && !journeyPackageId) setStep('chat')
+      if (!journeyStage && !journeyPackageId) {
+        setStep('chat')
+        if (previousJourneyStage.current === 'confirmed') {
+          setParsed(null)
+          setRecipient({ name: '', phone: '', email: '' })
+          setPackageRequestId(crypto.randomUUID())
+          sessionStorage.removeItem(SEND_JOURNEY_KEY)
+          sessionStorage.removeItem('gonow_send_form_v1')
+        }
+      }
+      previousJourneyStage.current = journeyStage
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journeyStage, journeyPackageId])
@@ -591,9 +602,8 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
       setCreatedPackageMatches([])
       setCreatedPackageOrder(null)
       setStep('confirmed')
-      const historyState = window.history.state ?? {}
-      window.history.replaceState(historyState, '', '/skicka')
-      window.history.pushState(historyState, '', `/skicka?stage=confirmed&package_id=${data.package.id}`)
+      window.history.replaceState(null, '', '/skicka')
+      window.history.pushState(null, '', `/skicka?stage=confirmed&package_id=${data.package.id}`)
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Kunde inte boka pakettransporten.')
       setStep('review')
@@ -710,9 +720,8 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
         setCreatedPackageOrder(null)
         setStep('confirmed')
         if (data.package?.id) {
-          const historyState = window.history.state ?? {}
-          window.history.replaceState(historyState, '', '/skicka')
-          window.history.pushState(historyState, '', `/skicka?stage=confirmed&package_id=${data.package.id}`)
+          window.history.replaceState(null, '', '/skicka')
+          window.history.pushState(null, '', `/skicka?stage=confirmed&package_id=${data.package.id}`)
         }
       } catch {
         setSubmitError('Nätverksfel, försök igen.')
@@ -874,7 +883,7 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
 
         {/* ══ STEP: CHAT ══════════════════════════════════════════════════════ */}
         {step === 'chat' && tabMode === 'skicka' && !aiMode && (
-          <EnterpriseSendForm requestId={packageRequestId} sender={sender} recipient={recipient} onContinue={(draft) => {
+          <EnterpriseSendForm key={packageRequestId} requestId={packageRequestId} sender={sender} recipient={recipient} onContinue={(draft) => {
             const parsedDraft: AIParseResult = {
               type: draft.service_type === 'return' ? 'return' : 'package',
               from_city: draft.pickup_address,
