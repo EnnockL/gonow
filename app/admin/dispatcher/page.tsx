@@ -380,6 +380,23 @@ export default function DispatcherDashboard() {
           <span className="dp-brand-name">Gonow</span>
         </div>
 
+        {/* User + CTA at top */}
+        <div className="dp-top-user">
+          {userId && (
+            <Link href="/profil" className="dp-user-row">
+              <div className="dp-user-avatar">{userInitials}</div>
+              <span className="dp-user-name">{profile?.name?.split(' ')[0] ?? 'Konto'}</span>
+            </Link>
+          )}
+          <button
+            type="button"
+            className="dp-cta-btn"
+            onClick={() => window.dispatchEvent(new CustomEvent('gonow_open_package_booking'))}
+          >
+            Skicka nu
+          </button>
+        </div>
+
         {/* Platform nav */}
         <p className="dp-sidebar-section-label">Navigering</p>
         <ul className="dp-nav-list">
@@ -407,35 +424,15 @@ export default function DispatcherDashboard() {
           ))}
         </ul>
 
-        {/* Footer: user + CTA */}
+        {/* Footer: system status */}
         <div className="dp-sidebar-footer">
-          {/* refresh indicator */}
-          <div className="dp-refresh-mini" style={{ marginBottom: 12 }}>
-            <div className="dp-sys-status">
-              <span className="dp-status-dot" style={{ width: 6, height: 6 }} />
-              <span className="dp-sys-label">System: Aktiv</span>
-            </div>
-            <div className="dp-progress-track" style={{ width: '100%', marginTop: 6 }}>
-              <div className="dp-progress-fill" style={{ width: `${(countdown / REFRESH_S) * 100}%` }} />
-            </div>
+          <div className="dp-sys-status">
+            <span className="dp-status-dot" style={{ width: 6, height: 6 }} />
+            <span className="dp-sys-label">System: Aktiv</span>
           </div>
-
-          {/* user row */}
-          {userId && (
-            <Link href="/profil" className="dp-user-row">
-              <div className="dp-user-avatar">{userInitials}</div>
-              <span className="dp-user-name">{profile?.name?.split(' ')[0] ?? 'Konto'}</span>
-            </Link>
-          )}
-
-          {/* CTA */}
-          <button
-            type="button"
-            className="dp-cta-btn"
-            onClick={() => window.dispatchEvent(new CustomEvent('gonow_open_package_booking'))}
-          >
-            Skicka nu
-          </button>
+          <div className="dp-progress-track" style={{ width: '100%', marginTop: 6 }}>
+            <div className="dp-progress-fill" style={{ width: `${(countdown / REFRESH_S) * 100}%` }} />
+          </div>
         </div>
       </nav>
 
@@ -740,6 +737,12 @@ export default function DispatcherDashboard() {
         .dp-brand-name {
           font-size: 1rem; font-weight: 800; color: #fff;
           letter-spacing: -0.02em;
+        }
+
+        .dp-top-user {
+          padding: 0 12px 16px;
+          border-bottom: 1px solid rgba(255,255,255,0.06);
+          margin-bottom: 16px;
         }
 
         .dp-sidebar-section-label {
