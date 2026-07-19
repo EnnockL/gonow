@@ -751,15 +751,14 @@ export default function DispatcherDashboard() {
 
         .dp-nav-list {
           list-style: none; margin: 0; padding: 0 8px;
-          flex: 1;
         }
         .dp-nav-item {
-          display: flex; align-items: center; gap: 12px;
-          padding: 10px 12px; border-radius: 8px;
-          font-size: 0.82rem; font-weight: 600; color: ${MUTED};
+          display: flex; align-items: center; gap: 10px;
+          padding: 8px 12px; border-radius: 8px;
+          font-size: 0.79rem; font-weight: 500; color: ${MUTED};
           text-decoration: none;
           transition: background 0.12s, color 0.12s;
-          margin-bottom: 2px;
+          margin-bottom: 1px;
         }
         .dp-nav-item:hover {
           background: rgba(255,255,255,0.07);
@@ -768,25 +767,60 @@ export default function DispatcherDashboard() {
         .dp-nav-active {
           background: rgba(74,222,128,0.12) !important;
           color: ${GREEN} !important;
+          font-weight: 700;
         }
         .dp-nav-icon { flex-shrink: 0; display: flex; }
+        .dp-nav-badge {
+          margin-left: auto; font-size: 0.52rem; font-weight: 800;
+          background: rgba(74,222,128,0.15); color: ${GREEN};
+          border-radius: 4px; padding: 1px 5px; letter-spacing: 0.04em;
+        }
 
         .dp-sidebar-footer {
-          padding: 16px 20px 0;
+          padding: 14px 12px 0;
           border-top: 1px solid rgba(255,255,255,0.06);
           margin-top: auto;
         }
         .dp-sys-status {
           display: flex; align-items: center; gap: 7px;
-          margin-bottom: 10px;
         }
         .dp-sys-label {
           font-size: 0.6rem; font-weight: 600; color: ${MUTED};
         }
-        .dp-refresh-mini .dp-progress-track {
+        .dp-refresh-mini .dp-progress-track,
+        .dp-progress-track {
           width: 100%; height: 2px;
           background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden;
         }
+        .dp-user-row {
+          display: flex; align-items: center; gap: 9px;
+          padding: 8px 10px; border-radius: 8px;
+          text-decoration: none;
+          border: 1px solid rgba(255,255,255,0.07);
+          background: rgba(255,255,255,0.03);
+          margin-bottom: 8px;
+          transition: background 0.12s;
+        }
+        .dp-user-row:hover { background: rgba(255,255,255,0.07); }
+        .dp-user-avatar {
+          width: 26px; height: 26px; border-radius: 50%;
+          background: ${PLAT}; color: #0a0c10;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 0.6rem; font-weight: 800; flex-shrink: 0;
+        }
+        .dp-user-name {
+          font-size: 0.78rem; font-weight: 600; color: ${TEXT};
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .dp-cta-btn {
+          width: 100%; padding: 9px 0; border-radius: 999px;
+          background: ${GREEN}; color: #0a0a0a;
+          font-size: 0.8rem; font-weight: 700; border: none;
+          cursor: pointer; font-family: inherit;
+          transition: opacity 0.15s;
+          margin-bottom: 4px;
+        }
+        .dp-cta-btn:hover { opacity: 0.88; }
 
         /* ── MAIN CONTENT AREA ───────────────────────────────────────── */
         .dp-main {
