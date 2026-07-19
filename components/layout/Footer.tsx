@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Globe, MessageCircle, Rss } from 'lucide-react'
@@ -52,10 +53,13 @@ const COLS = [
 const CITIES = ['Stockholm', 'Göteborg', 'Malmö', 'Uppsala', 'Sundsvall', 'Örebro']
 
 export default function Footer() {
+  const path = usePathname()
   const [email, setEmail] = useState('')
   const [state, setState] = useState<'idle' | 'loading' | 'done'>('idle')
   const [isMobile, setIsMobile] = useState(false)
   const [accent, setAccent] = useState<'green' | 'blue'>('green')
+
+  if (path.startsWith('/admin')) return null
 
   useEffect(() => {
     setAccent((localStorage.getItem('accent') ?? 'green') as 'green' | 'blue')
