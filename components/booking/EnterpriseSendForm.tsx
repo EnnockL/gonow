@@ -170,30 +170,24 @@ export default function EnterpriseSendForm({ requestId, sender, recipient, onCon
 function RouteCard({ title, value, onChange, mode, date }: { title:string;value:string;onChange:(v:string)=>void;mode:string;date:string }) {
   const [sugg, setSugg] = useState<string[]>([])
   const [open, setOpen] = useState(false)
+  const [searching, setSearching] = useState(false)
+  const [searchDone, setSearchDone] = useState(false)
   useEffect(() => {
     const q = value.trim()
-    if (q.length < 3) {
-      const reset = window.setTimeout(() => setSugg([]), 0)
+    if (q.length < 2) {
+      const reset = window.setTimeout(() => { setSugg([]); setSearching(false); setSearchDone(false) }, 0)
       return () => clearTimeout(reset)
     }
     const t = setTimeout(async () => {
+      setSearching(true)
+      setSearchDone(false)
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=6&countrycodes=se&addressdetails=1`,
-          { headers: { 'User-Agent': 'Gonow/1.0 (gonow.se)' } }
-        )
-        if (!res.ok) return
-        const data = await res.json() as Array<{display_name:string;address:{road?:string;house_number?:string;postcode?:string;city?:string;town?:string;village?:string;municipality?:string;residential?:string}}>
-        const items = data.map(d => {
-          const a = d.address
-          const road = a.road || a.residential || ''
-          const num = a.house_number ? ' ' + a.house_number : ''
-          const pc = a.postcode || ''
-          const city = a.city || a.town || a.village || a.municipality || ''
-          return road ? `${road}${num}${pc ? ', ' + pc : ''} ${city}`.trim() : d.display_name.split(',').slice(0, 3).join(',').trim()
-        }).filter((v, i, a) => a.indexOf(v) === i)
-        setSugg(items)
-      } catch {}
+        const res = await fetch(`/api/address-suggestions?q=${encodeURIComponent(q)}`)
+        const data = await res.json() as { suggestions?: string[] }
+        setSugg(res.ok ? data.suggestions ?? [] : [])
+        setOpen(true)
+      } catch { setSugg([]) }
+      finally { setSearching(false); setSearchDone(true) }
     }, 320)
     return () => clearTimeout(t)
   }, [value])
@@ -204,9 +198,11 @@ function RouteCard({ title, value, onChange, mode, date }: { title:string;value:
         <LocateFixed size={15}/>
         <input value={value} onChange={e=>{onChange(e.target.value);setOpen(true)}} onFocus={()=>{if(sugg.length)setOpen(true)}} onBlur={()=>setTimeout(()=>setOpen(false),160)} placeholder={title==='Från'?'T.ex. Storgatan 5, 97452 Luleå':'T.ex. Kungsgatan 12, 11143 Stockholm'} autoComplete="off" />
       </label>
-      {open && sugg.length > 0 && (
+      {open && value.trim().length >= 2 && (searching || searchDone) && (
         <div className="addr-drop">
-          {sugg.map((s, i) => {
+          {searching && <div className="addr-state">Söker adresser…</div>}
+          {!searching && sugg.length === 0 && <div className="addr-state">Inga förslag. Fortsätt skriva hela adressen.</div>}
+          {!searching && sugg.map((s, i) => {
             const ci = s.indexOf(', ')
             const st = ci > -1 ? s.slice(0, ci) : s
             const loc = ci > -1 ? s.slice(ci + 2) : ''
@@ -221,7 +217,7 @@ function RouteCard({ title, value, onChange, mode, date }: { title:string;value:
       )}
     </div>
     <div className="route-meta"><span>{mode}</span><span><CalendarDays size={13}/>{date}</span></div>
-    <style jsx>{`.route-card{padding:16px 18px;background:var(--sw-panel);border:1px solid var(--sw-border);border-radius:12px}.route-card h3{display:flex;align-items:center;gap:8px;font-size:15px;margin:0 0 11px}.route-card h3 svg{color:#22b957}.route-card label{display:flex;align-items:center;gap:10px;background:var(--sw-field);border:1px solid var(--sw-border-strong);padding:14px 16px;border-radius:10px;min-height:54px}.route-card input{width:100%;color:var(--sw-text);background:transparent;border:0;outline:0;font-size:16px}.route-card input::placeholder{color:var(--sw-muted)}.route-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 2px}.route-meta span{display:flex;align-items:center;gap:6px;color:var(--sw-text);background:var(--sw-field);border:1px solid var(--sw-border-strong);padding:9px 11px;border-radius:8px;font-size:11px;min-height:38px}.addr-drop{position:absolute;top:calc(100% + 5px);left:0;right:0;background:#0e1512;border:1px solid rgba(53,208,102,.22);border-radius:10px;overflow:hidden;z-index:200;box-shadow:0 16px 40px rgba(0,0,0,.6)}.addr-drop button{display:block;width:100%;text-align:left;padding:10px 14px;border:0;border-bottom:1px solid rgba(255,255,255,.06);background:transparent;cursor:pointer;font-family:inherit}.addr-drop button:last-child{border-bottom:0}.addr-drop button:hover{background:rgba(53,208,102,.08)}.addr-drop .sug-city{display:block;font-size:13px;font-weight:650;color:#eef3f0;line-height:1.2}.addr-drop .sug-detail{display:block;font-size:10px;color:#6d7872;margin-top:3px}.addr-drop button:hover .sug-city{color:#5ee090}.addr-drop button:hover .sug-detail{color:#4a8c5e}`}</style>
+    <style jsx>{`.route-card{padding:16px 18px;background:var(--sw-panel);border:1px solid var(--sw-border);border-radius:12px}.route-card h3{display:flex;align-items:center;gap:8px;font-size:15px;margin:0 0 11px}.route-card h3 svg{color:#22b957}.route-card label{display:flex;align-items:center;gap:10px;background:var(--sw-field);border:1px solid var(--sw-border-strong);padding:14px 16px;border-radius:10px;min-height:54px}.route-card input{width:100%;color:var(--sw-text);background:transparent;border:0;outline:0;font-size:16px}.route-card input::placeholder{color:var(--sw-muted)}.route-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 2px}.route-meta span{display:flex;align-items:center;gap:6px;color:var(--sw-text);background:var(--sw-field);border:1px solid var(--sw-border-strong);padding:9px 11px;border-radius:8px;font-size:11px;min-height:38px}.addr-drop{position:absolute;top:calc(100% + 5px);left:0;right:0;background:#0e1512;border:1px solid rgba(53,208,102,.22);border-radius:10px;overflow:hidden;z-index:200;box-shadow:0 16px 40px rgba(0,0,0,.6)}.addr-state{padding:12px 14px;color:#8f9b94;font-size:11px}.addr-drop button{display:block;width:100%;text-align:left;padding:10px 14px;border:0;border-bottom:1px solid rgba(255,255,255,.06);background:transparent;cursor:pointer;font-family:inherit}.addr-drop button:last-child{border-bottom:0}.addr-drop button:hover{background:rgba(53,208,102,.08)}.addr-drop .sug-city{display:block;font-size:13px;font-weight:650;color:#eef3f0;line-height:1.2}.addr-drop .sug-detail{display:block;font-size:10px;color:#6d7872;margin-top:3px}.addr-drop button:hover .sug-city{color:#5ee090}.addr-drop button:hover .sug-detail{color:#4a8c5e}`}</style>
   </div>
 }
 
