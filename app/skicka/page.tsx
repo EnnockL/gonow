@@ -591,7 +591,7 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
       setCreatedPackageMatches([])
       setCreatedPackageOrder(null)
       setStep('confirmed')
-      router.push(`/skicka?stage=confirmed&package_id=${data.package.id}`, { scroll: false })
+      router.replace(`/skicka?stage=confirmed&package_id=${data.package.id}`, { scroll: false })
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Kunde inte boka pakettransporten.')
       setStep('review')
@@ -707,6 +707,9 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
         setCreatedPackageMatches([])
         setCreatedPackageOrder(null)
         setStep('confirmed')
+        if (data.package?.id) {
+          router.replace(`/skicka?stage=confirmed&package_id=${data.package.id}`, { scroll: false })
+        }
       } catch {
         setSubmitError('Nätverksfel, försök igen.')
         setStep('matches')
@@ -1385,16 +1388,6 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
                 >
                   Se paketets status <ArrowRight size={14} />
                 </a>
-                {parsed && parsed.type !== 'lift' && (
-                  <button
-                    type="button"
-                    onClick={() => { setStep('review'); router.push('/skicka?stage=review', { scroll: false }) }}
-                    className="btn-secondary"
-                    style={{ marginTop: 9, padding: '10px 18px' }}
-                  >
-                    <ArrowLeft size={14} /> Tillbaka till bokningen
-                  </button>
-                )}
               </>
             )}
             </div>
