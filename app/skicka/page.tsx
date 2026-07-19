@@ -413,6 +413,22 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
     return () => window.clearInterval(id)
   }, [step, createdBookingId, createdPackageId])
 
+  // A completed booking is terminal. Browser Back must not reopen a form that
+  // could submit the same shipment again; users leave via Status or Mina paket.
+  useEffect(() => {
+    if (step !== 'confirmed' || !createdPackageId) return
+
+    const confirmedUrl = `/skicka?stage=confirmed&package_id=${createdPackageId}`
+    const keepCompletedBookingLocked = () => {
+      window.history.pushState({ gonowCompletedBooking: createdPackageId }, '', confirmedUrl)
+      setStep('confirmed')
+      router.replace(confirmedUrl, { scroll: false })
+    }
+
+    window.addEventListener('popstate', keepCompletedBookingLocked)
+    return () => window.removeEventListener('popstate', keepCompletedBookingLocked)
+  }, [step, createdPackageId, router])
+
   const activeTripMeta = useMemo(() => {
     return Object.fromEntries(activeTrips.map((trip) => [trip.id, getTripMeta(trip, bookings, userId)]))
   }, [activeTrips, bookings, userId])
