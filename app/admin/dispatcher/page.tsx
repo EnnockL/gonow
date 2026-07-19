@@ -703,7 +703,6 @@ export default function DispatcherDashboard() {
         .dp-shell {
           position: relative;
           min-height: 100vh;
-          padding-top: 72px;
           color: ${TEXT};
           font-family: var(--font-sans, system-ui, sans-serif);
           display: flex;
@@ -713,10 +712,10 @@ export default function DispatcherDashboard() {
         /* ── LEFT SIDEBAR ────────────────────────────────────────────── */
         .dp-sidebar {
           position: fixed;
-          top: 72px;
+          top: 0;
           left: 0;
           width: 220px;
-          height: calc(100vh - 72px);
+          height: 100vh;
           background: #0a0c10;
           border-right: 1px solid rgba(255,255,255,0.05);
           display: flex;

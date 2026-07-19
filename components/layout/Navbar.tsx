@@ -278,6 +278,11 @@ export default function Navbar() {
 
   const dark = theme === 'dark'
 
+  // Hide navbar entirely on admin pages — sidebar takes over
+  if (path.startsWith('/admin')) {
+    return null
+  }
+
   function openSendPackageFlow() {
     window.dispatchEvent(new CustomEvent('gonow_open_package_booking'))
     setOpen(false)
