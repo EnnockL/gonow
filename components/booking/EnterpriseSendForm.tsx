@@ -15,13 +15,22 @@ type Props = {
   recipient: Contact
   onContinue: (draft: PendingBookingDraft) => void
   onAI: () => void
+  onSenderChange?: (contact: Contact) => void
+  onRecipientChange?: (contact: Contact) => void
 }
 type ParcelType = 'package' | 'large' | 'pallet' | 'document'
 const SEND_FORM_KEY = 'gonow_send_form_v1'
+const LAST_BOOKING_KEY = 'gonow_last_booking_v1'
+type LastBooking = { type: ParcelType; weight: number; description: string; specialRequirements?: string; from: string; to: string; sender?: Contact; recipient?: Contact }
 
 function loadFormDraft() {
   if (typeof window === 'undefined') return null
   try { return JSON.parse(sessionStorage.getItem(SEND_FORM_KEY) || 'null') as { type?: ParcelType; weight?: number; description?: string; specialRequirements?: string; from?: string; to?: string; phone?: string; recipientPhone?: string } | null } catch { return null }
+}
+
+function loadLastBooking() {
+  if (typeof window === 'undefined') return null
+  try { return JSON.parse(localStorage.getItem(LAST_BOOKING_KEY) || 'null') as LastBooking | null } catch { return null }
 }
 
 const parcelTypes = [
@@ -31,13 +40,14 @@ const parcelTypes = [
   { id: 'document' as const, icon: FileText, name: 'Dokument', sub: 'Viktiga dokument', limit: '0,1 – 2 kg', min: .1, max: 2, initial: .5 },
 ]
 
-export default function EnterpriseSendForm({ requestId, sender, recipient, onContinue, onAI }: Props) {
+export default function EnterpriseSendForm({ requestId, sender, recipient, onContinue, onAI, onSenderChange, onRecipientChange }: Props) {
   const [type, setType] = useState<ParcelType>('package')
   const [weight, setWeight] = useState(2)
   const [description, setDescription] = useState('')
   const [specialRequirements, setSpecialRequirements] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
+  const [lastBooking] = useState<LastBooking | null>(() => loadLastBooking())
 
   useEffect(() => {
     const initial = window.setTimeout(() => {
@@ -73,6 +83,17 @@ export default function EnterpriseSendForm({ requestId, sender, recipient, onCon
   }, [type, weight, description, specialRequirements, from, to])
 
   const canContinue = from.trim().length > 2 && to.trim().length > 2 && !!quote
+  const useLastBooking = () => {
+    if (!lastBooking) return
+    setType(lastBooking.type)
+    setWeight(lastBooking.weight)
+    setDescription(lastBooking.description || '')
+    setSpecialRequirements(lastBooking.specialRequirements || '')
+    setFrom(lastBooking.from)
+    setTo(lastBooking.to)
+    if (lastBooking.sender && onSenderChange) onSenderChange(lastBooking.sender)
+    if (lastBooking.recipient && onRecipientChange) onRecipientChange(lastBooking.recipient)
+  }
   const submit = () => canContinue && onContinue({
     request_id: requestId,
     service_type: 'package',
@@ -111,7 +132,10 @@ export default function EnterpriseSendForm({ requestId, sender, recipient, onCon
             </div>
           ))}
         </div>
-        <button className="send-ai" type="button" onClick={onAI}><Sparkles size={15} /> GIS-assistent</button>
+        <div className="send-actions">
+          {lastBooking && <button className="send-recent" type="button" onClick={useLastBooking}><Clock3 size={14} /> Använd senaste</button>}
+          <button className="send-ai" type="button" onClick={onAI}><Sparkles size={15} /> GIS-assistent</button>
+        </div>
       </header>
 
       <div className="send-panel parcel-panel">
@@ -162,6 +186,8 @@ export default function EnterpriseSendForm({ requestId, sender, recipient, onCon
         .weight-row{grid-template-columns:110px minmax(180px,1fr) 230px}
         @media(max-width:850px){.send-workspace{padding:16px;height:auto;max-height:none;overflow:visible}.enterprise-meta>span{display:none}.send-topbar{align-items:flex-start}.send-step>div,.send-step i{display:none}.send-ai{margin-left:auto}.parcel-grid{grid-template-columns:1fr 1fr}.weight-row{grid-template-columns:1fr}.route-grid{grid-template-columns:1fr}.swap{transform:rotate(90deg);margin:auto}.swap:hover{transform:rotate(270deg)}.trust-strip{grid-template-columns:1fr;gap:12px}.trust-strip>div+div{border-left:0;padding-left:0}.send-footer{grid-template-columns:1fr;gap:14px}.send-footer p{border-left:0;padding-left:0}.send-footer button{width:100%}}
         @media(max-width:480px){.parcel-grid{grid-template-columns:1fr}.send-step>span{width:29px;height:29px}.send-workspace{border-radius:16px}.send-ai{font-size:0;width:38px;height:38px;justify-content:center;padding:0}.send-ai svg{width:16px}.send-footer{position:sticky;bottom:8px;background:var(--sw-card)}}
+        .send-actions{display:flex;align-items:center;gap:7px}.send-recent{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.045);color:var(--sw-text);border:1px solid var(--sw-border-strong);border-radius:8px;padding:8px 11px;font-size:10px;font-weight:750;cursor:pointer;white-space:nowrap}.send-recent:hover{border-color:#25b456;background:rgba(34,197,94,.08)}
+        @media(max-width:600px){.send-recent{font-size:0;width:38px;height:38px;justify-content:center;padding:0}.send-recent svg{width:15px}}
       `}</style>
     </section>
   )

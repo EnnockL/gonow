@@ -596,6 +596,16 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
       })
       const data = await res.json().catch(() => ({})) as { package?: CreatedPackage; error?: string }
       if (!res.ok || !data.package) throw new Error(data.error || 'Kunde inte boka pakettransporten.')
+      try { localStorage.setItem('gonow_last_booking_v1', JSON.stringify({
+        type: packageType,
+        weight: draft.weight_kg,
+        description: parsed.description || 'Paket',
+        specialRequirements: parsed.special_requirements || '',
+        from: parsed.from_city,
+        to: parsed.to_city,
+        sender,
+        recipient,
+      })) } catch {}
       setCreatedBookingId(null)
       setCreatedPackageId(data.package.id)
       setCreatedPackage(data.package)
@@ -713,6 +723,16 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
           return
         }
         const data = await res.json() as { package?: CreatedPackage }
+        try { localStorage.setItem('gonow_last_booking_v1', JSON.stringify({
+          type: packageType,
+          weight: parsed.weight_kg || 1,
+          description: parsed.description || 'Paket',
+          specialRequirements: parsed.special_requirements || '',
+          from: parsed.from_city,
+          to: parsed.to_city,
+          sender,
+          recipient,
+        })) } catch {}
         setCreatedBookingId(null)
         setCreatedPackageId(data.package?.id ?? null)
         setCreatedPackage(data.package ?? null)
@@ -883,7 +903,7 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
 
         {/* ══ STEP: CHAT ══════════════════════════════════════════════════════ */}
         {step === 'chat' && tabMode === 'skicka' && !aiMode && (
-          <EnterpriseSendForm key={packageRequestId} requestId={packageRequestId} sender={sender} recipient={recipient} onContinue={(draft) => {
+          <EnterpriseSendForm key={packageRequestId} requestId={packageRequestId} sender={sender} recipient={recipient} onSenderChange={setSender} onRecipientChange={setRecipient} onContinue={(draft) => {
             const parsedDraft: AIParseResult = {
               type: draft.service_type === 'return' ? 'return' : 'package',
               from_city: draft.pickup_address,
