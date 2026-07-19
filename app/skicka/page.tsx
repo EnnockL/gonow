@@ -1363,7 +1363,8 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
             <div className="sk-success-ring">
               <CheckCircle2 size={32} style={{ color: 'var(--success)' }} />
             </div>
-            <h2 className="sk-confirm-title">Paketet är bokat!</h2>
+            <p className="sk-confirm-eyebrow">Bokning genomförd</p>
+            <h2 className="sk-confirm-title">Klart — Gonow tar över härifrån.</h2>
             <p className="sk-confirm-sub">
               Gonow tar hand om transporten. Du kan följa paketets status härifrån.
             </p>
@@ -1398,23 +1399,11 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
             )}
             </div>
             {createdPackage && (
-              <div className="sk-package-status-card" style={{
-                marginTop: 24,
-                width: '100%',
-                maxWidth: 560,
-                padding: 22,
-                borderRadius: 22,
-                border: '1px solid var(--border)',
-                background: 'var(--surface)',
-                boxShadow: '0 16px 48px rgba(0,0,0,0.08)',
-                textAlign: 'left',
-              }}>
+              <div className="sk-package-status-card">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
                   <div>
-                    <p className="sk-form-label" style={{ marginBottom: 6 }}>Din transport just nu</p>
-                    <h3 style={{ fontSize: '1.05rem', color: 'var(--text)', fontWeight: 800, letterSpacing: '-0.03em' }}>
-                      {createdPackage.from_city} → {createdPackage.to_city}
-                    </h3>
+                    <p className="sk-form-label" style={{ marginBottom: 6 }}>Transportöversikt</p>
+                    <h3 className="sk-status-heading">Gonow söker rätt transport</h3>
                   </div>
                   <span style={{
                     padding: '7px 12px',
@@ -1447,7 +1436,19 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
                   </span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 16 }}>
+                <div className="sk-confirm-route">
+                  <div className="sk-confirm-stop">
+                    <span>Från</span>
+                    <strong>{createdPackage.from_city}</strong>
+                  </div>
+                  <ArrowRight className="sk-confirm-route-arrow" size={20} />
+                  <div className="sk-confirm-stop">
+                    <span>Till</span>
+                    <strong>{createdPackage.to_city}</strong>
+                  </div>
+                </div>
+
+                <div className="sk-confirm-facts">
                   <div style={{ padding: 14, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
                     <p style={{ fontSize: '0.7rem', color: 'var(--muted)', marginBottom: 5 }}>Transportkontakt</p>
                     <strong style={{ color: 'var(--text)' }}>
@@ -3137,17 +3138,25 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
         }
         .sk-confirmed-compact {
           display: grid;
-          grid-template-columns: minmax(280px, 0.8fr) minmax(430px, 1.2fr);
-          align-items: center;
-          gap: 28px;
-          padding: 28px 0 16px;
+          grid-template-columns: minmax(300px, 0.72fr) minmax(520px, 1.28fr);
+          align-items: stretch;
+          gap: 0;
+          padding: 30px 0 18px;
           text-align: left;
+          overflow: hidden;
+          border: 1px solid rgba(255,255,255,0.14);
+          border-radius: 26px;
+          background: rgba(7,16,13,0.9);
+          box-shadow: 0 28px 80px rgba(0,0,0,0.3);
+          backdrop-filter: blur(22px);
         }
         .sk-confirm-hero {
           display: flex;
           flex-direction: column;
           align-items: flex-start;
-          padding: 22px;
+          justify-content: center;
+          padding: 34px 30px;
+          border-right: 1px solid rgba(255,255,255,0.1);
         }
         .sk-confirmed-compact .sk-confirm-title,
         .sk-confirmed-compact .sk-confirm-sub {
@@ -3155,15 +3164,79 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
         }
         .sk-confirmed-compact .sk-confirm-sub {
           max-width: 420px;
+          color: rgba(255,255,255,0.65);
         }
         .sk-confirmed-compact .sk-package-status-card {
           margin-top: 0 !important;
           max-width: none !important;
-          padding: 18px !important;
+          width: 100%;
+          padding: 28px !important;
+          border: 0;
+          border-radius: 0;
+          background: rgba(255,255,255,0.98);
+          box-shadow: none;
+          text-align: left;
         }
         .sk-confirmed-compact .sk-success-ring {
           width: 62px;
           height: 62px;
+          margin-bottom: 16px;
+        }
+        .sk-confirm-eyebrow {
+          margin: 2px 0 8px;
+          color: #32d875;
+          font-size: 0.68rem;
+          font-weight: 800;
+          letter-spacing: 0.13em;
+          text-transform: uppercase;
+        }
+        .sk-confirmed-compact .sk-confirm-title {
+          color: #fff;
+          font-size: clamp(1.65rem, 2.2vw, 2.25rem);
+          line-height: 1.05;
+          margin-top: 0;
+        }
+        .sk-status-heading {
+          color: #101512;
+          font-size: 1.15rem;
+          font-weight: 800;
+          letter-spacing: -0.03em;
+        }
+        .sk-confirm-route {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 16px;
+          padding: 16px;
+          border: 1px solid #dce3df;
+          border-radius: 17px;
+          background: linear-gradient(135deg, #f7faf8, #eef5f1);
+        }
+        .sk-confirm-stop { min-width: 0; }
+        .sk-confirm-stop span {
+          display: block;
+          margin-bottom: 4px;
+          color: #748078;
+          font-size: 0.66rem;
+          font-weight: 800;
+          letter-spacing: 0.09em;
+          text-transform: uppercase;
+        }
+        .sk-confirm-stop strong {
+          display: block;
+          overflow: hidden;
+          color: #101512;
+          font-size: 0.86rem;
+          line-height: 1.35;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .sk-confirm-route-arrow { color: #19b957; }
+        .sk-confirm-facts {
+          display: grid;
+          grid-template-columns: 1fr 0.7fr;
+          gap: 10px;
           margin-bottom: 16px;
         }
 
@@ -3671,6 +3744,40 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
           .sk-submit-btn {
             width: 100%;
             justify-content: center;
+          }
+          .sk-confirmed-compact {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0;
+            padding: 0;
+            border-radius: 20px;
+          }
+          .sk-confirm-hero {
+            align-items: flex-start;
+            padding: 24px 20px;
+            border-right: 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            text-align: left;
+          }
+          .sk-confirmed-compact .sk-confirm-title,
+          .sk-confirmed-compact .sk-confirm-sub {
+            text-align: left;
+          }
+          .sk-confirmed-compact .sk-package-status-card {
+            padding: 20px !important;
+          }
+          .sk-confirm-route {
+            grid-template-columns: 1fr;
+            gap: 10px;
+          }
+          .sk-confirm-route-arrow {
+            transform: rotate(90deg);
+          }
+          .sk-confirm-stop strong {
+            white-space: normal;
+          }
+          .sk-confirm-facts {
+            grid-template-columns: 1fr;
           }
           .sk-state-center {
             padding: 60px 16px;
