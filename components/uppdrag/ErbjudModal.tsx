@@ -3,35 +3,50 @@
 import { useState } from 'react'
 import { X, MapPin, Package as PkgIcon } from 'lucide-react'
 import { UppdragPackage } from './PackageCard'
+import { authedFetch } from '@/lib/auth/authed-fetch'
 
 interface ErbjudModalProps {
   pkg: UppdragPackage
+  carrierId: string
   onClose: () => void
   onSuccess: () => void
 }
 
-export default function ErbjudModal({ pkg, onClose, onSuccess }: ErbjudModalProps) {
+export default function ErbjudModal({ pkg, carrierId, onClose, onSuccess }: ErbjudModalProps) {
   const [message, setMessage] = useState('')
   const [pickupTime, setPickupTime] = useState('')
+  const [offeredPrice, setOfferedPrice] = useState(String(pkg.payout))
   const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setError(null)
     setSending(true)
     try {
-      await fetch(`/api/packages/${pkg.id}/offers`, {
+      const composedMessage = [message.trim(), pickupTime.trim() ? `Uppskattad hämtningstid: ${pickupTime.trim()}` : null]
+        .filter(Boolean)
+        .join('\n\n')
+
+      const res = await authedFetch('/api/matches', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message,
-          pickup_time_est: pickupTime,
+          package_id: pkg.id,
+          proposed_price: parseFloat(offeredPrice) || pkg.payout,
+          ai_message_driver: composedMessage || undefined,
         }),
       })
-    } catch {
-      // Allow success even if API fails — show toast either way
-    } finally {
-      setSending(false)
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setError(d.error ?? 'Något gick fel, försök igen.')
+        setSending(false)
+        return
+      }
       onSuccess()
+    } catch {
+      setError('Nätverksfel, försök igen.')
+      setSending(false)
     }
   }
 
@@ -80,7 +95,7 @@ export default function ErbjudModal({ pkg, onClose, onSuccess }: ErbjudModalProp
                   <PkgIcon size={11} /> {pkg.type} · {pkg.weight}
                 </p>
               </div>
-              <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#22c55e' }}>+{pkg.payout} kr</span>
+              <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--gn)' }}>+{pkg.payout} kr</span>
             </div>
             <p style={{ fontSize: '0.72rem', color: 'var(--muted)', margin: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
               <MapPin size={11} /> Upphämtning: {pkg.pickup}
@@ -92,6 +107,28 @@ export default function ErbjudModal({ pkg, onClose, onSuccess }: ErbjudModalProp
 
           {/* Form */}
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div>
+              <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>
+                Ditt pris (kr) — max {pkg.payout} kr
+              </label>
+              <input
+                type="number"
+                min="1"
+                max={pkg.payout}
+                value={offeredPrice}
+                onChange={e => setOfferedPrice(e.target.value)}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  background: 'var(--surface-2)', border: '1px solid var(--border)',
+                  borderRadius: 10, padding: '10px 12px',
+                  fontSize: '0.85rem', color: 'var(--text)',
+                  fontFamily: 'inherit', outline: 'none',
+                  transition: 'border-color 0.15s',
+                }}
+                onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+              />
+            </div>
             <div>
               <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>
                 Meddelande till avsändaren
@@ -136,6 +173,9 @@ export default function ErbjudModal({ pkg, onClose, onSuccess }: ErbjudModalProp
               />
             </div>
 
+            {error && (
+              <p style={{ fontSize: '0.78rem', color: '#ef4444', margin: 0 }}>{error}</p>
+            )}
             <button
               type="submit"
               disabled={sending}

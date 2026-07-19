@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { geocode, drivingDistance } from '@/lib/distance'
-import {
-  calculatePackagePrice,
-  calculateLiftPrice,
-  calculateCarrierPayout,
-} from '@/lib/pricing'
+import { calcPackagePrice, calcLiftPrice, calcCarrierPayout } from '@/lib/price'
 
 // In-memory cache: geocode + distance results expire after 30 min
 const distanceCache = new Map<string, { distanceKm: number; ts: number }>()
@@ -48,21 +44,21 @@ export async function GET(req: NextRequest) {
   }
 
   if (type === 'package') {
-    const urgency = (['standard', 'today', 'express'] as const).includes(urgencyRaw as 'standard')
-      ? (urgencyRaw as 'standard' | 'today' | 'express')
-      : 'standard'
-    const result = calculatePackagePrice({
-      distanceKm,
-      weightKg: isNaN(kg) ? 2 : kg,
+    const urgency = (['flexible', 'tomorrow', 'today', 'express'] as const).includes(urgencyRaw as 'flexible')
+      ? (urgencyRaw as 'flexible' | 'tomorrow' | 'today' | 'express')
+      : urgencyRaw === 'standard' ? 'flexible' : 'flexible'
+    const result = calcPackagePrice({
+      km: distanceKm,
+      kg: isNaN(kg) ? 2 : kg,
       urgency,
       fragile,
     })
-    const split = calculateCarrierPayout(result.recommendedPrice)
+    const split = calcCarrierPayout(result.recommended)
     return NextResponse.json({
       type,
       distanceKm,
-      recommendedPrice: result.recommendedPrice,
-      maxPrice: result.maxPrice,
+      recommendedPrice: result.recommended,
+      maxPrice: result.ceiling,
       carrierPayout: split.carrierPayout,
       breakdown: result.breakdown,
       split: {
@@ -73,20 +69,25 @@ export async function GET(req: NextRequest) {
   }
 
   if (type === 'lift') {
-    const urgency: 'standard' | 'today' = urgencyRaw === 'today' ? 'today' : 'standard'
-    const result = calculateLiftPrice({
-      distanceKm,
+    const isWeekend = urgencyRaw === 'weekend'
+    const result = calcLiftPrice({
+      km: distanceKm,
       passengers: isNaN(passengers) ? 1 : passengers,
-      urgency,
+      isWeekend,
     })
-    const split = calculateCarrierPayout(result.recommendedPrice)
+    const split = calcCarrierPayout(result.totalRecommended)
     return NextResponse.json({
       type,
       distanceKm,
-      recommendedPrice: result.recommendedPrice,
-      maxPrice: result.maxPrice,
+      recommendedPrice: result.totalRecommended,
+      maxPrice: result.totalCeiling,
       carrierPayout: split.carrierPayout,
-      breakdown: result.breakdown,
+      taxiCapPerSeat: result.taxiCapPerSeat,
+      breakdown: {
+        baseFee:     result.breakdown.base,
+        distanceFee: result.breakdown.distance,
+        extrasFee:   result.breakdown.extras,
+      },
       split: {
         gonowCommission: split.gonowCommission,
         insurancePool: split.insurancePool,

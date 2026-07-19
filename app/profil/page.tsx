@@ -1,19 +1,22 @@
-'use client'
+﻿'use client'
 
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  ArrowRight, Car, CheckCircle2, Clock, CreditCard, Loader2, LogOut,
+  ArrowRight, Car, CheckCircle2, ChevronDown, Clock, CreditCard, Loader2, LogOut,
   Mail, MapPin, Package, Phone, Shield, Star, UserRound, Users, Wallet,
 } from 'lucide-react'
 import LiftChat from '@/components/lift/LiftChat'
+import MatchSuggestions from '@/components/matches/MatchSuggestions'
+import BankIDVerify from '@/components/auth/BankIDVerify'
 import { useAuth } from '@/hooks/useAuth'
 import AuthModal from '@/components/auth/AuthModal'
 import { createClient } from '@/lib/supabase'
 import { EscrowLedgerEntry, Order, OrderStatus, Payout, Trip, User } from '@/lib/types'
 import { BookingRequest, cancelBooking, loadAllBookings, updateBookingStatus } from '@/lib/bookings'
+import { authedFetch } from '@/lib/auth/authed-fetch'
 import { SavedTrip, loadTripsForCarrier } from '@/components/driver/MyTrips'
 import {
   getDefaultProfileMeta,
@@ -28,8 +31,80 @@ import { calculateGonowScore, completionRateFromOrders, getNextLevelRequirements
 import { GonowScoreCard, GonowScoreBadgeCompact } from '@/components/GonowScoreBadge'
 import { loadSignupEmail } from '@/lib/pending-booking'
 import CarrierProfileModal from '@/components/carrier/CarrierProfileModal'
+import RatingModal from '@/components/RatingModal'
 
-type TabKey = 'overview' | 'assignments' | 'orders' | 'requests' | 'lift_offers' | 'profile' | 'carriers'
+type TabKey =
+  | 'overview'
+  // Paket
+  | 'my_packages' | 'my_bids' | 'package_deliveries' | 'orders'
+  // Lift
+  | 'my_lift_requests' | 'lift_offers' | 'lift_matched' | 'lift_history'
+  // Kör & tjäna
+  | 'my_trips' | 'assignments' | 'packages_on_route' | 'lift_on_route' | 'earnings' | 'statistics'
+  // Konto
+  | 'profile' | 'bankid' | 'payment' | 'settings'
+  // Legacy (ej i nav men URL-tillgängliga)
+  | 'carriers' | 'requests'
+
+type PackageOffer = {
+  id: string
+  carrier_id: string
+  offered_price: number
+  message: string | null
+  status: string
+  created_at: string
+  users?: { name: string; rating_avg: number; avatar_url: string | null } | null
+}
+
+type MyPackage = {
+  id: string
+  from_city: string
+  to_city: string
+  description: string
+  weight_kg: number
+  price_ceiling: number
+  deadline: string
+  status: string
+  created_at: string
+  package_offers?: PackageOffer[]
+}
+
+type MyBid = {
+  id: string
+  package_id: string
+  offered_price: number
+  message: string | null
+  status: string
+  created_at: string
+  packages?: { from_city: string; to_city: string; description: string; price_ceiling: number; status: string } | null
+}
+
+type MyDriverMatch = {
+  id: string
+  package_id: string
+  driver_id: string
+  status: string
+  proposed_price: number | null
+  ai_message_driver: string | null
+  ai_message_customer: string | null
+  expires_at: string | null
+  created_at: string
+  packages?: { id: string; from_city: string; to_city: string; description: string; weight_kg?: number; price_ceiling: number; status: string } | null
+  drivers?: { id: string; name: string; rating_avg: number; avatar_url: string | null } | null
+}
+
+type PkgAssignment = {
+  id: string
+  from_city: string
+  to_city: string
+  description: string | null
+  weight_kg: number | null
+  price_ceiling: number | null
+  status: string
+  pickup_confirmed_at: string | null
+  delivery_confirmed_at: string | null
+  sender: { name: string | null; phone: string | null } | null
+}
 
 type LiftOffer = {
   id: string
@@ -45,6 +120,10 @@ type LiftOffer = {
 }
 type BookingRequestWithTrip = BookingRequest & {
   trips?: { from_city: string; to_city: string; departure_at: string | null }
+}
+
+function isLegacyLiftBooking(booking: Pick<BookingRequest, 'service_type'> | null | undefined) {
+  return booking?.service_type === 'passenger'
 }
 
 type CarrierDirectoryItem = {
@@ -63,6 +142,13 @@ function getOrderCarrierId(order: Order) {
   return order.carrier_id || order.receiver_id || null
 }
 
+function getOrderPackageId(order: Order) {
+  const metadata = order.metadata
+  if (!metadata || typeof metadata !== 'object') return null
+  const packageId = (metadata as Record<string, unknown>).package_id
+  return typeof packageId === 'string' ? packageId : null
+}
+
 function ledgerEntryLabel(entry: EscrowLedgerEntry) {
   switch (entry.entry_type) {
     case 'customer_payment_received':
@@ -70,7 +156,7 @@ function ledgerEntryLabel(entry: EscrowLedgerEntry) {
     case 'platform_fee_reserved':
       return 'Plattformsavgift reserverad'
     case 'carrier_payout_reserved':
-      return 'Förarandel låst i escrow'
+      return 'Förarandel säkrad hos Gonow'
     case 'carrier_available':
       return 'Redo för utbetalning'
     case 'carrier_payout_processing':
@@ -90,47 +176,149 @@ function ledgerEntryLabel(entry: EscrowLedgerEntry) {
   }
 }
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'overview',     label: 'Översikt'        },
-  { key: 'assignments',  label: 'Aktiva uppdrag'  },
-  { key: 'orders',       label: 'Bokningar'       },
-  { key: 'requests',     label: 'Förfrågningar'   },
-  { key: 'lift_offers',  label: 'Mina erbjudanden' },
-  { key: 'profile',      label: 'Profil'          },
-  { key: 'carriers',     label: 'Utforska förare' },
+type NavItem = { key: TabKey; label: string; isNew?: boolean }
+type NavGroupDef = { id: string; icon: string; label: string; key?: TabKey; items?: NavItem[] }
+
+const NAV_GROUPS: NavGroupDef[] = [
+  { id: 'overview', icon: '🏠', label: 'Översikt', key: 'overview' },
+  {
+    id: 'paket', icon: '📦', label: 'Paket',
+    items: [
+      { key: 'my_packages',        label: 'Mina paket' },
+      { key: 'my_bids',            label: 'Erbjudanden' },
+      { key: 'package_deliveries', label: 'Pågående leveranser' },
+      { key: 'orders',             label: 'Leveranshistorik' },
+    ],
+  },
+  {
+    id: 'lift', icon: '👤', label: 'Lift',
+    items: [
+      { key: 'my_lift_requests', label: 'Mina liftresor', isNew: true },
+      { key: 'lift_offers',      label: 'Erbjudanden' },
+      { key: 'lift_matched',     label: 'Matchade resor', isNew: true },
+      { key: 'lift_history',     label: 'Historik', isNew: true },
+    ],
+  },
+  {
+    id: 'kor', icon: '🚗', label: 'Kör & tjäna',
+    items: [
+      { key: 'my_trips',          label: 'Mina resor' },
+      { key: 'requests',          label: 'Förfrågningar' },
+      { key: 'assignments',       label: 'Aktiva leveranser' },
+      { key: 'packages_on_route', label: 'Paket längs rutten', isNew: true },
+      { key: 'lift_on_route',     label: 'Lift längs rutten', isNew: true },
+      { key: 'earnings',          label: 'Intäkter', isNew: true },
+      { key: 'statistics',        label: 'Statistik', isNew: true },
+    ],
+  },
+  {
+    id: 'konto', icon: '⚙️', label: 'Konto',
+    items: [
+      { key: 'profile',  label: 'Profil' },
+      { key: 'bankid',   label: 'BankID', isNew: true },
+      { key: 'payment',  label: 'Betalning', isNew: true },
+      { key: 'settings', label: 'Inställningar', isNew: true },
+    ],
+  },
 ]
 
+function getGroupId(tab: TabKey): string {
+  for (const g of NAV_GROUPS) {
+    if (g.key === tab) return g.id
+    if (g.items?.some(i => i.key === tab)) return g.id
+  }
+  return 'overview'
+}
+
+function getNavBadge(
+  key: TabKey,
+  counts: { activeAssignments: number; pendingIncoming: number; driverPendingNew: number; liftOffersCount: number; packagesWithBids: number; pendingBids: number }
+): number {
+  switch (key) {
+    case 'assignments': return counts.activeAssignments + counts.driverPendingNew
+    case 'requests':    return counts.pendingIncoming + counts.driverPendingNew
+    case 'my_trips':    return counts.pendingIncoming
+    case 'lift_offers': return counts.liftOffersCount
+    case 'my_packages':        return 0
+    case 'my_bids':            return counts.packagesWithBids   // väntande erbjudanden
+    case 'package_deliveries': return counts.pendingBids        // aktiva leveranser
+    default:            return 0
+  }
+}
+
 const ASSIGNMENT_STEPS: { status: OrderStatus; label: string; color: string }[] = [
-  { status: 'pending',    label: 'Accepterad',  color: '#f59e0b' },
-  { status: 'matched',    label: 'Betald',      color: '#15803d' },
+  { status: 'pending',    label: 'Väntar betalning',  color: '#f59e0b' },
+  { status: 'matched',    label: 'Transport klar',    color: '#3b82f6' },
+  { status: 'paid',       label: 'Betald',            color: 'var(--gn-dk)' },
   { status: 'picked_up',  label: 'Upphämtad',   color: '#7c3aed' },
   { status: 'in_transit', label: 'På väg',       color: '#0f766e' },
-  { status: 'delivered',  label: 'Levererad',    color: '#15803d' },
+  { status: 'delivered',  label: 'Levererad',    color: 'var(--gn-dk)' },
 ]
 
 const NEXT_ACTION: Record<string, { label: string; next: OrderStatus; border: string; bg: string; color: string }> = {
-  pending:    { label: 'Starta uppdrag',    next: 'matched',    border: 'rgba(34,197,94,0.3)',   bg: 'rgba(34,197,94,0.08)',   color: '#15803d' },
   matched:    { label: 'Markera upphämtad', next: 'picked_up',  border: 'rgba(124,58,237,0.3)',  bg: 'rgba(124,58,237,0.08)',  color: '#7c3aed' },
+  paid:       { label: 'Markera upphämtad', next: 'picked_up',  border: 'rgba(124,58,237,0.3)',  bg: 'rgba(124,58,237,0.08)',  color: '#7c3aed' },
   picked_up:  { label: 'Markera på väg',    next: 'in_transit', border: 'rgba(20,184,166,0.3)',  bg: 'rgba(20,184,166,0.08)',  color: '#0f766e' },
-  in_transit: { label: 'Markera levererad', next: 'delivered',  border: 'rgba(34,197,94,0.3)',   bg: 'rgba(34,197,94,0.08)',   color: '#15803d' },
+  in_transit: { label: 'Markera levererad', next: 'delivered',  border: 'var(--gn-030)',   bg: 'var(--gn-008)',   color: 'var(--gn-dk)' },
 }
 
 const ORDER_STATUS: Record<string, { label: string; color: string; bg: string }> = {
   pending: { label: 'Väntar betalning', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' },
-  matched: { label: 'Betald', color: '#15803d', bg: 'rgba(34,197,94,0.12)' },
+  matched: { label: 'Transport klar', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+  paid: { label: 'Betald', color: 'var(--gn-dk)', bg: 'var(--gn-012)' },
   picked_up: { label: 'Upphämtad', color: '#7c3aed', bg: 'rgba(124,58,237,0.12)' },
   in_transit: { label: 'På väg', color: '#0f766e', bg: 'rgba(20,184,166,0.12)' },
-  delivered: { label: 'Levererad', color: '#15803d', bg: 'rgba(34,197,94,0.12)' },
-  confirmed: { label: 'Bekräftad', color: '#15803d', bg: 'rgba(34,197,94,0.12)' },
+  delivered: { label: 'Levererad', color: 'var(--gn-dk)', bg: 'var(--gn-012)' },
+  confirmed: { label: 'Bekräftad', color: 'var(--gn-dk)', bg: 'var(--gn-012)' },
   disputed: { label: 'Tvist', color: '#dc2626', bg: 'rgba(239,68,68,0.12)' },
   cancelled: { label: 'Avbruten', color: '#64748b', bg: 'rgba(148,163,184,0.14)' },
 }
 
 const BOOKING_STATUS: Record<string, { label: string; color: string; bg: string }> = {
   pending: { label: 'Väntar svar', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-  accepted: { label: 'Accepterad', color: '#15803d', bg: 'rgba(34,197,94,0.12)' },
+  accepted: { label: 'Accepterad', color: 'var(--gn-dk)', bg: 'var(--gn-012)' },
   declined: { label: 'Avböjd', color: '#dc2626', bg: 'rgba(239,68,68,0.12)' },
   cancelled: { label: 'Avbruten', color: '#64748b', bg: 'rgba(148,163,184,0.14)' },
+}
+
+const PACKAGE_STATUS_META: Record<string, { label: string; shortLabel: string; color: string; bg: string }> = {
+  open: { label: 'Söker transport', shortLabel: 'Söker', color: '#64748b', bg: 'rgba(148,163,184,0.12)' },
+  matched: { label: 'Transport matchad', shortLabel: 'Matchad', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+  paid: { label: 'Betalning säkrad', shortLabel: 'Betald', color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+  picked_up: { label: 'Upphämtad', shortLabel: 'Upphämtad', color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
+  in_transit: { label: 'På väg', shortLabel: 'På väg', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+  delivered: { label: 'Levererad', shortLabel: 'Levererad', color: '#16a34a', bg: 'rgba(22,163,74,0.1)' },
+  confirmed: { label: 'Slutförd', shortLabel: 'Slutförd', color: 'var(--gn-dk)', bg: 'var(--gn-010)' },
+  cancelled: { label: 'Avbokad', shortLabel: 'Avbokad', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
+  expired: { label: 'Utgången', shortLabel: 'Utgången', color: '#b45309', bg: 'rgba(180,83,9,0.1)' },
+}
+
+const PACKAGE_FLOW_STEPS = [
+  { status: 'matched', label: 'Matchad', color: '#3b82f6' },
+  { status: 'paid', label: 'Betald', color: '#10b981' },
+  { status: 'picked_up', label: 'Upphämtad', color: '#7c3aed' },
+  { status: 'in_transit', label: 'På väg', color: '#f59e0b' },
+  { status: 'delivered', label: 'Levererad', color: '#16a34a' },
+] as const
+
+function getPackageStatusMeta(status: string) {
+  return PACKAGE_STATUS_META[status] ?? PACKAGE_STATUS_META.open
+}
+
+function getOrderPaymentSummary(order?: Order | null) {
+  if (!order?.price) return null
+
+  if (order.status === 'pending') return `Betalning väntar ${order.price} kr`
+  if (order.status === 'matched') return `Transport klar · ${order.price} kr`
+  if (['paid', 'picked_up', 'in_transit', 'delivered', 'confirmed'].includes(order.status)) {
+    return `Betalning säkrad ${order.price} kr`
+  }
+
+  return `${order.price} kr`
+}
+
+function isAwaitingPayment(order?: Order | null) {
+  return order?.status === 'pending' || order?.status === 'matched'
 }
 
 function panelStyle(glow = false, isDark = false, mobile = false): React.CSSProperties {
@@ -153,8 +341,8 @@ function panelStyle(glow = false, isDark = false, mobile = false): React.CSSProp
 function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div style={{ marginBottom: 18 }}>
-      <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', marginBottom: subtitle ? 6 : 0 }}>{title}</p>
-      {subtitle && <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.55 }}>{subtitle}</p>}
+      <p style={{ fontSize: '1.04rem', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text)', marginBottom: subtitle ? 6 : 0 }}>{title}</p>
+      {subtitle && <p style={{ fontSize: '0.8rem', color: 'var(--muted)', lineHeight: 1.62, maxWidth: 720 }}>{subtitle}</p>}
     </div>
   )
 }
@@ -194,14 +382,15 @@ function MobileSectionIntro({
 
 function statCard(label: string, value: string, hint: string, icon: React.ReactNode, isDark = false, mobile = false): React.ReactNode {
   return (
-    <div style={{ ...panelStyle(false, isDark, mobile), padding: 20 }}>
+    <div style={{ ...panelStyle(false, isDark, mobile), padding: mobile ? 18 : 20, boxShadow: isDark ? '0 14px 30px rgba(0,0,0,0.18)' : '0 14px 30px rgba(15,23,42,0.05)', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', right: -34, top: -34, width: 112, height: 112, borderRadius: '50%', background: 'var(--enterprise-panel-glow)', pointerEvents: 'none', opacity: 0.7 }} />
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
-          <p style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>{label}</p>
-          <p style={{ fontSize: '1.7rem', fontWeight: 800, letterSpacing: '-0.04em', color: 'var(--text)', marginBottom: 6 }}>{value}</p>
-          <p style={{ fontSize: '0.76rem', color: 'var(--muted)' }}>{hint}</p>
+          <p style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--muted)', marginBottom: 8, fontWeight: 800 }}>{label}</p>
+          <p style={{ fontSize: mobile ? '1.48rem' : '1.7rem', fontWeight: 850, letterSpacing: '-0.05em', color: 'var(--text)', marginBottom: 6, lineHeight: 1 }}>{value}</p>
+          <p style={{ fontSize: '0.77rem', color: 'var(--muted)', lineHeight: 1.55, maxWidth: 180 }}>{hint}</p>
         </div>
-        <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+        <div style={{ width: 42, height: 42, borderRadius: 14, background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.92)', border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
           {icon}
         </div>
       </div>
@@ -242,12 +431,24 @@ function groupCarriers(trips: (Trip & { users?: { name: string; rating_avg: numb
   })
 }
 
-const VALID_TABS: TabKey[] = ['overview', 'assignments', 'orders', 'requests', 'lift_offers', 'profile', 'carriers']
+const VALID_TABS: TabKey[] = [
+  'overview',
+  'my_packages', 'my_bids', 'package_deliveries', 'orders',
+  'my_lift_requests', 'lift_offers', 'lift_matched', 'lift_history',
+  'my_trips', 'assignments', 'packages_on_route', 'lift_on_route', 'earnings', 'statistics',
+  'profile', 'bankid', 'payment', 'settings',
+  'carriers', 'requests',
+]
 
 export default function ProfilPage() {
   const { userId, profile, loading: authLoading } = useAuth()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
+
+  function openPackageFlow() {
+    if (typeof window === 'undefined') return
+    window.dispatchEvent(new CustomEvent('gonow_open_package_booking'))
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -274,6 +475,7 @@ export default function ProfilPage() {
   const [pendingEmail, setPendingEmail] = useState('')
   const [isDark, setIsDark] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   useEffect(() => {
     const check = () => setIsDark(document.documentElement.classList.contains('dark'))
     check()
@@ -303,7 +505,6 @@ export default function ProfilPage() {
   const [payingId, setPayingId] = useState<string | null>(null)
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [payoutingId, setPayoutingId] = useState<string | null>(null)
-  const [markingPaidId, setMarkingPaidId] = useState<string | null>(null)
   const [respondingId, setRespondingId] = useState<string | null>(null)
   const [respondError, setRespondError] = useState<string | null>(null)
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null)
@@ -314,9 +515,18 @@ export default function ProfilPage() {
   const [myLiftOffers, setMyLiftOffers] = useState<LiftOffer[]>([])
   const [withdrawingLiftId, setWithdrawingLiftId] = useState<string | null>(null)
   const [liftOffersTab, setLiftOffersTab] = useState<string | null>(null)
+  const [myPackages, setMyPackages] = useState<MyPackage[]>([])
+  const [myBids, setMyBids] = useState<MyBid[]>([])
+  const [myDriverOffers, setMyDriverOffers] = useState<MyDriverMatch[]>([])
+  const [driverIncoming, setDriverIncoming] = useState<MyDriverMatch[]>([])
+  const [actionMatchId, setActionMatchId] = useState<string | null>(null)
+  const [pkgAssignments, setPkgAssignments] = useState<PkgAssignment[]>([])
+  const [pkgSubTab, setPkgSubTab] = useState<'active'|'previous'|'cancelled'>('active')
+  const [cancellingPkgId, setCancellingPkgId] = useState<string | null>(null)
+  const [pendingRating, setPendingRating] = useState<{ orderId: string; toUserId: string; toName: string; role: 'sender' | 'carrier' } | null>(null)
 
   useEffect(() => {
-    // Don't do anything while auth is still resolving — avoids flash of wrong state
+    // Don't do anything while auth is still resolving Ã¢â‚¬â€ avoids flash of wrong state
     if (authLoading) return
 
     if (!userId || !profile) {
@@ -334,10 +544,10 @@ export default function ProfilPage() {
     setShowAuth(false)
     setUser(profile)
     setMeta(loadUserProfileMeta(activeUserId))
-    setMyTrips(loadTripsForCarrier(activeUserId))
+    setMyTrips([])
+    setLoadingData(false) // visa UI omedelbart Ã¢â‚¬â€ data laddas i bakgrunden
 
-    async function loadDashboard(showSpinner = false) {
-      if (showSpinner) setLoadingData(true)
+    async function loadDashboard() {
       const supabase = createClient()
 
       const safeBookingRequests = async (
@@ -348,6 +558,7 @@ export default function ProfilPage() {
           let query = supabase
             .from('booking_requests')
             .select('*, trips(from_city, to_city, departure_at)')
+            .eq('service_type', 'passenger')
             .order('created_at', { ascending: false })
 
           if (mode === 'sender') {
@@ -366,20 +577,30 @@ export default function ProfilPage() {
         }
       }
 
-      const [ordersPayload, payoutsPayload, ledgerPayload, carrierTripsRes, remoteMyRequests, allTripsRes, allBookings] = await Promise.all([
-        fetch(`/api/orders?user_id=${activeUserId}`).then(async (res) => (res.ok ? await res.json() : { orders: [] })).catch(() => ({ orders: [] })),
-        fetch(`/api/payouts?carrier_id=${activeUserId}`).then(async (res) => (res.ok ? await res.json() : { payouts: [] })).catch(() => ({ payouts: [] })),
-        fetch(`/api/ledger?carrier_id=${activeUserId}`).then(async (res) => (res.ok ? await res.json() : { entries: [] })).catch(() => ({ entries: [] })),
-        supabase.from('trips').select('*').eq('carrier_id', activeUserId).order('departure_at', { ascending: true }).limit(30),
+      const [ordersPayload, payoutsPayload, ledgerPayload, carrierTripsPayload, remoteMyRequests, allTripsRes, allBookings, liftOffersData, pkgsData, bidsData, senderMatchesPayload, driverMatchesPayload, pkgAssignmentsPayload] = await Promise.all([
+        authedFetch('/api/orders').then(async (res) => (res.ok ? await res.json() : { orders: [] })).catch(() => ({ orders: [] })),
+        authedFetch('/api/payouts').then(async (res) => (res.ok ? await res.json() : { payouts: [] })).catch(() => ({ payouts: [] })),
+        authedFetch('/api/ledger').then(async (res) => (res.ok ? await res.json() : { entries: [] })).catch(() => ({ entries: [] })),
+        authedFetch(`/api/trips?carrier_id=${activeUserId}`).then(async (res) => (res.ok ? await res.json() : { trips: [] })).catch(() => ({ trips: [] })),
         safeBookingRequests('sender'),
         fetch('/api/trips').then(async (res) => (res.ok ? (await res.json()).trips : [])).catch(() => []),
         loadAllBookings().catch(() => []),
+        fetch(`/api/lift?carrier_id=${activeUserId}`).then(async (res) => (res.ok ? await res.json() : null)).catch(() => null),
+        authedFetch(`/api/packages?sender_id=${activeUserId}`).then(async (res) => {
+          if (!res.ok) return { data: [] }
+          const payload = await res.json() as { packages?: MyPackage[] }
+          return { data: payload.packages ?? [] }
+        }).catch(() => ({ data: [] })),
+        supabase.from('package_offers').select('id, package_id, offered_price, message, status, created_at, packages(from_city, to_city, description, price_ceiling, status)').eq('carrier_id', activeUserId).order('created_at', { ascending: false }).limit(20),
+        fetch(`/api/matches?sender_id=${activeUserId}`).then(async (res) => (res.ok ? await res.json() : { matches: [] })).catch(() => ({ matches: [] })),
+        fetch(`/api/matches?driver_id=${activeUserId}`).then(async (res) => (res.ok ? await res.json() : { matches: [] })).catch(() => ({ matches: [] })),
+        authedFetch(`/api/packages?carrier_id=${activeUserId}&statuses=matched,paid,picked_up,in_transit,delivered`).then(async (res) => (res.ok ? await res.json() : { packages: [] })).catch(() => ({ packages: [] })),
       ])
 
       setOrders((ordersPayload.orders as Order[]) || [])
       setPayouts((payoutsPayload.payouts as Payout[]) || [])
       setLedgerEntries((ledgerPayload.entries as EscrowLedgerEntry[]) || [])
-      const localBookings = allBookings as BookingRequestWithTrip[]
+      const localBookings = (allBookings as BookingRequestWithTrip[]).filter(isLegacyLiftBooking)
       const localMyRequests = localBookings.filter((booking) => booking.sender_id === activeUserId)
       const mergedMyRequests = [
         ...remoteMyRequests.map((booking) => ({
@@ -391,11 +612,12 @@ export default function ProfilPage() {
       setMyRequests(mergedMyRequests)
 
       const localTrips = loadTripsForCarrier(activeUserId)
-      const remoteTrips = (carrierTripsRes.data as SavedTrip[]) || []
-      const combinedTrips = [...localTrips, ...remoteTrips.filter((trip) => !localTrips.some((local) => local.id === trip.id))]
+      const remoteTrips = (carrierTripsPayload.trips as SavedTrip[]) || []
+      const unsyncedLocalTrips = localTrips.filter((trip) => !remoteTrips.some((remote) => remote.id === trip.id))
+      const combinedTrips = [...remoteTrips, ...unsyncedLocalTrips]
       setMyTrips(combinedTrips)
 
-      const carrierTripIds = ((carrierTripsRes.data as { id: string }[]) || []).map((trip) => trip.id)
+      const carrierTripIds = combinedTrips.map((trip) => trip.id)
       const incomingLocal = localBookings.filter((booking) => combinedTrips.some((trip) => trip.id === booking.trip_id))
 
       if (carrierTripIds.length > 0) {
@@ -415,25 +637,23 @@ export default function ProfilPage() {
       const tripList = Array.isArray(allTripsRes) && allTripsRes.length > 0 ? allTripsRes : SIM_TRIPS
       setCarriers(groupCarriers(tripList))
 
-      // Lift offers where this user is the carrier
-      const liftOffersRes = await fetch(`/api/lift?carrier_id=${activeUserId}`).catch(() => null)
-      if (liftOffersRes?.ok) {
-        const liftData = await liftOffersRes.json()
-        setMyLiftOffers((liftData.lift_requests as LiftOffer[]) ?? [])
-      }
-
-      setLoadingData(false)
+      if (liftOffersData) setMyLiftOffers((liftOffersData.lift_requests as LiftOffer[]) ?? [])
+      setMyPackages((pkgsData.data as MyPackage[]) ?? [])
+      setMyBids((bidsData.data as MyBid[]) ?? [])
+      setMyDriverOffers((senderMatchesPayload as { matches?: MyDriverMatch[] }).matches ?? [])
+      setDriverIncoming((driverMatchesPayload as { matches?: MyDriverMatch[] }).matches ?? [])
+      setPkgAssignments((pkgAssignmentsPayload as { packages?: PkgAssignment[] }).packages ?? [])
     }
 
-    loadDashboard(true)
+    loadDashboard()
 
     const pollId = window.setInterval(() => {
-      loadDashboard(false)
+      loadDashboard()
     }, 8000)
 
     const onTrips = () => {
       if (!activeUserId) return
-      setMyTrips(loadTripsForCarrier(activeUserId))
+      void loadDashboard()
     }
     const onBookings = () => loadDashboard()
     window.addEventListener('gonow_trips_updated', onTrips)
@@ -450,8 +670,6 @@ export default function ProfilPage() {
     return getProfileCompletion(meta, { name: user.name, phone: user.phone, email: user.email })
   }, [meta, user])
 
-  const acceptedRequests   = myRequests.filter(r => r.status === 'accepted').length
-  const pendingRequests    = myRequests.filter(r => r.status === 'pending').length
   const pendingIncoming    = incoming.filter(r => r.status === 'pending').length
   const activeCarrierTrips = myTrips.filter(t => new Date(t.departure_at).getTime() >= Date.now()).length
   const carrierOrders = useMemo(
@@ -464,7 +682,7 @@ export default function ProfilPage() {
   )
   const activeAssignments = orders.filter(o =>
     getOrderCarrierId(o) === userId && (
-      ['matched', 'picked_up', 'in_transit'].includes(o.status) ||
+      ['matched', 'paid', 'picked_up', 'in_transit'].includes(o.status) ||
       (o.status === 'pending' && o.confirmed_at)
     )
   )
@@ -553,7 +771,7 @@ export default function ProfilPage() {
 
     const hold = sum(
       carrierOrders
-        .filter((order) => ['matched', 'picked_up', 'in_transit'].includes(order.status))
+        .filter((order) => ['paid', 'picked_up', 'in_transit'].includes(order.status))
         .map((order) => order.carrier_payout ?? 0)
     )
 
@@ -611,22 +829,88 @@ export default function ProfilPage() {
     () => new Map([...myRequests, ...incoming].map(b => [b.id, b])),
     [myRequests, incoming]
   )
-  const orderByBookingRequestId = useMemo(
-    () => new Map(orders.filter((order) => order.booking_request_id).map((order) => [order.booking_request_id as string, order])),
-    [orders]
-  )
   const orderById = useMemo(
     () => new Map(orders.map((order) => [order.id, order])),
     [orders]
   )
-  const activeCustomerOrder = useMemo(
-    () => orders.find((order) => order.sender_id === userId && ['pending', 'matched', 'picked_up', 'in_transit', 'confirmed'].includes(order.status)) ?? null,
-    [orders, userId]
+  const orderByPackageId = useMemo(
+    () =>
+      new Map(
+        orders
+          .map((order) => {
+            const packageId = getOrderPackageId(order)
+            return packageId ? [packageId, order] as const : null
+          })
+          .filter(Boolean) as readonly (readonly [string, Order])[]
+      ),
+    [orders]
   )
-  const acceptedRequestNeedingPayment = useMemo(
-    () => myRequests.find((request) => request.status === 'accepted' && request.order_id && orderByBookingRequestId.has(request.id)) ?? null,
-    [myRequests, orderByBookingRequestId]
+  const senderMatchByPackageId = useMemo(
+    () =>
+      new Map(
+        myDriverOffers
+          .filter((match) => match.packages?.id)
+          .map((match) => [match.packages!.id, match] as const)
+      ),
+    [myDriverOffers]
   )
+  const activePackageJourney = useMemo(() => {
+    const priority = ['matched', 'paid', 'picked_up', 'in_transit', 'delivered', 'confirmed']
+    for (const status of priority) {
+      const found = myPackages.find((pkg) => pkg.status === status)
+      if (found) return found
+    }
+    return null
+  }, [myPackages])
+  const activePackageJourneyOrder = useMemo(
+    () => (activePackageJourney ? orderByPackageId.get(activePackageJourney.id) ?? null : null),
+    [activePackageJourney, orderByPackageId]
+  )
+  const packageDeliveries = useMemo(
+    () => myPackages.filter((pkg) => ['matched', 'paid', 'picked_up', 'in_transit', 'delivered'].includes(pkg.status)),
+    [myPackages]
+  )
+  const customerJourneyPackages = useMemo(
+    () =>
+      myPackages.filter((pkg) => {
+        if (['cancelled', 'expired', 'open'].includes(pkg.status)) return false
+        if (pkg.status === 'matched') {
+          const linkedOrder = orderByPackageId.get(pkg.id)
+          return !!linkedOrder && !isAwaitingPayment(linkedOrder)
+        }
+        return true
+      }),
+    [myPackages, orderByPackageId]
+  )
+  const customerRequestPackages = useMemo(
+    () =>
+      myPackages.filter((pkg) => {
+        if (['cancelled', 'expired', 'confirmed'].includes(pkg.status)) return false
+        if (pkg.status === 'open') return true
+        if (pkg.status === 'matched') {
+          const linkedOrder = orderByPackageId.get(pkg.id)
+          return !linkedOrder || isAwaitingPayment(linkedOrder)
+        }
+        return false
+      }),
+    [myPackages, orderByPackageId]
+  )
+  const customerPendingCount = customerRequestPackages.length
+  const customerWaitingMatchCount = customerRequestPackages.filter((pkg) => pkg.status === 'open').length
+  const customerWaitingEscrowCount = customerRequestPackages.filter((pkg) => pkg.status === 'matched' && isAwaitingPayment(orderByPackageId.get(pkg.id) ?? null)).length
+  const activePackageAssignments = useMemo(
+    () => pkgAssignments.filter((pkg) => ['matched', 'paid', 'picked_up', 'in_transit', 'delivered'].includes(pkg.status)),
+    [pkgAssignments]
+  )
+  const legacyActiveAssignments = useMemo(
+    () =>
+      activeAssignments.filter((order) => {
+        const packageId = getOrderPackageId(order)
+        return !packageId || !activePackageAssignments.some((pkg) => pkg.id === packageId)
+      }),
+    [activeAssignments, activePackageAssignments]
+  )
+  const activeDriverWorkCount = activePackageAssignments.length + legacyActiveAssignments.length
 
   async function handleSaveProfile() {
     if (!userId || !user) return
@@ -670,15 +954,15 @@ export default function ProfilPage() {
     setPayingId(orderId)
     setPaymentError(null)
     try {
-      const res = await fetch(`/api/orders/${orderId}/checkout`, { method: 'POST' })
+      const res = await authedFetch(`/api/orders/${orderId}/checkout`, { method: 'POST' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Kunde inte starta betalning.')
 
       if (data.mock) {
-        // Demo mode: update localStorage order to matched, then refresh
+        // Demo mode: update localStorage order to paid, then refresh
         const stored = JSON.parse(localStorage.getItem('gonow_bookings') || '[]')
         const updated = stored.map((o: { id: string; status: string }) =>
-          o.id === orderId ? { ...o, status: 'matched' } : o
+          o.id === orderId ? { ...o, status: 'paid' } : o
         )
         localStorage.setItem('gonow_bookings', JSON.stringify(updated))
         await new Promise(r => setTimeout(r, 600))
@@ -716,8 +1000,9 @@ export default function ProfilPage() {
     try {
       await updateBookingStatus(id, status)
       const nextBookings = await loadAllBookings().catch(() => [])
-      setIncoming(nextBookings.filter((booking) => myTrips.some((trip) => trip.id === booking.trip_id)) as BookingRequestWithTrip[])
-      setMyRequests(nextBookings.filter((booking) => booking.sender_id === userId) as BookingRequestWithTrip[])
+      const liftBookings = nextBookings.filter(isLegacyLiftBooking)
+      setIncoming(liftBookings.filter((booking) => myTrips.some((trip) => trip.id === booking.trip_id)) as BookingRequestWithTrip[])
+      setMyRequests(liftBookings.filter((booking) => booking.sender_id === userId) as BookingRequestWithTrip[])
     } catch (error) {
       setRespondError(error instanceof Error ? error.message : 'Kunde inte uppdatera bokningen.')
     } finally {
@@ -729,7 +1014,7 @@ export default function ProfilPage() {
     if (!confirm('Är du säker på att du vill avboka detta uppdrag?')) return
     setCancellingOrderId(orderId)
     try {
-      const res = await fetch(`/api/orders/${orderId}/cancel`, { method: 'POST' })
+      const res = await authedFetch(`/api/orders/${orderId}/cancel`, { method: 'POST' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Kunde inte avboka uppdraget.')
       setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'cancelled' as OrderStatus } : o))
@@ -744,7 +1029,7 @@ export default function ProfilPage() {
     setUpdatingOrderId(orderId)
     setStatusError(null)
     try {
-      const res = await fetch(`/api/orders/${orderId}/status`, {
+      const res = await authedFetch(`/api/orders/${orderId}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
@@ -754,6 +1039,19 @@ export default function ProfilPage() {
         throw new Error(data.error || 'Kunde inte uppdatera orderstatus.')
       }
       setOrders((current) => current.map((order) => (order.id === orderId ? { ...order, ...data.order } : order)))
+
+      // Trigger rating modal after sender confirms delivery
+      if (status === 'confirmed') {
+        const order = orders.find((o) => o.id === orderId)
+        if (order && order.sender_id === userId) {
+          const carrierId = getOrderCarrierId(order)
+          const carrierObj = (order as unknown as Record<string, unknown>)._carrier as { name?: string } | null
+          const carrierName = carrierObj?.name ?? 'Din transportkontakt'
+          if (carrierId) {
+            setPendingRating({ orderId, toUserId: carrierId, toName: carrierName, role: 'sender' })
+          }
+        }
+      }
     } catch (error) {
       setStatusError({ id: orderId, msg: error instanceof Error ? error.message : 'Kunde inte uppdatera orderstatus.' })
     } finally {
@@ -782,18 +1080,77 @@ export default function ProfilPage() {
 
   async function reloadLedger() {
     if (!userId) return
-    const res = await fetch(`/api/ledger?carrier_id=${userId}`).catch(() => null)
+    const res = await authedFetch('/api/ledger').catch(() => null)
     if (res?.ok) {
       const data = await res.json()
       setLedgerEntries(data.entries || [])
     }
   }
 
+  async function handlePkgDeliveryAction(pkgId: string, action: 'pickup' | 'start_transit' | 'deliver') {
+    const res = await authedFetch(`/api/packages/${pkgId}/driver-status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    })
+    if (!res.ok) return
+    const data = await res.json()
+    if (data.package) {
+      setPkgAssignments(prev => prev.map(p => p.id === pkgId ? { ...p, ...data.package } : p))
+    }
+  }
+
+  async function handleDriverMatchAction(matchId: string, action: 'driver_confirm' | 'driver_decline') {
+    setActionMatchId(matchId)
+    try {
+      const res = await authedFetch(`/api/matches/${matchId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+      if (!res.ok) return
+      const nextStatus = action === 'driver_confirm' ? 'matched' : 'cancelled'
+      setDriverIncoming(prev => prev.map(m => m.id === matchId ? { ...m, status: nextStatus } : m))
+    } finally {
+      setActionMatchId(null)
+    }
+  }
+
+  async function handleMatchAction(matchId: string, action: 'customer_accept' | 'customer_decline') {
+    setActionMatchId(matchId)
+    try {
+      const res = await authedFetch(`/api/matches/${matchId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+      if (!res.ok) return
+      const nextStatus = action === 'customer_accept' ? 'customer_accepted' : 'cancelled'
+      setMyDriverOffers(prev => prev.map(m => m.id === matchId ? { ...m, status: nextStatus } : m))
+    } finally {
+      setActionMatchId(null)
+    }
+  }
+
+  async function handleCancelPackage(packageId: string) {
+    if (!confirm('Avboka paketet?')) return
+    setCancellingPkgId(packageId)
+    try {
+      const res = await authedFetch(`/api/packages/${packageId}/cancel`, { method: 'POST' })
+      if (res.ok) {
+        setMyPackages(prev => prev.map(p => p.id === packageId ? { ...p, status: 'cancelled' } : p))
+      }
+    } finally {
+      setCancellingPkgId(null)
+    }
+  }
+
+
   async function handleStartPayout(orderId: string) {
     setPayoutingId(orderId)
     setSaveMessage(null)
     try {
-      const res = await fetch('/api/payouts', {
+      const res = await authedFetch('/api/payouts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order_id: orderId }),
@@ -817,34 +1174,7 @@ export default function ProfilPage() {
     }
   }
 
-  async function handleMarkPayoutPaid(payoutId: string) {
-    setMarkingPaidId(payoutId)
-    setSaveMessage(null)
-    try {
-      const res = await fetch(`/api/payouts/${payoutId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'paid' }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Kunde inte markera payout som klar.')
-
-      if (data.payout) {
-        setPayouts((current) =>
-          current.map((p) => (p.id === payoutId ? data.payout : p))
-        )
-      }
-
-      await reloadLedger()
-      setSaveMessage('Payout markerad som klar. Saldot har uppdaterats.')
-    } catch (error) {
-      setSaveMessage(error instanceof Error ? error.message : 'Kunde inte markera payout som klar.')
-    } finally {
-      setMarkingPaidId(null)
-    }
-  }
-
-  if (authLoading || loadingData) {
+  if (authLoading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ width: 36, height: 36, borderRadius: '50%', border: '2px solid var(--accent)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
@@ -908,12 +1238,11 @@ export default function ProfilPage() {
           ? 'linear-gradient(180deg,#0a0a0a 0%,#111111 100%)'
           : 'linear-gradient(180deg,#f8fafc 0%,#eefbf1 100%)')
         : (isDark
-          ? 'linear-gradient(180deg, rgba(34,197,94,0.02) 0%, rgba(34,197,94,0.06) 100%)'
+          ? 'linear-gradient(180deg, var(--gn-002) 0%, var(--gn-006) 100%)'
           : 'linear-gradient(180deg,#fcfdfc 0%,#f1faef 100%)'),
-      overflowX: 'hidden',
+      overflowX: 'clip',
     }}>
-
-      {/* ── MOBILE: compact app header ── */}
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ MOBILE: compact app header Ã¢â€â‚¬Ã¢â€â‚¬ */}
       {isMobile && (
         <div style={{
           background: isDark ? 'rgba(17,17,17,0.92)' : 'rgba(255,255,255,0.92)',
@@ -941,28 +1270,64 @@ export default function ProfilPage() {
         </div>
       )}
 
-      {/* ── MOBILE: sticky underline tab bar ── */}
-      {isMobile && (
-        <div className="mobile-app-tabs" style={{ position: 'sticky', top: 66, zIndex: 20, background: isDark ? 'rgba(17,17,17,0.92)' : 'rgba(255,255,255,0.92)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`, display: 'flex', overflowX: 'auto', scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'], scrollSnapType: 'x proximity' }}>
-          {TABS.map((tab) => {
-            const badge = tab.key === 'assignments' ? activeAssignments.length : tab.key === 'requests' ? pendingIncoming : tab.key === 'lift_offers' ? myLiftOffers.filter(l => l.status === 'offered').length : 0
-            const isActive = activeTab === tab.key
-            return (
-              <button key={tab.key} onClick={() => handleTabChange(tab.key)} style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '15px 15px 12px', border: 'none', borderBottom: `2.5px solid ${isActive ? '#22c55e' : 'transparent'}`, background: 'none', color: isActive ? 'var(--text)' : 'var(--muted)', fontWeight: isActive ? 700 : 500, fontSize: '0.81rem', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'color 0.15s', marginBottom: -1 }}>
-                {tab.label}
-                {badge > 0 && <span style={{ fontSize: '0.58rem', fontWeight: 800, minWidth: 15, height: 15, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', background: '#22c55e', color: '#0a0a0a' }}>{badge}</span>}
-              </button>
-            )
-          })}
-        </div>
-      )}
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ MOBILE: 2-level nav (group bar + sub-tab bar) Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      {isMobile && (() => {
+        const badgeCounts = {
+          activeAssignments: activeDriverWorkCount,
+          pendingIncoming,
+          driverPendingNew: driverIncoming.filter(m => m.status === 'driver_pending_confirmation').length,
+          liftOffersCount: myLiftOffers.filter(l => l.status === 'offered').length,
+          packagesWithBids: myDriverOffers.filter((match) => match.status === 'suggested').length,
+          pendingBids: myPackages.filter(p => ['matched', 'paid', 'picked_up', 'in_transit', 'delivered'].includes(p.status)).length,
+        }
+        const activeGroup = NAV_GROUPS.find(g => getGroupId(activeTab) === g.id)
+        return (
+          <>
+            <div style={{ position: 'sticky', top: 66, zIndex: 20, background: isDark ? 'rgba(17,17,17,0.94)' : 'rgba(255,255,255,0.92)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`, boxShadow: isDark ? '0 8px 22px rgba(0,0,0,0.22)' : '0 10px 28px rgba(15,23,42,0.05)', display: 'flex', justifyContent: 'space-around' }}>
+              {NAV_GROUPS.map((group) => {
+                const isGroupActive = getGroupId(activeTab) === group.id
+                const groupBadge = group.items?.reduce((sum, item) => sum + getNavBadge(item.key, badgeCounts), 0) ?? 0
+                return (
+                  <button
+                    key={group.id}
+                    onClick={() => {
+                      if (group.key) handleTabChange(group.key)
+                      else if (group.items?.[0]) handleTabChange(group.items[0].key)
+                    }}
+                    style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '11px 4px 8px', border: 'none', borderBottom: `2.5px solid ${isGroupActive ? 'var(--gn)' : 'transparent'}`, background: isGroupActive ? (isDark ? 'rgba(146,255,99,0.05)' : 'rgba(146,255,99,0.06)') : 'none', cursor: 'pointer', color: isGroupActive ? 'var(--text)' : 'var(--muted)', marginBottom: -1 }}
+                  >
+                    <span style={{ fontSize: '1.05rem', lineHeight: 1 }}>{group.icon}</span>
+                    <span style={{ fontSize: '0.6rem', fontWeight: isGroupActive ? 800 : 650, whiteSpace: 'nowrap', letterSpacing: '0.01em' }}>{group.label}</span>
+                    {groupBadge > 0 && <span style={{ position: 'absolute', top: 6, right: '18%', fontSize: '0.5rem', fontWeight: 800, minWidth: 13, height: 13, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 2px', background: 'var(--gn)', color: '#0a0a0a' }}>{groupBadge}</span>}
+                  </button>
+                )
+              })}
+            </div>
+            {activeGroup?.items && (
+              <div className="mobile-app-tabs" style={{ position: 'sticky', top: 114, zIndex: 19, background: isDark ? 'rgba(14,14,14,0.92)' : 'rgba(248,250,252,0.92)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)'}`, display: 'flex', overflowX: 'auto', scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'], scrollSnapType: 'x proximity', padding: '4px 8px 6px', gap: 6 }}>
+                {activeGroup.items.map((item) => {
+                  const badge = getNavBadge(item.key, badgeCounts)
+                  const isActive = activeTab === item.key
+                  return (
+                    <button key={item.key} onClick={() => handleTabChange(item.key)} style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '10px 13px', border: `1px solid ${isActive ? 'var(--gn-030)' : 'transparent'}`, borderRadius: 999, background: isActive ? 'var(--gn-008)' : 'none', color: isActive ? 'var(--text)' : 'var(--muted)', fontWeight: isActive ? 700 : 500, fontSize: '0.79rem', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'color 0.15s, background 0.15s, border-color 0.15s' }}>
+                      {item.label}
+                      {item.isNew && <span style={{ fontSize: '0.5rem', fontWeight: 800, color: 'var(--gn)', background: 'var(--gn-012)', padding: '1px 4px', borderRadius: 999, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Ny</span>}
+                      {badge > 0 && <span style={{ fontSize: '0.58rem', fontWeight: 800, minWidth: 15, height: 15, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', background: 'var(--gn)', color: '#0a0a0a' }}>{badge}</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </>
+        )
+      })()}
 
-      {/* ── DESKTOP: maxWidth wrapper ── */}
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ DESKTOP: maxWidth wrapper Ã¢â€â‚¬Ã¢â€â‚¬ */}
       <div style={isMobile ? undefined : { maxWidth: 1260, margin: '0 auto', padding: '0 24px' }}>
 
-        {/* ── DESKTOP ONLY: stepper header ── */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ DESKTOP ONLY: stepper header Ã¢â€â‚¬Ã¢â€â‚¬ */}
         {!isMobile && (
-          <div style={{ display: 'flex', alignItems: 'center', padding: '18px 24px', marginBottom: 24, border: `1px solid ${isDark ? 'rgba(34,197,94,0.14)' : 'rgba(34,197,94,0.12)'}`, borderRadius: 24, background: isDark ? 'linear-gradient(135deg,rgba(18,22,29,0.96) 0%,rgba(28,33,42,0.98) 100%)' : 'linear-gradient(180deg,#ffffff 0%,#f7fbf6 100%)', boxShadow: isDark ? '0 18px 46px rgba(0,0,0,0.24)' : '0 20px 50px rgba(15,23,42,0.08)', gap: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', padding: '18px 24px', marginBottom: 24, border: `1px solid ${isDark ? 'var(--gn-014)' : 'var(--gn-012)'}`, borderRadius: 24, background: isDark ? 'linear-gradient(135deg,rgba(18,22,29,0.95) 0%,rgba(23,28,35,0.98) 100%)' : 'linear-gradient(180deg,#ffffff 0%,#fbfdf9 100%)', boxShadow: isDark ? '0 16px 38px rgba(0,0,0,0.22)' : '0 18px 40px rgba(15,23,42,0.06)', gap: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, marginRight: 'auto' }}>
               <div style={{ width: 36, height: 36, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.82rem', fontWeight: 700, background: '#0a0a0a', color: '#ffffff', border: '1px solid rgba(0,0,0,0.2)' }}>{initials}</div>
               <div>
@@ -990,29 +1355,87 @@ export default function ProfilPage() {
           </div>
         )}
 
-        {/* ── Grid: sidebar (desktop) + content ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '240px minmax(0,1fr)', gap: 24, alignItems: 'start' }}>
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Layout: sidebar (desktop) + content Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
 
           {/* Desktop sidebar only */}
           {!isMobile && (
-            <aside style={{ ...panelStyle(false, isDark, isMobile), padding: 16, position: 'sticky', top: 96, borderRadius: 22, boxShadow: isDark ? '0 16px 40px rgba(0,0,0,0.22)' : '0 20px 44px rgba(15,23,42,0.06)' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {TABS.map((tab) => {
-                  const badge = tab.key === 'assignments' ? activeAssignments.length : tab.key === 'requests' ? pendingIncoming : tab.key === 'lift_offers' ? myLiftOffers.filter(l => l.status === 'offered').length : 0
+            <aside style={{ ...panelStyle(false, isDark, isMobile), padding: 12, position: 'sticky', top: 96, borderRadius: 24, boxShadow: isDark ? '0 16px 40px rgba(0,0,0,0.22)' : '0 18px 36px rgba(15,23,42,0.05)', maxHeight: 'calc(100vh - 112px)', overflowY: 'auto', width: 248, flexShrink: 0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {NAV_GROUPS.map((group) => {
+                  const badgeCounts = {
+                    activeAssignments: activeDriverWorkCount,
+                    pendingIncoming,
+                    driverPendingNew: driverIncoming.filter(m => m.status === 'driver_pending_confirmation').length,
+                    liftOffersCount: myLiftOffers.filter(l => l.status === 'offered').length,
+                    packagesWithBids: myDriverOffers.filter((match) => match.status === 'suggested').length,
+                    pendingBids: myPackages.filter((pkg) => ['matched', 'paid', 'picked_up', 'in_transit', 'delivered'].includes(pkg.status)).length,
+                  }
+                  if (group.key) {
+                    return (
+                      <button key={group.id} onClick={() => handleTabChange(group.key!)} style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 12, border: '1px solid transparent', background: activeTab === group.key ? 'var(--accent-soft)' : 'transparent', color: activeTab === group.key ? 'var(--text)' : 'var(--muted)', fontWeight: activeTab === group.key ? 700 : 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem' }}>
+                        <span>{group.icon}</span> {group.label}
+                      </button>
+                    )
+                  }
+                  const isGroupActive = getGroupId(activeTab) === group.id
+                  const isCollapsed   = collapsedGroups.has(group.id)
+                  function toggleGroup() {
+                    setCollapsedGroups(prev => {
+                      const next = new Set(prev)
+                      next.has(group.id) ? next.delete(group.id) : next.add(group.id)
+                      return next
+                    })
+                  }
                   return (
-                    <button key={tab.key} onClick={() => handleTabChange(tab.key)} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 14, border: '1px solid transparent', background: activeTab === tab.key ? 'var(--accent-soft)' : 'transparent', color: activeTab === tab.key ? 'var(--text)' : 'var(--muted)', fontWeight: activeTab === tab.key ? 700 : 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      {tab.label}
-                      {badge > 0 && <span style={{ fontSize: '0.65rem', fontWeight: 800, minWidth: 18, height: 18, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', background: 'var(--accent)', color: '#0a0a0a' }}>{badge}</span>}
-                    </button>
+                    <div key={group.id} style={{ marginTop: 4 }}>
+                      <button
+                        onClick={toggleGroup}
+                        style={{
+                          width: '100%', display: 'flex', alignItems: 'center', gap: 6,
+                          padding: '8px 10px 6px 12px',
+                          background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                          borderRadius: 10,
+                          transition: 'background 0.12s',
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'none' }}
+                      >
+                        <span style={{ fontSize: '0.82rem' }}>{group.icon}</span>
+                        <p style={{ flex: 1, textAlign: 'left', fontSize: '0.64rem', fontWeight: 800, letterSpacing: '0.09em', textTransform: 'uppercase', color: isGroupActive ? 'var(--text)' : 'var(--muted)', margin: 0 }}>{group.label}</p>
+                        <ChevronDown
+                          size={13}
+                          style={{
+                            color: 'var(--muted)',
+                            flexShrink: 0,
+                            transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.18s',
+                          }}
+                        />
+                      </button>
+                      {!isCollapsed && group.items?.map((item) => {
+                        const badge = getNavBadge(item.key, badgeCounts)
+                        const isActive = activeTab === item.key
+                        return (
+                          <button key={item.key} onClick={() => handleTabChange(item.key)} style={{ width: '100%', textAlign: 'left', padding: '8px 10px 8px 28px', borderRadius: 11, border: '1px solid transparent', background: isActive ? 'var(--accent-soft)' : 'transparent', color: isActive ? 'var(--text)' : 'var(--muted)', fontWeight: isActive ? 700 : 500, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: '0.82rem' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                              {item.label}
+                              {item.isNew && <span style={{ fontSize: '0.52rem', fontWeight: 800, color: 'var(--accent)', background: 'var(--accent-soft)', padding: '1px 4px', borderRadius: 999, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Ny</span>}
+                            </span>
+                            {badge > 0 && <span style={{ fontSize: '0.6rem', fontWeight: 800, minWidth: 17, height: 17, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', background: 'var(--accent)', color: '#0a0a0a' }}>{badge}</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
                   )
                 })}
               </div>
             </aside>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 24, minWidth: 0, padding: isMobile ? '18px 14px 32px' : 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 16 : 24, minWidth: 0, flex: 1, padding: isMobile ? '18px 14px 32px' : 0 }}>
             {isMobile && (
-              <div style={{ ...panelStyle(true, isDark, isMobile), padding: '20px 18px', position: 'relative', overflow: 'hidden', borderRadius: 22, boxShadow: isDark ? '0 18px 44px rgba(0,0,0,0.28)' : '0 20px 46px rgba(34,197,94,0.10)' }}>
+              <div style={{ ...panelStyle(true, isDark, isMobile), padding: '20px 18px', position: 'relative', overflow: 'hidden', borderRadius: 22, boxShadow: isDark ? '0 18px 44px rgba(0,0,0,0.28)' : '0 20px 46px var(--gn-010)' }}>
                 <div style={{ position: 'absolute', right: -48, top: -48, width: 140, height: 140, borderRadius: '50%', background: 'var(--enterprise-panel-glow)', pointerEvents: 'none' }} />
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
                   <div>
@@ -1026,7 +1449,7 @@ export default function ProfilPage() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10 }}>
                   {[
-                    { label: 'Förfrågningar', value: pendingRequests },
+                    { label: 'Förfrågningar', value: customerPendingCount },
                     { label: 'Resor', value: activeCarrierTrips },
                     { label: 'Saldo', value: `${driverWallet.available} kr` },
                   ].map((item) => (
@@ -1051,14 +1474,16 @@ export default function ProfilPage() {
                     eyebrow="Översikt"
                     title="Din panel, lugn och tydlig."
                     subtitle="Här får du direkt koll på konto, bokningar, resor och nästa steg utan att behöva hoppa mellan vyer."
-                    meta={`${pendingRequests} väntar`}
+                    meta={`${customerPendingCount} väntar`}
                   />
                 )}
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0,1fr))' : 'repeat(4, minmax(0,1fr))', gap: 14 }}>
-                  {statCard('Profil', `${completion}%`, 'Onboarding och sparade standarduppgifter', <UserRound size={18} />, isDark, isMobile)}
-                  {statCard('Aktiva resor', `${activeCarrierTrips}`, 'Registrerade rutter i din panel', <Car size={18} />, isDark, isMobile)}
-                  {statCard('Väntande svar', `${pendingRequests}`, 'Dina skickade förfrågningar', <Clock size={18} />, isDark, isMobile)}
-                  {statCard('Accepterade', `${acceptedRequests}`, 'Redo att betalas eller genomföras', <CheckCircle2 size={18} />, isDark, isMobile)}
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0,1fr))' : 'repeat(3, minmax(0,1fr))', gap: 14 }}>
+                  {statCard('Aktiva paket', `${myPackages.filter(p => ['open', 'matched'].includes(p.status)).length}`, 'Publicerade och matchade', <Package size={18} />, isDark, isMobile)}
+                  {statCard('Liftresor', `${myLiftOffers.filter(l => ['offered', 'matched'].includes(l.status)).length}`, 'Erbjudanden och matchningar', <Users size={18} />, isDark, isMobile)}
+                  {statCard('Leveranser', `${activeDriverWorkCount}`, 'Pågående som förare', <Car size={18} />, isDark, isMobile)}
+                  {statCard('Saldo', `${driverWallet.available} kr`, 'Tillgängligt för utbetalning', <Wallet size={18} />, isDark, isMobile)}
+                  {statCard('Gonow Score', `${gonowScore?.score ?? 0}`, gonowScore?.tier.label ?? 'Ny förare', <Star size={18} />, isDark, isMobile)}
+                  {statCard('Mina resor', `${activeCarrierTrips}`, 'Registrerade rutter', <MapPin size={18} />, isDark, isMobile)}
                 </div>
 
                 {gonowScore && user && (
@@ -1078,15 +1503,14 @@ export default function ProfilPage() {
                   <div style={{ ...panelStyle(true, isDark, isMobile), padding: 24, position: 'relative', overflow: 'hidden' }}>
                     <div style={{ position: 'absolute', right: -70, top: -70, width: 220, height: 220, borderRadius: '50%', background: 'var(--enterprise-panel-glow)', pointerEvents: 'none' }} />
                     <SectionTitle
-                      title="F\u00f6rarsaldo"
-                      subtitle="Byggt som en riktig operations-wallet: vad som \u00e4r p\u00e5 hold, vad som kan betalas ut och vad som redan har g\u00e5tt ut."
+                      title="Din ekonomi i Gonow" subtitle="Se vad som är låst i transporten, vad som är redo för utbetalning och vad som redan har betalats ut."
                     />
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 18 }}>
                       <div>
-                        <p style={{ fontSize: '0.72rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>Tillg\u00e4ngligt saldo</p>
+                        <p style={{ fontSize: '0.72rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>Redo för utbetalning</p>
                         <p style={{ fontSize: '2.4rem', fontWeight: 800, letterSpacing: '-0.06em', color: 'var(--text)', lineHeight: 1 }}>{driverWallet.available} kr</p>
                         <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 10 }}>
-                          {driverWallet.availableOrders} leveranser klara f\u00f6r payout
+                          {driverWallet.availableOrders} leveranser är klara att betalas ut
                         </p>
                       </div>
                       <div style={{ width: 48, height: 48, borderRadius: 16, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0 }}>
@@ -1096,30 +1520,30 @@ export default function ProfilPage() {
 
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0,1fr))', gap: 12, marginBottom: 16 }}>
                       <div style={{ padding: 16, borderRadius: 18, background: 'var(--surface)', border: '1px solid var(--enterprise-panel-border)' }}>
-                        <p style={{ fontSize: '0.72rem', color: 'var(--muted)', marginBottom: 6 }}>P\u00e5 hold</p>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--muted)', marginBottom: 6 }}>Låst i transport</p>
                         <p style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{driverWallet.hold} kr</p>
-                        <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>Betalt av kund men jobbet \u00e4r inte avslutat.</p>
+                        <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>Kunden har betalat men leveransen är inte slutbekräftad.</p>
                       </div>
                       <div style={{ padding: 16, borderRadius: 18, background: 'var(--surface)', border: '1px solid var(--enterprise-panel-border)' }}>
-                        <p style={{ fontSize: '0.72rem', color: 'var(--muted)', marginBottom: 6 }}>P\u00e5g\u00e5ende payout</p>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--muted)', marginBottom: 6 }}>Utbetalning påbörjad</p>
                         <p style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{driverWallet.processing} kr</p>
-                        <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>{driverWallet.processingOrders} poster i payout-k\u00f6n.</p>
+                        <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>{driverWallet.processingOrders} poster är på väg ut till ditt konto.</p>
                       </div>
                       <div style={{ padding: 16, borderRadius: 18, background: 'var(--surface)', border: '1px solid var(--enterprise-panel-border)' }}>
                         <p style={{ fontSize: '0.72rem', color: 'var(--muted)', marginBottom: 6 }}>Utbetalt totalt</p>
                         <p style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{driverWallet.paid} kr</p>
-                        <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>{driverWallet.paidOrders} payout-poster redan klara.</p>
+                        <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>{driverWallet.paidOrders} utbetalningar är redan avslutade.</p>
                       </div>
                       <div style={{ padding: 16, borderRadius: 18, background: 'var(--surface)', border: '1px solid var(--enterprise-panel-border)' }}>
-                        <p style={{ fontSize: '0.72rem', color: 'var(--muted)', marginBottom: 6 }}>Brutto till n\u00e4tverket</p>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--muted)', marginBottom: 6 }}>Totalt intjänat</p>
                         <p style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{driverWallet.grossBooked} kr</p>
-                        <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>Summerat p\u00e5 dina aktiva och slutf\u00f6rda uppdrag.</p>
+                        <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>Summerat över dina aktiva och avslutade uppdrag.</p>
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between', gap: 12, paddingTop: 4 }}>
                       <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6 }}>
-                        Enterprise-t\u00e4nket h\u00e4r \u00e4r att f\u00f6raren alltid ska kunna skilja p\u00e5 intj\u00e4nat, l\u00e5st och utbetalt.
+                        Du ska alltid kunna skilja på pengar som är låsta i transporten, redo för utbetalning och redan utbetalade.
                       </p>
                       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: isMobile ? 'stretch' : 'flex-end' }}>
                         {payoutReadyOrders[0] && (
@@ -1128,7 +1552,7 @@ export default function ProfilPage() {
                           </button>
                         )}
                         <button onClick={() => handleTabChange('assignments')} className="btn-primary" style={{ padding: '11px 16px', whiteSpace: 'nowrap', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}>
-                          Se driftstatus
+                          Se aktiva uppdrag
                         </button>
                       </div>
                     </div>
@@ -1172,104 +1596,103 @@ export default function ProfilPage() {
                   </div>
 
                   <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
-                    <SectionTitle title="Operationsl\u00e4ge" subtitle="Vad du b\u00f6r g\u00f6ra n\u00e4st f\u00f6r att h\u00e5lla fl\u00f6det snabbt och tydligt." />
+                    <SectionTitle title="Det här kräver din uppmärksamhet" subtitle="Det viktigaste att följa upp just nu för att hålla Gonow-resan snabb och tydlig." />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       <div style={{ padding: 16, borderRadius: 18, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                        <p style={{ fontSize: '0.74rem', color: 'var(--muted)', marginBottom: 4 }}>Inkommande f\u00f6rfr\u00e5gningar</p>
+                        <p style={{ fontSize: '0.74rem', color: 'var(--muted)', marginBottom: 4 }}>Nya förfrågningar</p>
                         <p style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text)' }}>{pendingIncoming}</p>
                       </div>
                       <div style={{ padding: 16, borderRadius: 18, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                        <p style={{ fontSize: '0.74rem', color: 'var(--muted)', marginBottom: 4 }}>Aktiva uppdrag</p>
-                        <p style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text)' }}>{activeAssignments.length}</p>
+                        <p style={{ fontSize: '0.74rem', color: 'var(--muted)', marginBottom: 4 }}>Aktiva leveranser</p>
+                        <p style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text)' }}>{activeDriverWorkCount}</p>
                       </div>
                       <div style={{ padding: 16, borderRadius: 18, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                        <p style={{ fontSize: '0.74rem', color: 'var(--muted)', marginBottom: 4 }}>F\u00f6rarresor live</p>
+                        <p style={{ fontSize: '0.74rem', color: 'var(--muted)', marginBottom: 4 }}>Resor live</p>
                         <p style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text)' }}>{activeCarrierTrips}</p>
                       </div>
                     </div>
-                    <div style={{ marginTop: 16, padding: 16, borderRadius: 18, background: 'var(--accent-soft)', border: '1px solid rgba(34,197,94,0.2)' }}>
-                      <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginBottom: 8 }}>N\u00e4sta enterprise-steg</p>
+                    <div style={{ marginTop: 16, padding: 16, borderRadius: 18, background: 'var(--accent-soft)', border: '1px solid var(--gn-020)' }}>
+                      <p style={{ fontSize: '0.76rem', color: 'var(--muted)', marginBottom: 8 }}>Nästa steg</p>
                       <p style={{ fontSize: '0.84rem', color: 'var(--text)', lineHeight: 1.7 }}>
-                        N\u00e4r Stripe Connect \u00e4r inkopplat kan `Tillg\u00e4ngligt saldo` driva en riktig payout-knapp, payout-schema och exporthistorik.
+                        När utbetalningar är helt inkopplade blir den här ytan ditt fasta ställe för saldo, utbetalning och historik.
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.1fr 0.9fr', gap: 20 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20 }}>
                   <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
-                    <SectionTitle
-                      title="Varför detta är rätt grund"
-                      subtitle="Vi flyttar kärnupplevelsen till ett ställe där användaren slipper fylla om samma saker i varje nytt flöde."
-                    />
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
-                      {[
-                        'Bokningar och resor i samma panel',
-                        'Profilen återanvänds i skicka, lift och kör',
-                        'Förarinformation kan byggas ut utan att bryta resten',
-                        'Utforska förare blir en trygg, inloggad premium-vy',
-                      ].map((item) => (
-                        <div key={item} style={{ padding: 16, borderRadius: 18, background: 'var(--surface-2)', border: '1px solid var(--border)', fontSize: '0.82rem', color: 'var(--text)', lineHeight: 1.6 }}>
-                          {item}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
-                    <SectionTitle title="Snabböversikt" subtitle="Det som redan finns sparat och det som bör fyllas i härnäst." />
-                    {(activeCustomerOrder || acceptedRequestNeedingPayment) && (
-                      <div style={{ padding: 16, borderRadius: 18, background: 'var(--surface-2)', border: '1px solid var(--border)', marginBottom: 16 }}>
-                        <p style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>Aktiv kundresa</p>
-                        <p style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
-                          {activeCustomerOrder?.description || acceptedRequestNeedingPayment?.description || 'Bokning pågår'}
-                        </p>
-                        <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: 12 }}>
-                          {activeCustomerOrder
-                            ? `${activeCustomerOrder.pickup_address || 'Upphämtning'} → ${activeCustomerOrder.dropoff_address || 'Avlämning'}`
-                            : `${acceptedRequestNeedingPayment?.pickup_address || 'Upphämtning'} → ${acceptedRequestNeedingPayment?.dropoff_address || 'Avlämning'}`}
-                        </p>
-                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                          {activeCustomerOrder?.status === 'pending' && (
-                            <button onClick={() => handlePay(activeCustomerOrder.id)} className="btn-primary" style={{ padding: '11px 16px' }}>
-                              {payingId === activeCustomerOrder.id ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Startar...</> : <><CreditCard size={13} /> Betala nu</>}
-                            </button>
-                          )}
-                          {activeCustomerOrder && activeCustomerOrder.status !== 'pending' && (
-                            <Link href={`/spara/${activeCustomerOrder.id}`} className="btn-primary" style={{ padding: '11px 16px', display: 'inline-flex', gap: 8 }}>
-                              Spåra resa <ArrowRight size={14} />
-                            </Link>
-                          )}
-                          <button onClick={() => handleTabChange('requests')} style={{ padding: '11px 16px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
-                            Se förfrågningar
-                          </button>
+                    <SectionTitle title="Aktiv leverans" subtitle="Din pågående kundresa - status och nästa åtgärd." />
+                    {activePackageJourney ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ padding: 16, borderRadius: 18, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                          <p style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>Gonow ansvarar nu</p>
+                          <p style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                            {activePackageJourney.description || 'Bokning pågår'}
+                          </p>
+                          <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: 12 }}>
+                            {`${activePackageJourney.from_city || 'Upphämtning'} → ${activePackageJourney.to_city || 'Avlämning'}`}
+                          </p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--gn-dk)', background: 'var(--gn-010)', padding: '4px 9px', borderRadius: 999 }}>
+                              {getPackageStatusMeta(activePackageJourney.status).label}
+                            </span>
+                            {getOrderPaymentSummary(activePackageJourneyOrder) ? (
+                              <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{getOrderPaymentSummary(activePackageJourneyOrder)}</span>
+                            ) : null}
+                            {senderMatchByPackageId.get(activePackageJourney.id)?.drivers?.name ? (
+                              <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Transport via {senderMatchByPackageId.get(activePackageJourney.id)?.drivers?.name}</span>
+                            ) : null}
+                          </div>
+                          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                            {activePackageJourney.status === 'matched' && activePackageJourneyOrder && isAwaitingPayment(activePackageJourneyOrder) && (
+                              <button onClick={() => handlePay(activePackageJourneyOrder.id)} className="btn-primary" style={{ padding: '11px 16px' }}>
+                                {payingId === activePackageJourneyOrder.id ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Startar...</> : <><CreditCard size={13} /> Betala och lås transport</>}
+                              </button>
+                            )}
+                            {!(activePackageJourney.status === 'matched' && isAwaitingPayment(activePackageJourneyOrder)) && (
+                              <Link href={`/paket/${activePackageJourney.id}`} className="btn-primary" style={{ padding: '11px 16px', display: 'inline-flex', gap: 8 }}>
+                                Följ paket <ArrowRight size={14} />
+                              </Link>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    )}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                        <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>Kontakt</span>
-                        <strong style={{ color: 'var(--text)', fontSize: '0.82rem' }}>{user.phone || 'Saknas'}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                        <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>Stad</span>
-                        <strong style={{ color: 'var(--text)', fontSize: '0.82rem' }}>{meta.city || 'Saknas'}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                        <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>Roll</span>
-                        <strong style={{ color: 'var(--text)', fontSize: '0.82rem' }}>{meta.role_intent}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                        <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>Fordon</span>
-                        <strong style={{ color: 'var(--text)', fontSize: '0.82rem' }}>
-                          {meta.vehicle_make && meta.vehicle_model ? `${meta.vehicle_make} ${meta.vehicle_model}` : 'Inte sparat än'}
-                        </strong>
-                      </div>
-                      <div style={{ paddingTop: 6 }}>
-                        <button onClick={() => handleTabChange('profile')} className="btn-primary" style={{ padding: '11px 16px', display: 'inline-flex', gap: 8 }}>
-                          Fyll profiluppgifter <ArrowRight size={14} />
+                    ) : (
+                      <div style={{ padding: 28, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
+                        <Package size={24} style={{ color: 'var(--muted)', marginBottom: 10 }} />
+                        <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.7 }}>Ingen aktiv leverans just nu.</p>
+                        <button onClick={() => handleTabChange('my_packages')} className="btn-primary" style={{ marginTop: 14, padding: '10px 16px', display: 'inline-flex', gap: 8 }}>
+                          Skicka paket <ArrowRight size={14} />
                         </button>
                       </div>
+                    )}
+                  </div>
+                  <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                    <SectionTitle title="Snabbåtkomst" subtitle="Vanligaste åtgärderna — max ett klick bort." />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {[
+                        { icon: '📦', label: 'Skicka paket', sub: `${myPackages.filter(p => p.status === 'open').length} Öppna`, tab: 'my_packages' as TabKey },
+                        { icon: '🚗', label: 'Aktiva leveranser', sub: `${activeDriverWorkCount} pågående`, tab: 'assignments' as TabKey },
+                        { icon: '🗺️', label: 'Mina resor', sub: `${activeCarrierTrips} registrerade`, tab: 'my_trips' as TabKey },
+                        { icon: '👤', label: 'Lift-erbjudanden', sub: `${myLiftOffers.filter(l => l.status === 'offered').length} Öppna`, tab: 'lift_offers' as TabKey },
+                        { icon: '💰', label: 'Intäkter', sub: `${driverWallet.available} kr tillgängligt`, tab: 'earnings' as TabKey },
+                      ].map((item) => (
+                        <button
+                          key={item.tab}
+                          onClick={() => handleTabChange(item.tab)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 16, border: '1px solid var(--border)', background: 'var(--surface-2)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'background 0.15s' }}
+                          onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'var(--surface)')}
+                          onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'var(--surface-2)')}
+                        >
+                          <span style={{ fontSize: '1rem', flexShrink: 0 }}>{item.icon}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{item.label}</p>
+                            <p style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{item.sub}</p>
+                          </div>
+                          <ArrowRight size={14} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -1280,12 +1703,76 @@ export default function ProfilPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {isMobile && (
                   <MobileSectionIntro
-                    eyebrow="Aktiva uppdrag"
-                    title="Det här kör du just nu."
-                    subtitle="Alla leveranser som pågår samlade i en tydlig driftvy med status, kontakt och nästa åtgärd."
-                    meta={`${activeAssignments.length} aktiva`}
+                    eyebrow="Kör & tjäna"
+                    title="Aktiva leveranser."
+                    subtitle="Följ dina pågående uppdrag från accepterad bokning till leverans."
+                    meta={`${activeDriverWorkCount} aktiva`}
                   />
                 )}
+
+                {/* Inkommande paketförfrågningar via trip-selected flow */}
+                {(() => {
+                  const pending = driverIncoming.filter(m => m.status === 'driver_pending_confirmation')
+                  if (pending.length === 0) return null
+                  return (
+                    <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                      <div style={{ marginBottom: 16 }}>
+                        <p style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text)', margin: '0 0 4px' }}>Nya förfrågningar</p>
+                        <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: 0 }}>Kunder vill skicka paket med din resa. Svara inom 30 minuter.</p>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {pending.map(match => {
+                          const pkg = match.packages
+                          const expiresIn = match.expires_at
+                            ? Math.max(0, Math.round((new Date(match.expires_at).getTime() - Date.now()) / 60000))
+                            : null
+                          return (
+                            <div key={match.id} style={{ borderRadius: 14, border: '1px solid rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.04)', padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>
+                                  {pkg?.from_city ?? '?'} {'\u2192'} {pkg?.to_city ?? '?'}
+                                </p>
+                                <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: '3px 0 0' }}>
+                                  {pkg?.description ?? 'Paket'}{pkg?.weight_kg ? ` · ${pkg.weight_kg} kg` : ''}
+                                </p>
+                                {match.proposed_price != null && (
+                                  <p style={{ fontSize: '0.78rem', color: 'var(--text)', fontWeight: 600, margin: '3px 0 0' }}>
+                                    Upp till {match.proposed_price} kr
+                                  </p>
+                                )}
+                                {expiresIn !== null && (
+                                  <p style={{ fontSize: '0.7rem', color: '#b45309', margin: '4px 0 0' }}>
+                                    Svarar senast om {expiresIn} min
+                                  </p>
+                                )}
+                                {match.ai_message_driver && (
+                                  <p style={{ fontSize: '0.72rem', color: 'var(--muted)', margin: '4px 0 0', fontStyle: 'italic' }}>&ldquo;{match.ai_message_driver}&rdquo;</p>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                                <button
+                                  onClick={() => handleDriverMatchAction(match.id, 'driver_decline')}
+                                  disabled={actionMatchId === match.id}
+                                  style={{ padding: '7px 12px', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', fontWeight: 600, cursor: actionMatchId === match.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', opacity: actionMatchId === match.id ? 0.6 : 1 }}
+                                >
+                                  Neka
+                                </button>
+                                <button
+                                  onClick={() => handleDriverMatchAction(match.id, 'driver_confirm')}
+                                  disabled={actionMatchId === match.id}
+                                  style={{ padding: '7px 14px', borderRadius: 9, border: 'none', background: 'var(--accent)', color: '#0a0a0a', fontWeight: 700, cursor: actionMatchId === match.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', opacity: actionMatchId === match.id ? 0.6 : 1 }}
+                                >
+                                  {actionMatchId === match.id ? '...' : 'Acceptera'}
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })()}
+
                 <div style={{ ...panelStyle(true, isDark, isMobile), padding: 24, position: 'relative', overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', right: -80, top: -80, width: 240, height: 240, borderRadius: '50%', background: 'var(--enterprise-panel-glow)', pointerEvents: 'none' }} />
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0,1fr))' : 'repeat(4, minmax(0,1fr))', gap: 12 }}>
@@ -1296,21 +1783,130 @@ export default function ProfilPage() {
                   </div>
                 </div>
 
-                <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                  <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                   <SectionTitle
-                    title="Aktiva uppdrag"
-                    subtitle="Dina pågående leveranser — upphämtning, på väg och klara att bekräftas."
+                    title="Aktiva leveranser"
+                    subtitle="Följ dina pågående uppdrag från accepterad bokning till leverans."
                   />
 
-                  {activeAssignments.length === 0 ? (
+                  {activeDriverWorkCount === 0 ? (
                     <div style={{ padding: 32, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
                       <Package size={28} style={{ color: 'var(--muted)', marginBottom: 10 }} />
-                      <p style={{ fontSize: '0.88rem', color: 'var(--muted)' }}>Inga aktiva uppdrag just nu.</p>
-                      <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 4 }}>Acceptera förfrågningar under Förfrågningar-fliken för att starta ett uppdrag.</p>
+                      <p style={{ fontSize: '0.88rem', color: 'var(--muted)' }}>Inga aktiva leveranser just nu.</p>
+                      <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 4 }}>Acceptera inkommande förfrågningar under Kör & tjäna → Mina resor för att starta ett uppdrag.</p>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                      {activeAssignments.map((order) => {
+                      {/* Package assignments from the package_matches flow */}
+                      {activePackageAssignments.map(pkg => {
+                        const PKG_STEPS = [
+                          { status: 'matched',    label: 'Transport klar', color: '#3b82f6' },
+                          { status: 'paid',       label: 'Betald',     color: '#10b981' },
+                          { status: 'picked_up',  label: 'Upphämtad',  color: '#7c3aed' },
+                          { status: 'in_transit', label: 'På väg',     color: '#0f766e' },
+                          { status: 'delivered',  label: 'Levererad',  color: 'var(--gn-dk)' },
+                        ]
+                        const pkgStepIdx = pkg.status === 'paid' ? 1 : pkg.status === 'picked_up' ? 2 : pkg.status === 'in_transit' ? 3 : pkg.status === 'delivered' ? 4 : 0
+                        const pkgNext = pkg.status === 'paid'
+                          ? { label: 'Bekräfta upphämtning', action: 'pickup' as const,          border: 'rgba(124,58,237,0.3)', bg: 'rgba(124,58,237,0.08)', color: '#7c3aed' }
+                          : pkg.status === 'picked_up'
+                          ? { label: 'Markera på väg',         action: 'start_transit' as const,   border: 'rgba(20,184,166,0.3)', bg: 'rgba(20,184,166,0.08)', color: '#0f766e' }
+                          : pkg.status === 'in_transit'
+                          ? { label: 'Markera levererad',        action: 'deliver' as const,         border: 'var(--gn-030)',        bg: 'var(--gn-008)',         color: 'var(--gn-dk)' }
+                          : null
+
+                        return (
+                          <div key={pkg.id} style={{ padding: isMobile ? 18 : 22, borderRadius: isMobile ? 22 : 24, background: isDark ? 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))' : 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.98))', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 18, boxShadow: isMobile ? 'none' : '0 16px 36px rgba(15,23,42,0.05)' }}>
+                            {/* Route + badge */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                                  <MapPin size={14} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text)' }}>{pkg.from_city}</span>
+                                  <span style={{ color: 'var(--muted)' }}>{'\u2192'}</span>
+                                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text)' }}>{pkg.to_city}</span>
+                                </div>
+                                <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: 0 }}>
+                                  Paket{pkg.description ? ` · ${pkg.description}` : ''}{pkg.weight_kg ? ` · ${pkg.weight_kg} kg` : ''}
+                                </p>
+                              </div>
+                              <div style={{ padding: '6px 12px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700, background: PKG_STEPS[pkgStepIdx]?.color ? `${PKG_STEPS[pkgStepIdx].color}22` : 'var(--surface-2)', color: PKG_STEPS[pkgStepIdx]?.color ?? 'var(--muted)', flexShrink: 0 }}>
+                                {PKG_STEPS[pkgStepIdx]?.label}
+                              </div>
+                            </div>
+
+                            {/* Timeline */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+                              {PKG_STEPS.map((step, i) => {
+                                const done = i < pkgStepIdx
+                                const current = i === pkgStepIdx
+                                return (
+                                  <div key={step.status} style={{ display: 'flex', alignItems: 'center', flex: i < PKG_STEPS.length - 1 ? 1 : 'none' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 64 }}>
+                                      <div style={{ width: 22, height: 22, borderRadius: '50%', border: `2px solid ${done || current ? step.color : 'var(--border)'}`, background: done ? step.color : current ? `${step.color}22` : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        {done && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                        {current && <div style={{ width: 8, height: 8, borderRadius: '50%', background: step.color }} />}
+                                      </div>
+                                      <span style={{ fontSize: '0.65rem', color: done || current ? 'var(--text)' : 'var(--muted)', fontWeight: current ? 800 : 600, textAlign: 'center', lineHeight: 1.2 }}>{step.label}</span>
+                                    </div>
+                                    {i < PKG_STEPS.length - 1 && (
+                                      <div style={{ flex: 1, height: 2, background: done ? step.color : 'var(--border)', borderRadius: 999, margin: '0 4px', marginBottom: 16 }} />
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+
+                            {/* Sender info + payout */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                {pkg.sender && (
+                                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      <Users size={13} style={{ color: 'var(--muted)' }} />
+                                      <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Avsändare:</span>
+                                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text)' }}>{pkg.sender.name ?? 'Kund'}</span>
+                                    </div>
+                                    {pkg.sender.phone && (
+                                      <a href={`tel:${pkg.sender.phone}`} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'var(--gn-dk)', textDecoration: 'none', fontWeight: 600 }}>
+                                        <Phone size={12} />
+                                        {pkg.sender.phone}
+                                      </a>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              {pkg.price_ceiling && (
+                                <div style={{ textAlign: 'right' }}>
+                                  <p style={{ fontSize: '0.62rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
+                                    {pkg.status === 'delivered' ? 'Väntar payout' : 'Utbetalning'}
+                                  </p>
+                                  <p style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>{pkg.price_ceiling} kr</p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Action button */}
+                            {pkgNext && (
+                              <button
+                                onClick={() => handlePkgDeliveryAction(pkg.id, pkgNext.action)}
+                                style={{ width: '100%', padding: '14px 18px', borderRadius: 14, border: `1.5px solid ${pkgNext.border}`, background: pkgNext.bg, color: pkgNext.color, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 800, fontSize: '0.9rem', transition: 'opacity 0.15s' }}
+                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '0.8' }}
+                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
+                              >
+                                {pkgNext.label}
+                              </button>
+                            )}
+                            {pkg.status === 'delivered' && (
+                              <div style={{ padding: '12px 16px', borderRadius: 12, background: 'var(--gn-006)', border: '1px solid var(--gn-020)', fontSize: '0.8rem', color: 'var(--gn-dk)', textAlign: 'center', fontWeight: 600, lineHeight: 1.6 }}>
+                                Levererat. Gonow väntar nu på kundens bekräftelse innan payout frigörs till ditt saldo.
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+
+                      {legacyActiveAssignments.map((order) => {
                         const nextAction = NEXT_ACTION[order.status]
                         const stepIndex = ASSIGNMENT_STEPS.findIndex(s => s.status === order.status)
                         // Use nested booking_requests join data (from API), fallback to bookingById map
@@ -1333,7 +1929,7 @@ export default function ProfilPage() {
                                   <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)' }}>
                                     {order.pickup_address || 'Upphämtning'}
                                   </span>
-                                  <span style={{ color: 'var(--muted)', flexShrink: 0 }}>→</span>
+                                  <span style={{ color: 'var(--muted)', flexShrink: 0 }}>{'\u2192'}</span>
                                   <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)' }}>
                                     {order.dropoff_address || 'Avlämning'}
                                   </span>
@@ -1446,7 +2042,7 @@ export default function ProfilPage() {
                                     )}
                                   </div>
                                   {senderPhone && (
-                                    <a href={`tel:${senderPhone}`} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: '#15803d', textDecoration: 'none', fontWeight: 600 }}>
+                                    <a href={`tel:${senderPhone}`} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'var(--gn-dk)', textDecoration: 'none', fontWeight: 600 }}>
                                       <Phone size={12} style={{ flexShrink: 0 }} />
                                       {senderPhone}
                                     </a>
@@ -1454,14 +2050,14 @@ export default function ProfilPage() {
                                 </div>
                                 {/* Recipient */}
                                 {recipientName && (
-                                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', padding: '8px 12px', borderRadius: 10, background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)' }}>
+                                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', padding: '8px 12px', borderRadius: 10, background: 'var(--gn-006)', border: '1px solid var(--gn-020)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem' }}>
-                                      <UserRound size={13} color="#15803d" style={{ flexShrink: 0 }} />
-                                      <span style={{ fontSize: '0.72rem', color: '#15803d' }}>Mottagare:</span>
-                                      <span style={{ fontWeight: 700, color: '#15803d' }}>{recipientName}</span>
+                                      <UserRound size={13} color="var(--gn-dk)" style={{ flexShrink: 0 }} />
+                                      <span style={{ fontSize: '0.72rem', color: 'var(--gn-dk)' }}>Mottagare:</span>
+                                      <span style={{ fontWeight: 700, color: 'var(--gn-dk)' }}>{recipientName}</span>
                                     </div>
                                     {recipientPhone && (
-                                      <a href={`tel:${recipientPhone}`} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: '#15803d', textDecoration: 'none', fontWeight: 700 }}>
+                                      <a href={`tel:${recipientPhone}`} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'var(--gn-dk)', textDecoration: 'none', fontWeight: 700 }}>
                                         <Phone size={12} style={{ flexShrink: 0 }} />
                                         {recipientPhone}
                                       </a>
@@ -1503,7 +2099,7 @@ export default function ProfilPage() {
                             )}
 
                             {order.status === 'delivered' && (
-                              <div style={{ padding: '12px 16px', borderRadius: 12, background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)', fontSize: '0.8rem', color: '#15803d', textAlign: 'center', fontWeight: 600 }}>
+                              <div style={{ padding: '12px 16px', borderRadius: 12, background: 'var(--gn-006)', border: '1px solid var(--gn-020)', fontSize: '0.8rem', color: 'var(--gn-dk)', textAlign: 'center', fontWeight: 600 }}>
                                 Levererat — inväntar kundens bekräftelse
                               </div>
                             )}
@@ -1524,12 +2120,12 @@ export default function ProfilPage() {
                   )}
                 </div>
 
-                {/* Ongoing payouts — mark as paid */}
+                {/* Ongoing payouts Ã¢â‚¬â€ mark as paid */}
                 {payouts.filter(p => p.status === 'processing' || p.status === 'pending').length > 0 && (
                   <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
                     <SectionTitle
                       title="Pågående utbetalningar"
-                      subtitle="Dessa payouts är startade. Markera dem som klara när pengarna har gått ut."
+                      subtitle="Gonow följer utbetalningen automatiskt och uppdaterar status när pengarna har betalats ut."
                     />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       {payouts
@@ -1552,25 +2148,15 @@ export default function ProfilPage() {
                                   Pågående
                                 </span>
                               </div>
-                              <button
-                                onClick={() => handleMarkPayoutPaid(payout.id)}
-                                disabled={markingPaidId === payout.id}
-                                style={{
-                                  padding: '11px 16px', borderRadius: 12, border: 'none',
-                                  background: markingPaidId === payout.id ? 'rgba(34,197,94,0.5)' : '#22c55e',
-                                  color: '#0a0a0a', cursor: markingPaidId === payout.id ? 'not-allowed' : 'pointer',
-                                  fontFamily: 'inherit', fontWeight: 700, fontSize: '0.84rem', whiteSpace: 'nowrap',
-                                }}
-                              >
-                                {markingPaidId === payout.id ? 'Markerar...' : 'Markera klar'}
-                              </button>
+                              <span style={{ padding: '9px 12px', borderRadius: 999, border: '1px solid var(--border)', color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                Uppdateras automatiskt
+                              </span>
                             </div>
                           )
                         })}
                     </div>
                   </div>
                 )}
-
                 {/* Quick link to all orders */}
                 <button
                   onClick={() => handleTabChange('orders')}
@@ -1583,126 +2169,241 @@ export default function ProfilPage() {
 
             {activeTab === 'orders' && (
               <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
-                {isMobile && (
-                  <div style={{ marginBottom: 18 }}>
-                    <MobileSectionIntro
-                      eyebrow="Bokningar"
-                      title="Följ varje leverans utan friktion."
-                      subtitle="Här ska det vara självklart om något väntar på betalning, är på väg eller redan är klart."
-                      meta={`${orders.length} totalt`}
-                    />
-                  </div>
-                )}
-                <SectionTitle title="Mina bokningar" subtitle="Här ska kundens status alltid vara tydlig: väntar, accepterad, på väg eller levererad." />
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0,1fr))', gap: 12, marginBottom: 16 }}>
-                  {[
-                    { label: 'Aktiva', value: orders.filter(o => !['cancelled', 'confirmed'].includes(o.status)).length, hint: 'kräver uppföljning' },
-                    { label: 'Väntar betalning', value: orders.filter(o => o.status === 'pending').length, hint: 'redo för checkout' },
-                    { label: 'På väg', value: orders.filter(o => ['picked_up', 'in_transit'].includes(o.status)).length, hint: 'leveranser i drift' },
-                    { label: 'Klara', value: orders.filter(o => ['delivered', 'confirmed'].includes(o.status)).length, hint: 'levererat / bekräftat' },
-                  ].map((item) => (
-                    <div key={item.label} style={{ padding: isMobile ? 14 : 16, borderRadius: 18, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.72)', border: '1px solid var(--border)', boxShadow: isMobile ? 'none' : '0 10px 24px rgba(15,23,42,0.04)' }}>
-                      <p style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>{item.label}</p>
-                      <p style={{ fontSize: isMobile ? '1.2rem' : '1.4rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em', marginBottom: 4 }}>{item.value}</p>
-                      <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>{item.hint}</p>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {orders.filter(o => showHistory || o.status !== 'cancelled').length === 0 && (
-                    <div style={{ padding: 28, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center', color: 'var(--muted)' }}>
-                      Inga aktiva bokningar. Börja med att boka från en aktiv resa eller låt AI:n matcha dig.
-                    </div>
-                  )}
-                  {orders.filter(o => showHistory || o.status !== 'cancelled').map((order) => {
-                      const status = ORDER_STATUS[order.status] || ORDER_STATUS.pending
-                      const canPay = order.sender_id === userId && order.status === 'pending'
-                      const isCarrierOrder = getOrderCarrierId(order) === userId
-                      return (
-                        <div key={order.id} style={{ padding: isMobile ? 16 : 20, borderRadius: isMobile ? 22 : 22, background: isDark ? 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))' : 'linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,252,0.98))', border: '1px solid var(--border)', display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', gap: isMobile ? 12 : 16, alignItems: isMobile ? 'flex-start' : 'center', boxShadow: isMobile ? 'none' : '0 14px 32px rgba(15,23,42,0.05)' }}>
-                          <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>{order.description || 'Bokning'}</p>
-                            <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6 }}>{order.pickup_address} → {order.dropoff_address}</p>
-                            {(() => {
-                              const carrierId = getOrderCarrierId(order)
-                              const carrierUser = (order as any)._carrier as { name?: string } | null
-                              const carrierName = carrierUser?.name || (order as any).carrier_name || null
-                              return carrierId && carrierId !== userId ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
-                                  <Shield size={11} style={{ color: 'var(--muted)', flexShrink: 0 }} />
-                                  <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Bärare:</span>
-                                  <button onClick={() => setViewProfileUserId(carrierId)} style={{ background: 'none', border: 'none', padding: 0, fontSize: '0.76rem', fontWeight: 600, color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
-                                    {carrierName || 'Visa profil'}
-                                  </button>
+                {(() => {
+                  const visiblePackages = myPackages.filter((pkg) => {
+                    const isHistoryPackage = ['cancelled', 'expired'].includes(pkg.status)
+                    if (customerJourneyPackages.some((journeyPkg) => journeyPkg.id === pkg.id)) return true
+                    return showHistory && isHistoryPackage
+                  })
+                  const stats = [
+                    { label: 'Aktiva', value: customerJourneyPackages.filter((pkg) => pkg.status !== 'confirmed').length, hint: 'kräver uppföljning' },
+                    { label: 'Betalda', value: customerJourneyPackages.filter((pkg) => pkg.status === 'paid').length, hint: 'betalning säkrad hos Gonow' },
+                    { label: 'På väg', value: customerJourneyPackages.filter((pkg) => ['picked_up', 'in_transit', 'delivered'].includes(pkg.status)).length, hint: 'leveranser i drift' },
+                    { label: 'Klara', value: customerJourneyPackages.filter((pkg) => pkg.status === 'confirmed').length, hint: 'bekräftade resor' },
+                  ]
+
+                  return (
+                    <>
+                      {isMobile && (
+                        <div style={{ marginBottom: 18 }}>
+                          <MobileSectionIntro
+                            eyebrow="Bokningar"
+                            title="Följ varje paket i samma resa."
+                            subtitle="Bokning, betalning, spårning och bekräftelse ska hänga ihop utan att du behöver förstå interna betalningssteg."
+                            meta={`${myPackages.length} totalt`}
+                          />
+                        </div>
+                      )}
+                      <SectionTitle title="Mina bokningar" subtitle="Paketresan visas här som en sammanhängande Gonow-resa från bokning till bekräftad leverans." />
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0,1fr))', gap: 12, marginBottom: 16 }}>
+                        {stats.map((item) => (
+                          <div key={item.label} style={{ padding: isMobile ? 14 : 16, borderRadius: 20, background: isDark ? 'rgba(255,255,255,0.03)' : 'linear-gradient(180deg, rgba(255,255,255,0.92), rgba(244,248,255,0.98))', border: '1px solid var(--border)', boxShadow: isMobile ? 'none' : '0 12px 28px rgba(15,23,42,0.045)' }}>
+                            <p style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>{item.label}</p>
+                            <p style={{ fontSize: isMobile ? '1.2rem' : '1.4rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em', marginBottom: 4 }}>{item.value}</p>
+                            <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>{item.hint}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {visiblePackages.length === 0 && (
+                          <div style={{ padding: 28, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center', color: 'var(--muted)' }}>
+                            Inga aktiva bokningar. Börja med att boka från en aktiv resa eller låt Gonow hitta rätt transport.
+                          </div>
+                        )}
+                        {visiblePackages.map((pkg) => {
+                          const statusMeta = getPackageStatusMeta(pkg.status)
+                          const linkedOrder = orderByPackageId.get(pkg.id)
+                          const driverName = senderMatchByPackageId.get(pkg.id)?.drivers?.name
+                          const canPayNow = pkg.status === 'matched' && Boolean(linkedOrder) && isAwaitingPayment(linkedOrder)
+                          const canConfirmPackage = pkg.status === 'delivered'
+                          const isCompletedJourney = pkg.status === 'confirmed'
+
+                          return (
+                            <div key={pkg.id} style={{ padding: isMobile ? 16 : 20, borderRadius: 24, background: isDark ? 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))' : 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(243,248,255,0.99))', border: '1px solid var(--border)', display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', gap: isMobile ? 12 : 16, alignItems: isMobile ? 'flex-start' : 'center', boxShadow: isMobile ? 'none' : '0 16px 36px rgba(15,23,42,0.05)' }}>
+                              <div style={{ minWidth: 0 }}>
+                                <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                                  {pkg.from_city} {'\u2192'} {pkg.to_city}
+                                </p>
+                                <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6 }}>
+                                  {pkg.description || 'Paketbokning'}
+                                </p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+                                  {pkg.weight_kg > 0 && <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{pkg.weight_kg} kg</span>}
+                                  {getOrderPaymentSummary(linkedOrder) ? <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{getOrderPaymentSummary(linkedOrder)}</span> : null}
+                                  {driverName ? <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Transport via {driverName}</span> : null}
                                 </div>
-                              ) : null
-                            })()}
-                            {isCarrierOrder && (
-                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-                                {order.status === 'matched' && (
-                                  <button onClick={() => handleOrderStatusUpdate(order.id, 'picked_up')} style={{ padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(124,58,237,0.25)', background: 'rgba(124,58,237,0.08)', color: '#7c3aed', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>
-                                    {updatingOrderId === order.id ? 'Sparar...' : 'Markera upphämtad'}
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: 10, flexShrink: 0, width: isMobile ? '100%' : 'auto' }}>
+                                <span style={{ padding: '5px 10px', borderRadius: 999, fontSize: '0.72rem', color: statusMeta.color, background: statusMeta.bg }}>
+                                  {statusMeta.label}
+                                </span>
+                                {linkedOrder && canPayNow ? (
+                                  <button onClick={() => handlePay(linkedOrder.id)} className="btn-primary" style={{ padding: '10px 14px', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}>
+                                    {payingId === linkedOrder.id ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Startar...</> : <><CreditCard size={13} /> Betala</>}
+                                  </button>
+                                ) : canConfirmPackage ? (
+                                  <Link href={`/paket/${pkg.id}`} className="btn-primary" style={{ padding: '10px 14px', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}>
+                                    Bekräfta leverans
+                                  </Link>
+                                ) : isCompletedJourney ? (
+                                  <Link href={`/paket/${pkg.id}`} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--gn-030)', color: 'var(--gn-dk)', background: 'var(--gn-008)', fontWeight: 700, fontSize: '0.78rem', textDecoration: 'none', width: isMobile ? '100%' : 'auto' }}>
+                                    Visa avslutad resa
+                                  </Link>
+                                ) : (
+                                  <Link href={`/paket/${pkg.id}`} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--gn)', color: 'var(--gn)', background: '#0a0a0a', fontWeight: 700, fontSize: '0.78rem', textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap', width: isMobile ? '100%' : 'auto' }}>
+                                    <MapPin size={12} /> Spåra paket
+                                  </Link>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+                        {myPackages.some((pkg) => ['cancelled', 'expired'].includes(pkg.status)) && (
+                          <button
+                            onClick={() => setShowHistory((h) => !h)}
+                            style={{ padding: '10px 16px', borderRadius: 12, border: '1px dashed var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.8rem', fontWeight: 600, textAlign: 'center' }}
+                          >
+                            {showHistory
+                              ? 'Dölj historik'
+                              : `Visa historik (${myPackages.filter((pkg) => ['cancelled', 'expired'].includes(pkg.status)).length} avslutade)`}
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+            )}
+
+            {activeTab === 'package_deliveries' && (() => {
+              const deliveries = packageDeliveries
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  {isMobile && (
+                  <MobileSectionIntro
+                    eyebrow="Paket"
+                    title="Pågående leveranser."
+                    subtitle="Dina paket som är matchade och på väg. Följ statusen i realtid och spåra leveransen."
+                    meta={`${deliveries.length} aktiva`}
+                  />
+                )}
+                  <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                    {!isMobile && (
+                      <SectionTitle
+                        title="Pågående leveranser"
+                        subtitle="Dina skickade paket som nu är matchade med en förare och på väg."
+                      />
+                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, minmax(0,1fr))' : 'repeat(3, minmax(0,1fr))', gap: 12, marginBottom: 20 }}>
+                      {[
+                        { label: 'Transport klara', value: myPackages.filter(p => p.status === 'matched').length, hint: 'förare utsedd' },
+                        { label: 'Betalda', value: myPackages.filter(p => p.status === 'paid').length, hint: 'betalning säkrad hos Gonow' },
+                        { label: 'På väg', value: myPackages.filter(p => ['picked_up', 'in_transit'].includes(p.status)).length, hint: 'under leverans' },
+                      ].map(item => (
+                        <div key={item.label} style={{ padding: isMobile ? 14 : 16, borderRadius: 18, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                          <p style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>{item.label}</p>
+                          <p style={{ fontSize: isMobile ? '1.2rem' : '1.4rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em', marginBottom: 4 }}>{item.value}</p>
+                          <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>{item.hint}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {deliveries.length === 0 ? (
+                      <div style={{ padding: 32, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
+                        <Package size={28} style={{ color: 'var(--muted)', marginBottom: 10 }} />
+                        <p style={{ fontSize: '0.88rem', color: 'var(--muted)' }}>Inga pågående leveranser.</p>
+                        <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 4, lineHeight: 1.65 }}>
+                          Bokningar som matchats med en förare och är på väg visas här.
+                        </p>
+                        <button onClick={() => handleTabChange('my_packages')} className="btn-primary" style={{ marginTop: 16, padding: '10px 16px', display: 'inline-flex', gap: 8 }}>
+                          Skicka paket <ArrowRight size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        {deliveries.map((pkg) => {
+                          const linkedOrder = orderByPackageId.get(pkg.id)
+                          const linkedMatch = senderMatchByPackageId.get(pkg.id)
+                          const carrierId = linkedMatch?.driver_id || (linkedOrder ? getOrderCarrierId(linkedOrder) : null)
+                          const carrierName = linkedMatch?.drivers?.name || (linkedOrder as any)?._carrier?.name || null
+                          const statusMeta = getPackageStatusMeta(pkg.status)
+                          const stepIndex = PACKAGE_FLOW_STEPS.findIndex((step) => step.status === pkg.status)
+                          return (
+                            <div key={pkg.id} style={{ padding: isMobile ? 18 : 22, borderRadius: 22, background: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
+                                    <MapPin size={14} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)' }}>{pkg.from_city || 'Upphämtning'}</span>
+                                    <span style={{ color: 'var(--muted)', flexShrink: 0 }}>{'\u2192'}</span>
+                                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)' }}>{pkg.to_city || 'Avlämning'}</span>
+                                  </div>
+                                  <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
+                                    {pkg.description || 'Paket'}
+                                    {pkg.weight_kg ? ` · ${pkg.weight_kg} kg` : ''}
+                                    {getOrderPaymentSummary(linkedOrder) ? ` · ${getOrderPaymentSummary(linkedOrder)}` : ''}
+                                  </p>
+                                  {carrierId && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
+                                      <Shield size={11} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+                                      <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Transport via</span>
+                                      <button onClick={() => setViewProfileUserId(carrierId)} style={{ background: 'none', border: 'none', padding: 0, fontSize: '0.76rem', fontWeight: 600, color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                                        {carrierName || 'Visa profil'}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                                <div style={{ padding: '6px 12px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700, background: statusMeta.bg, color: statusMeta.color, flexShrink: 0 }}>
+                                  {statusMeta.shortLabel}
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+                                {PACKAGE_FLOW_STEPS.map((step, i) => {
+                                  const done = i < stepIndex
+                                  const current = i === stepIndex
+                                  return (
+                                    <div key={step.status} style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: 1 }}>
+                                        <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${done || current ? step.color : 'var(--border)'}`, background: done ? step.color : current ? `${step.color}22` : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                          {done && <CheckCircle2 size={10} style={{ color: '#fff' }} />}
+                                        </div>
+                                        <span style={{ fontSize: '0.58rem', fontWeight: current ? 700 : 500, color: done || current ? 'var(--text)' : 'var(--muted)', textAlign: 'center', lineHeight: 1.2 }}>{step.label}</span>
+                                      </div>
+                                      {i < PACKAGE_FLOW_STEPS.length - 1 && (
+                                        <div style={{ height: 2, flex: 1, background: done ? step.color : 'var(--border)', margin: '0 2px', marginBottom: 16, flexShrink: 0 }} />
+                                      )}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                <Link href={`/paket/${pkg.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--gn)', color: 'var(--gn)', background: '#0a0a0a', fontWeight: 700, fontSize: '0.78rem', textDecoration: 'none' }}>
+                                  <MapPin size={12} /> Följ paket
+                                </Link>
+                                {linkedOrder && pkg.status === 'matched' && isAwaitingPayment(linkedOrder) && (
+                                  <button onClick={() => handlePay(linkedOrder.id)} className="btn-primary" style={{ padding: '9px 14px' }}>
+                                    {payingId === linkedOrder.id ? 'Startar...' : 'Betala transport'}
                                   </button>
                                 )}
-                                {order.status === 'picked_up' && (
-                                  <button onClick={() => handleOrderStatusUpdate(order.id, 'in_transit')} style={{ padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(20,184,166,0.25)', background: 'rgba(20,184,166,0.08)', color: '#0f766e', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>
-                                    {updatingOrderId === order.id ? 'Sparar...' : 'Markera på väg'}
-                                  </button>
+                                {linkedMatch?.proposed_price != null && (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 12px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--muted)', fontWeight: 600, fontSize: '0.78rem' }}>
+                                    Pris {linkedMatch.proposed_price} kr
+                                  </span>
                                 )}
-                                {order.status === 'in_transit' && (
-                                  <button onClick={() => handleOrderStatusUpdate(order.id, 'delivered')} style={{ padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(34,197,94,0.25)', background: 'rgba(34,197,94,0.08)', color: '#15803d', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>
-                                    {updatingOrderId === order.id ? 'Sparar...' : 'Markera levererad'}
+                                {pkg.status === 'delivered' && linkedOrder && (
+                                  <button onClick={() => handleOrderStatusUpdate(linkedOrder.id, 'confirmed')} className="btn-primary" style={{ padding: '9px 14px', background: 'var(--gn-dk)', borderColor: 'var(--gn-dk)' }}>
+                                    {updatingOrderId === linkedOrder.id ? 'Sparar...' : 'Bekräfta leverans'}
                                   </button>
                                 )}
                               </div>
-                            )}
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: 10, flexShrink: 0, width: isMobile ? '100%' : 'auto' }}>
-                            <span style={{ padding: '5px 10px', borderRadius: 999, fontSize: '0.72rem', color: status.color, background: status.bg }}>{status.label}</span>
-                            <strong style={{ color: 'var(--text)', fontSize: isMobile ? '1rem' : undefined }}>{order.price} kr</strong>
-                            {canPay ? (
-                              <button onClick={() => handlePay(order.id)} className="btn-primary" style={{ padding: '10px 14px', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}>
-                                {payingId === order.id ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Startar...</> : <><CreditCard size={13} /> Betala</>}
-                              </button>
-                            ) : order.status === 'delivered' && order.sender_id === userId ? (
-                              <button
-                                onClick={() => handleOrderStatusUpdate(order.id, 'confirmed')}
-                                className="btn-primary"
-                                style={{ padding: '10px 14px', background: '#15803d', borderColor: '#15803d', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}
-                              >
-                                {updatingOrderId === order.id ? 'Sparar...' : 'Bekräfta leverans'}
-                              </button>
-                            ) : (
-                              <Link href={`/spara/${order.id}`} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 14px', borderRadius: 10, border: '1px solid #22c55e', color: '#22c55e', background: '#0a0a0a', fontWeight: 700, fontSize: '0.78rem', textDecoration: 'none', cursor: 'pointer', whiteSpace: 'nowrap', width: isMobile ? '100%' : 'auto' }}>
-                                <MapPin size={12} /> Spåra
-                              </Link>
-                            )}
-                            {['pending', 'matched'].includes(order.status) && !isCarrierOrder && (
-                              <button
-                                onClick={() => handleCancelOrder(order.id)}
-                                disabled={cancellingOrderId === order.id}
-                                style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.06)', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.75rem', fontWeight: 600, opacity: cancellingOrderId === order.id ? 0.6 : 1, width: isMobile ? '100%' : 'auto' }}
-                              >
-                                {cancellingOrderId === order.id ? 'Avbokar...' : 'Avboka'}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                    {orders.some(o => o.status === 'cancelled') && (
-                      <button
-                        onClick={() => setShowHistory(h => !h)}
-                        style={{ padding: '10px 16px', borderRadius: 12, border: '1px dashed var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.8rem', fontWeight: 600, textAlign: 'center' }}
-                      >
-                        {showHistory
-                          ? 'Dölj historik'
-                          : `Visa historik (${orders.filter(o => o.status === 'cancelled').length} avbrutna)`}
-                      </button>
+                            </div>
+                          )
+                        })}
+                      </div>
                     )}
                   </div>
-              </div>
-            )}
+                </div>
+              )
+            })()}
 
             {activeTab === 'lift_offers' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -1738,7 +2439,7 @@ export default function ProfilPage() {
                     const offerStatusMeta: Record<string, { label: string; color: string; bg: string }> = {
                       offered:   { label: 'Erbjuden',  color: '#b45309', bg: 'rgba(245,158,11,0.12)' },
                       matched:   { label: 'Matchad',   color: '#1d4ed8', bg: 'rgba(59,130,246,0.12)' },
-                      open:      { label: 'Öppen',     color: '#15803d', bg: 'rgba(34,197,94,0.10)' },
+                      open:      { label: 'Öppen',     color: 'var(--gn-dk)', bg: 'var(--gn-010)' },
                       cancelled: { label: 'Avbruten',  color: '#64748b', bg: 'rgba(148,163,184,0.14)' },
                       expired:   { label: 'Utgått',    color: '#64748b', bg: 'rgba(148,163,184,0.14)' },
                     }
@@ -1788,14 +2489,14 @@ export default function ProfilPage() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                               <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.2)' }}>
                                 <p style={{ fontSize: '0.82rem', fontWeight: 700, color: '#1d4ed8', margin: '0 0 4px' }}>
-                                  {passengerName} har accepterat — resan är bekräftad!
+                                  {passengerName} har accepterat - resan är bekräftad!
                                 </p>
                                 {lift.users?.phone ? (
                                   <a href={`tel:${lift.users.phone}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', color: '#1d4ed8', fontWeight: 600, textDecoration: 'none' }}>
                                     <Phone size={12} /> {lift.users.phone}
                                   </a>
                                 ) : (
-                                  <p style={{ fontSize: '0.74rem', color: 'var(--muted)', margin: 0 }}>Ingen telefon sparad — chatta nedan</p>
+                                  <p style={{ fontSize: '0.74rem', color: 'var(--muted)', margin: 0 }}>Ingen telefon sparad - chatta nedan</p>
                                 )}
                               </div>
                               <LiftChat liftId={lift.id} />
@@ -1842,7 +2543,7 @@ export default function ProfilPage() {
                     if (myLiftOffers.length === 0) return (
                       <div style={{ padding: 32, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
                         <Users size={28} style={{ color: 'var(--muted)', marginBottom: 10 }} />
-                        <p style={{ fontSize: '0.88rem', color: 'var(--muted)' }}>Inga erbjudanden än.</p>
+                        <p style={{ fontSize: '0.88rem', color: 'var(--muted)' }}>Inga erbjudanden Än.</p>
                         <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 4 }}>Gå till Lift och klicka &quot;Erbjud plats&quot; på en förfrågan för att komma igång.</p>
                       </div>
                     )
@@ -1899,90 +2600,135 @@ export default function ProfilPage() {
                     <MobileSectionIntro
                       eyebrow="Förfrågningar"
                       title="Både skickat och inkommande på ett ställe."
-                      subtitle="Som kund ska du se svarsläge direkt. Som förare ska du snabbt kunna sortera vad som är värt att acceptera."
-                      meta={`${pendingIncoming} nya`}
+                      subtitle="Som kund ser du öppna paketresor som ännu inte låsts. Som förare ser du inkommande lift separat från paketflödet."
+                      meta={`${customerPendingCount} öppna`}
                     />
                   </div>
                 )}
                 <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
-                  <SectionTitle title="Mina skickade förfrågningar" subtitle="Det här är den viktigaste kundvyn att bygga klart vidare på." />
-                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, minmax(0,1fr))', gap: 10, marginBottom: 14 }}>
-                    {[
-                      { label: 'Skickade', value: myRequests.length },
-                      { label: 'Accepterade', value: myRequests.filter(item => item.status === 'accepted').length },
-                      { label: 'Väntar svar', value: myRequests.filter(item => item.status === 'pending').length },
-                    ].map((item) => (
-                      <div key={item.label} style={{ padding: 14, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                        <p style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>{item.label}</p>
-                        <p style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em' }}>{item.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {myRequests.length === 0 ? (
-                      <p style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>Inga skickade förfrågningar än.</p>
-                    ) : myRequests.map((item) => {
-                      const status = BOOKING_STATUS[item.status] || BOOKING_STATUS.pending
-                      const linkedOrder = orderByBookingRequestId.get(item.id) || (item.order_id ? orderById.get(item.order_id) : undefined) || orderById.get(item.id)
-                      const canPayRequestOrder = linkedOrder?.sender_id === userId && linkedOrder.status === 'pending'
-                      const fallbackPayOrderId = item.order_id || linkedOrder?.id || item.id
-                      return (
-                        <div key={item.id} style={{ padding: 16, borderRadius: isMobile ? 18 : 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
-                            <strong style={{ color: 'var(--text)', fontSize: '0.84rem' }}>{item.pickup_address} → {item.dropoff_address}</strong>
-                            <span style={{ padding: '4px 8px', borderRadius: 999, fontSize: '0.68rem', color: status.color, background: status.bg }}>{status.label}</span>
-                          </div>
-                          <p style={{ fontSize: '0.76rem', color: 'var(--muted)' }}>{item.description || 'Ingen extra beskrivning'}</p>
-                          {item.trips && (
-                            <p style={{ fontSize: '0.74rem', color: 'var(--muted)', marginTop: 8 }}>
-                              Rutt: {item.trips.from_city} {'\u2192'} {item.trips.to_city}
-                            </p>
-                          )}
-                          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
-                            {canPayRequestOrder && (
-                              <button onClick={() => handlePay(linkedOrder.id)} className="btn-primary" style={{ padding: '10px 14px', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}>
-                                {payingId === linkedOrder.id ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Startar...</> : <><CreditCard size={13} /> Betala nu</>}
-                              </button>
-                            )}
-                            {!canPayRequestOrder && item.status === 'accepted' && fallbackPayOrderId && (
-                              <button onClick={() => handlePay(fallbackPayOrderId)} className="btn-primary" style={{ padding: '10px 14px', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}>
-                                {payingId === fallbackPayOrderId ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Startar...</> : <><CreditCard size={13} /> Betala nu</>}
-                              </button>
-                            )}
-                            {linkedOrder && linkedOrder.status !== 'pending' && (
-                              <Link href={`/spara/${linkedOrder.id}`} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--accent)', color: '#0a0a0a', background: 'var(--accent)', fontWeight: 700, fontSize: '0.78rem', textDecoration: 'none', cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}>
-                                <MapPin size={12} /> Spåra order
-                              </Link>
-                            )}
-                            {item.status === 'accepted' && !linkedOrder && (
-                              <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>
-                                Accepterad. Order synkas in för betalning.
-                              </span>
-                            )}
-                            {item.status === 'pending' && (
-                              <button
-                                onClick={() => handleCancel(item.id)}
-                                disabled={cancellingId === item.id}
-                                style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.07)', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', fontWeight: 600, opacity: cancellingId === item.id ? 0.6 : 1, width: isMobile ? '100%' : 'auto' }}
-                              >
-                                {cancellingId === item.id ? 'Avbryter...' : 'Avbryt förfrågan'}
-                              </button>
-                            )}
-                          </div>
+                  {(() => {
+                    return (
+                      <>
+                        <SectionTitle title="Mina öppna paketresor" subtitle="Här ser du bara det som fortfarande väntar på transport eller betalning. Pågående paketresor följer du under Bokningar." />
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, minmax(0,1fr))', gap: 10, marginBottom: 14 }}>
+                          {[
+                            { label: 'Aktiva', value: customerPendingCount },
+                            { label: 'Väntar transport', value: customerWaitingMatchCount },
+                            { label: 'Väntar betalning', value: customerWaitingEscrowCount },
+                          ].map((item) => (
+                            <div key={item.label} style={{ padding: 14, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                              <p style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>{item.label}</p>
+                              <p style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em' }}>{item.value}</p>
+                            </div>
+                          ))}
                         </div>
-                      )
-                    })}
-                  </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          {customerRequestPackages.length === 0 ? (
+                            <p style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>Inga öppna förfrågningar just nu. När Gonow har låst transporten fortsätter resan under Bokningar.</p>
+                          ) : customerRequestPackages.map((pkg) => {
+                            const statusMeta = getPackageStatusMeta(pkg.status)
+                            const linkedOrder = orderByPackageId.get(pkg.id)
+                            const linkedMatch = senderMatchByPackageId.get(pkg.id)
+                            const canPayNow = pkg.status === 'matched' && Boolean(linkedOrder) && isAwaitingPayment(linkedOrder)
+
+                            return (
+                              <div key={pkg.id} style={{ padding: 16, borderRadius: isMobile ? 18 : 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+                                  <strong style={{ color: 'var(--text)', fontSize: '0.84rem' }}>{pkg.from_city} {'\u2192'} {pkg.to_city}</strong>
+                                  <span style={{ padding: '4px 8px', borderRadius: 999, fontSize: '0.68rem', color: statusMeta.color, background: statusMeta.bg }}>{statusMeta.label}</span>
+                                </div>
+                                <p style={{ fontSize: '0.76rem', color: 'var(--muted)' }}>{pkg.description || 'Paketresa hos Gonow'}</p>
+                                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
+                                  {pkg.weight_kg ? <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>{pkg.weight_kg} kg</span> : null}
+                                  {getOrderPaymentSummary(linkedOrder) ? <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>{getOrderPaymentSummary(linkedOrder)}</span> : null}
+                                  {linkedMatch?.drivers?.name ? <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>Transport via {linkedMatch.drivers.name}</span> : null}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
+                                  {linkedOrder && canPayNow ? (
+                                    <button onClick={() => handlePay(linkedOrder.id)} className="btn-primary" style={{ padding: '10px 14px', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}>
+                                      {payingId === linkedOrder.id ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Startar...</> : <><CreditCard size={13} /> Betala nu</>}
+                                    </button>
+                                  ) : (
+                                    <Link href={`/paket/${pkg.id}`} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--gn)', color: 'var(--gn)', background: '#0a0a0a', fontWeight: 700, fontSize: '0.78rem', textDecoration: 'none', width: isMobile ? '100%' : 'auto' }}>
+                                      <MapPin size={12} />
+                                      {pkg.status === 'open' ? 'Följ matchning' : 'Öppna paketresa'}
+                                    </Link>
+                                  )}
+
+                                  {pkg.status === 'open' && (
+                                    <span style={{ fontSize: '0.74rem', color: 'var(--muted)', alignSelf: 'center' }}>
+                                      Gonow söker fortfarande rätt transport.
+                                    </span>
+                                  )}
+                                  {pkg.status === 'matched' && !canPayNow && (
+                                    <span style={{ fontSize: '0.74rem', color: 'var(--muted)', alignSelf: 'center' }}>
+                                      Transporten är säkrad. Paketresan fortsätter nu under Bokningar.
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )
+                  })()}
                 </div>
 
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {/* New flow: driver_pending_confirmation from package_matches */}
+                {driverIncoming.filter(m => m.status === 'driver_pending_confirmation').length > 0 && (
+                  <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24, border: '1px solid rgba(245,158,11,0.3)' }}>
+                    <SectionTitle title="Paketförfrågningar — svara snart" subtitle="Kunder vill skicka paket med din resa. Acceptera eller neka inom 30 min." />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {driverIncoming.filter(m => m.status === 'driver_pending_confirmation').map(match => {
+                        const pkg = match.packages
+                        const expiresIn = match.expires_at
+                          ? Math.max(0, Math.round((new Date(match.expires_at).getTime() - Date.now()) / 60000))
+                          : null
+                        return (
+                          <div key={match.id} style={{ borderRadius: 14, border: '1px solid rgba(245,158,11,0.25)', background: 'rgba(245,158,11,0.04)', padding: '14px 16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text)', margin: '0 0 3px' }}>
+                                  {pkg?.from_city ?? '?'} {'\u2192'} {pkg?.to_city ?? '?'}
+                                </p>
+                                <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: 0 }}>
+                                  {pkg?.description ?? 'Paket'}{pkg?.weight_kg ? ` · ${pkg.weight_kg} kg` : ''}
+                                  {match.proposed_price != null ? ` · Upp till ${match.proposed_price} kr` : ''}
+                                </p>
+                                {expiresIn !== null && (
+                                  <p style={{ fontSize: '0.7rem', color: '#b45309', margin: '4px 0 0' }}>Svarar senast om {expiresIn} min</p>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                                <button
+                                  onClick={() => handleDriverMatchAction(match.id, 'driver_decline')}
+                                  disabled={actionMatchId === match.id}
+                                  style={{ padding: '7px 12px', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', fontWeight: 600, cursor: actionMatchId === match.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', opacity: actionMatchId === match.id ? 0.6 : 1 }}
+                                >Neka</button>
+                                <button
+                                  onClick={() => handleDriverMatchAction(match.id, 'driver_confirm')}
+                                  disabled={actionMatchId === match.id}
+                                  style={{ padding: '7px 14px', borderRadius: 9, border: 'none', background: 'var(--accent)', color: '#0a0a0a', fontWeight: 700, cursor: actionMatchId === match.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', opacity: actionMatchId === match.id ? 0.6 : 1 }}
+                                >{actionMatchId === match.id ? '...' : 'Acceptera'}</button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                  </div>
+                  </div>
+                )}
+
                 <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
-                  <SectionTitle title="Inkommande till mina resor" subtitle="Här ska bärare kunna acceptera flera, men alltid med tydlig kapacitet." />
-                  <div style={{ marginBottom: 14, padding: '14px 16px', borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  <SectionTitle title="Inkommande lift till mina resor" subtitle="Hantera passagerarförfrågningar separat medan paketresor fortsätter i Gonows paketflöde." />
+                  <div style={{ marginBottom: 14, padding: '16px 18px', borderRadius: 20, background: isDark ? 'rgba(255,255,255,0.03)' : 'linear-gradient(180deg, rgba(255,255,255,0.93), rgba(244,248,255,0.98))', border: '1px solid var(--border)', boxShadow: isMobile || isDark ? 'none' : '0 14px 30px rgba(15,23,42,0.045)' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0,1fr))', gap: 10 }}>
                       {[
-                        { label: 'Inkommande', value: incoming.length },
-                        { label: 'Nya', value: incoming.filter(item => item.status === 'pending').length },
-                        { label: 'Accepterade', value: incoming.filter(item => item.status === 'accepted').length },
+                        { label: 'Lift inkommande', value: incoming.length },
+                        { label: 'Nya lift', value: incoming.filter(item => item.status === 'pending').length },
+                        { label: 'Accepterade lift', value: incoming.filter(item => item.status === 'accepted').length },
                         { label: 'Mina resor', value: myTrips.length },
                       ].map((item) => (
                         <div key={item.label}>
@@ -1999,13 +2745,13 @@ export default function ProfilPage() {
                   )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {incoming.length === 0 ? (
-                      <p style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>Inga inkommande förfrågningar ännu.</p>
+                      <p style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>Inga inkommande liftförfrågningar ännu.</p>
                     ) : incoming.map((item) => {
                       const status = BOOKING_STATUS[item.status] || BOOKING_STATUS.pending
                       const pending = item.status === 'pending'
                       const senderInitials = item.sender_name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '?'
                       return (
-                        <div key={item.id} style={{ padding: 16, borderRadius: isMobile ? 18 : 16, background: 'var(--surface-2)', border: `1px solid ${pending ? 'rgba(34,197,94,0.2)' : 'var(--border)'}` }}>
+                        <div key={item.id} style={{ padding: 16, borderRadius: isMobile ? 18 : 16, background: 'var(--surface-2)', border: `1px solid ${pending ? 'var(--gn-020)' : 'var(--border)'}` }}>
                           {/* Sender row */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
                             <button
@@ -2014,10 +2760,10 @@ export default function ProfilPage() {
                               title="Se profil"
                               style={{
                                 width: 42, height: 42, borderRadius: 12, flexShrink: 0,
-                                background: 'linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.08))',
-                                border: '1.5px solid rgba(34,197,94,0.3)',
+                                background: 'linear-gradient(135deg, var(--gn-020), var(--gn-008))',
+                                border: '1.5px solid var(--gn-030)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: '0.82rem', fontWeight: 800, color: '#15803d',
+                                fontSize: '0.82rem', fontWeight: 800, color: 'var(--gn-dk)',
                                 cursor: item.sender_id ? 'pointer' : 'default',
                                 transition: 'transform 0.12s ease', padding: 0,
                               }}
@@ -2042,14 +2788,14 @@ export default function ProfilPage() {
                           </div>
 
                           {/* Route + details */}
-                          <div style={{ padding: '10px 12px', borderRadius: 10, background: 'rgba(0,0,0,0.03)', border: '1px solid var(--border)', marginBottom: 10 }}>
+                          <div style={{ padding: '12px 14px', borderRadius: 14, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(245,248,252,0.85)', border: '1px solid var(--border)', marginBottom: 10 }}>
                             <p style={{ fontSize: '0.76rem', color: 'var(--text)', fontWeight: 600, marginBottom: 3 }}>
-                              {item.pickup_address} → {item.dropoff_address}
+                              {item.pickup_address} {'\u2192'} {item.dropoff_address}
                             </p>
                             {item.description && <p style={{ fontSize: '0.72rem', color: 'var(--muted)', margin: 0 }}>{item.description}</p>}
                             {item.weight_kg > 0 && <p style={{ fontSize: '0.72rem', color: 'var(--muted)', margin: '3px 0 0' }}>{item.weight_kg} kg</p>}
                             {item.sender_phone && (
-                              <a href={`tel:${item.sender_phone}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 5, fontSize: '0.72rem', color: '#15803d', textDecoration: 'none', fontWeight: 600 }}>
+                              <a href={`tel:${item.sender_phone}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 5, fontSize: '0.72rem', color: 'var(--gn-dk)', textDecoration: 'none', fontWeight: 600 }}>
                                 <Phone size={11} /> {item.sender_phone}
                               </a>
                             )}
@@ -2057,7 +2803,133 @@ export default function ProfilPage() {
 
                           {pending && (
                             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 8 }}>
-                              <button onClick={() => handleRespond(item.id, 'accepted')} style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.08)', color: '#15803d', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>
+                              <button onClick={() => handleRespond(item.id, 'accepted')} style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--gn-030)', background: 'var(--gn-008)', color: 'var(--gn-dk)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>
+                                {respondingId === item.id ? 'Sparar...' : 'Acceptera'}
+                              </button>
+                              <button onClick={() => handleRespond(item.id, 'declined')} style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.06)', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>
+                                Avböj
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+                </div>{/* closes flex column wrapper for right grid column */}
+              </div>
+            )}
+
+            {activeTab === 'my_trips' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {isMobile && (
+                  <MobileSectionIntro
+                    eyebrow="Kör & tjäna"
+                    title="Dina resor och inkommande förfrågningar."
+                    subtitle="Rutter du kör och avsändare som vill boka plats."
+                    meta={`${pendingIncoming} nya`}
+                  />
+                )}
+                <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                  {!isMobile && <SectionTitle title="Mina registrerade resor" subtitle="Rutter du kör. Avsändare kan boka plats på dessa." />}
+                  {/* AI match confirmation requests for driver */}
+                  {userId && <MatchSuggestions driverId={userId} />}
+                  {myTrips.length === 0 ? (
+                    <div style={{ padding: 32, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
+                      <Car size={28} style={{ color: 'var(--muted)', marginBottom: 10 }} />
+                      <p style={{ fontSize: '0.88rem', color: 'var(--muted)' }}>Inga registrerade resor ännu.</p>
+                      <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 4 }}>Gå till <Link href="/kor" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 700 }}>Kör</Link> för att registrera din första resa.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {myTrips.map(trip => {
+                        const tripDate = new Date(trip.departure_at)
+                        const isPast = tripDate < new Date()
+                        return (
+                          <div key={trip.id} style={{ padding: '16px 18px', borderRadius: 18, background: 'var(--surface-2)', border: `1px solid ${isPast ? 'var(--border)' : 'var(--gn-020)'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                            <div>
+                              <p style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{trip.from_city} {'\u2192'} {trip.to_city}</p>
+                              <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
+                                {tripDate.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                            <span style={{ padding: '5px 12px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700, background: isPast ? 'rgba(148,163,184,0.12)' : 'var(--gn-010)', color: isPast ? 'var(--muted)' : 'var(--gn-dk)' }}>
+                              {isPast ? 'Avslutad' : 'Kommande'}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                  <SectionTitle title="Inkommande förfrågningar" subtitle="Bokningsförfrågningar från avsändare till dina resor. Acceptera eller avböj direkt." />
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0,1fr))', gap: 10, marginBottom: 14 }}>
+                    {[
+                      { label: 'Totalt', value: incoming.length },
+                      { label: 'Nya', value: incoming.filter(item => item.status === 'pending').length },
+                      { label: 'Accepterade', value: incoming.filter(item => item.status === 'accepted').length },
+                      { label: 'Mina resor', value: myTrips.length },
+                    ].map((item) => (
+                      <div key={item.label} style={{ padding: 14, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                        <p style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>{item.label}</p>
+                        <p style={{ fontSize: '1.08rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em' }}>{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {respondError && (
+                    <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#dc2626', fontSize: '0.82rem' }}>
+                      {respondError}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {incoming.length === 0 ? (
+                      <p style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>Inga inkommande förfrågningar ännu.</p>
+                    ) : incoming.map((item) => {
+                      const status = BOOKING_STATUS[item.status] || BOOKING_STATUS.pending
+                      const pending = item.status === 'pending'
+                      const senderInitials = item.sender_name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '?'
+                      return (
+                        <div key={item.id} style={{ padding: 16, borderRadius: isMobile ? 18 : 16, background: 'var(--surface-2)', border: `1px solid ${pending ? 'var(--gn-020)' : 'var(--border)'}` }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                            <button
+                              onClick={() => item.sender_id && setViewProfileUserId(item.sender_id)}
+                              disabled={!item.sender_id}
+                              title="Se profil"
+                              style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg, var(--gn-020), var(--gn-008))', border: '1.5px solid var(--gn-030)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.82rem', fontWeight: 800, color: 'var(--gn-dk)', cursor: item.sender_id ? 'pointer' : 'default', transition: 'transform 0.12s ease', padding: 0 }}
+                              onMouseEnter={e => { if (item.sender_id) (e.currentTarget as HTMLElement).style.transform = 'scale(1.08)' }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
+                            >
+                              {senderInitials}
+                            </button>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                                <div>
+                                  <strong style={{ color: 'var(--text)', fontSize: '0.88rem', display: 'block' }}>{item.sender_name || 'Avsändare'}</strong>
+                                  {item.sender_id && (
+                                    <button onClick={() => setViewProfileUserId(item.sender_id!)} style={{ background: 'none', border: 'none', padding: 0, fontSize: '0.68rem', color: 'var(--muted)', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                                      Se profil
+                                    </button>
+                                  )}
+                                </div>
+                                <span style={{ padding: '4px 8px', borderRadius: 999, fontSize: '0.68rem', color: status.color, background: status.bg, flexShrink: 0 }}>{status.label}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ padding: '12px 14px', borderRadius: 14, background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(245,248,252,0.85)', border: '1px solid var(--border)', marginBottom: 10 }}>
+                            <p style={{ fontSize: '0.76rem', color: 'var(--text)', fontWeight: 600, marginBottom: 3 }}>{item.pickup_address} {'\u2192'} {item.dropoff_address}</p>
+                            {item.description && <p style={{ fontSize: '0.72rem', color: 'var(--muted)', margin: 0 }}>{item.description}</p>}
+                            {item.weight_kg > 0 && <p style={{ fontSize: '0.72rem', color: 'var(--muted)', margin: '3px 0 0' }}>{item.weight_kg} kg</p>}
+                            {item.sender_phone && (
+                              <a href={`tel:${item.sender_phone}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 5, fontSize: '0.72rem', color: 'var(--gn-dk)', textDecoration: 'none', fontWeight: 600 }}>
+                                <Phone size={11} /> {item.sender_phone}
+                              </a>
+                            )}
+                          </div>
+                          {pending && (
+                            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 8 }}>
+                              <button onClick={() => handleRespond(item.id, 'accepted')} style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1px solid var(--gn-030)', background: 'var(--gn-008)', color: 'var(--gn-dk)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>
                                 {respondingId === item.id ? 'Sparar...' : 'Acceptera'}
                               </button>
                               <button onClick={() => handleRespond(item.id, 'declined')} style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.06)', color: '#dc2626', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>
@@ -2073,13 +2945,314 @@ export default function ProfilPage() {
               </div>
             )}
 
+                                    {activeTab === 'my_packages' && (() => {
+              const mkGpId = (id: string) => 'GP-' + id.replace(/-/g, '').slice(0, 6).toUpperCase()
+              const active = myPackages.filter(p => ['open', 'matched', 'paid', 'picked_up', 'in_transit', 'delivered'].includes(p.status))
+              const previous = myPackages.filter(p => p.status === 'confirmed')
+              const cancelled = myPackages.filter(p => ['cancelled', 'expired'].includes(p.status))
+
+              const PkgCard = ({ pkg }: { pkg: MyPackage }) => {
+                const s = getPackageStatusMeta(pkg.status)
+                const canCancel = ['open', 'matched'].includes(pkg.status)
+                const linkedOrder = orderByPackageId.get(pkg.id)
+                const canPayNow = pkg.status === 'matched' && Boolean(linkedOrder) && isAwaitingPayment(linkedOrder)
+
+                return (
+                  <div style={{ borderRadius: 18, border: '1px solid var(--border)', background: 'var(--surface)', overflow: 'hidden' }}>
+                    <div style={{ padding: '14px 16px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ fontSize: '0.68rem', fontFamily: 'monospace', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em' }}>{mkGpId(pkg.id)}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: s.color, background: s.bg, padding: '3px 9px', borderRadius: 999 }}>{s.shortLabel}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '0 16px 10px' }}>
+                      <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', margin: '0 0 4px', letterSpacing: '-0.02em' }}>{pkg.from_city} → {pkg.to_city}</p>
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        {pkg.price_ceiling > 0 && <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>Max {pkg.price_ceiling} kr</span>}
+                        {pkg.weight_kg > 0 && <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>· {pkg.weight_kg} kg</span>}
+                        {pkg.description && <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>· {pkg.description}</span>}
+                      </div>
+                    </div>
+
+                    {['matched', 'paid', 'picked_up', 'in_transit', 'delivered'].includes(pkg.status) && (() => {
+                      const stepIdx = PACKAGE_FLOW_STEPS.findIndex(s => s.status === pkg.status)
+                      return (
+                        <div style={{ padding: '0 16px 12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+                            {PACKAGE_FLOW_STEPS.map((step, i) => {
+                              const done = i < stepIdx
+                              const curr = i === stepIdx
+                              return (
+                                <div key={step.status} style={{ display: 'flex', alignItems: 'center', flex: i < PACKAGE_FLOW_STEPS.length - 1 ? 1 : 'none' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, minWidth: 48 }}>
+                                    <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${done || curr ? step.color : 'var(--border)'}`, background: done ? step.color : curr ? `${step.color}22` : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                      {done && <svg width="8" height="7" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+                                      {curr && <div style={{ width: 7, height: 7, borderRadius: '50%', background: step.color }} />}
+                                    </div>
+                                    <span style={{ fontSize: '0.58rem', color: done || curr ? 'var(--text)' : 'var(--muted)', fontWeight: curr ? 800 : 500, textAlign: 'center', lineHeight: 1.2 }}>{step.label}</span>
+                                  </div>
+                                  {i < PACKAGE_FLOW_STEPS.length - 1 && (
+                                    <div style={{ flex: 1, height: 2, background: done ? step.color : 'var(--border)', borderRadius: 999, margin: '0 2px', marginBottom: 14 }} />
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })()}
+
+                    {pkg.status === 'open' && (
+                      <div style={{ margin: '0 16px 12px', padding: '8px 12px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>→</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text)' }}>Väntar på matchning</span>
+                      </div>
+                    )}
+
+                    {pkg.status === 'open' && <div style={{ padding: '0 16px 12px' }}><MatchSuggestions packageId={pkg.id} /></div>}
+
+                    <div style={{ padding: '10px 16px 14px', display: 'flex', gap: 8, flexWrap: 'wrap', borderTop: '1px solid var(--border)' }}>
+                      {canPayNow && linkedOrder && (
+                        <button onClick={() => handlePay(linkedOrder.id)} className="btn-primary" style={{ flex: 1, padding: '8px 12px', justifyContent: 'center' }}>
+                          {payingId === linkedOrder.id ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Startar...</> : <><CreditCard size={13} /> Betala nu</>}
+                        </button>
+                      )}
+                      {pkg.status !== 'expired' && (
+                        <Link href={`/paket/${pkg.id}`} style={{ flex: 1, textAlign: 'center', fontSize: '0.78rem', fontWeight: 700, color: 'var(--gn-dk)', textDecoration: 'none', padding: '8px 12px', borderRadius: 10, background: 'var(--gn-010)', border: '1px solid var(--gn-020)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                          Spåra →
+                        </Link>
+                      )}
+                      {pkg.status === 'expired' && (
+                        <button onClick={openPackageFlow} style={{ flex: 1, textAlign: 'center', fontSize: '0.78rem', fontWeight: 700, color: '#b45309', padding: '8px 12px', borderRadius: 10, background: 'rgba(180,83,9,0.06)', border: '1px solid rgba(180,83,9,0.2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          Publicera igen →
+                        </button>
+                      )}
+                      {pkg.status === 'delivered' && (
+                        <Link href={`/paket/${pkg.id}`} style={{ flex: 1, textAlign: 'center', fontSize: '0.78rem', fontWeight: 700, color: '#fff', textDecoration: 'none', padding: '8px 12px', borderRadius: 10, background: '#16a34a', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                          Bekräfta leverans
+                        </Link>
+                      )}
+                      {pkg.status === 'confirmed' && (
+                        <Link href={`/paket/${pkg.id}`} style={{ flex: 1, textAlign: 'center', fontSize: '0.78rem', fontWeight: 700, color: 'var(--gn-dk)', textDecoration: 'none', padding: '8px 12px', borderRadius: 10, background: 'var(--gn-010)', border: '1px solid var(--gn-020)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                          Lämna recension
+                        </Link>
+                      )}
+                      {canCancel && (
+                        <button
+                          onClick={() => handleCancelPackage(pkg.id)}
+                          disabled={cancellingPkgId === pkg.id}
+                          style={{ fontSize: '0.78rem', fontWeight: 600, color: '#dc2626', padding: '8px 12px', borderRadius: 10, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)', cursor: 'pointer', fontFamily: 'inherit', opacity: cancellingPkgId === pkg.id ? 0.6 : 1 }}
+                        >
+                          {cancellingPkgId === pkg.id ? 'Avbokar…' : 'Avboka'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              }
+
+              const activePkgIds = new Set(active.map(p => p.id))
+              const matchedFromOffers = pkgSubTab === 'active'
+                ? myDriverOffers.filter(m => m.status === 'matched' && m.packages && !activePkgIds.has(m.packages.id))
+                : []
+
+              const SUB_TABS = [
+                { key: 'active' as const, label: 'Aktiva', items: active, dim: false },
+                { key: 'previous' as const, label: 'Tidigare', items: previous, dim: false },
+                { key: 'cancelled' as const, label: 'Avbokade/Utgångna', items: cancelled, dim: true },
+              ]
+              const visibleItems = SUB_TABS.find(t => t.key === pkgSubTab)?.items ?? []
+              const isDimmed = SUB_TABS.find(t => t.key === pkgSubTab)?.dim ?? false
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div>
+                      <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', margin: '0 0 2px' }}>Mina paket</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--muted)', margin: 0 }}>Paket du skickar via Gonow</p>
+                    </div>
+                    <button onClick={openPackageFlow} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: '1.5px solid var(--gn-030)', background: 'var(--gn-008)', color: 'var(--gn-dk)', fontFamily: 'inherit', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
+                      + Nytt paket
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 4, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 12, padding: 4 }}>
+                    {SUB_TABS.map(t => {
+                      const isActive = pkgSubTab === t.key
+                      return (
+                        <button key={t.key} onClick={() => setPkgSubTab(t.key)} style={{ flex: 1, padding: '7px 10px', borderRadius: 9, border: 'none', fontFamily: 'inherit', fontSize: '0.8rem', fontWeight: isActive ? 700 : 500, cursor: 'pointer', transition: 'all 0.15s', background: isActive ? 'var(--surface)' : 'transparent', color: isActive ? 'var(--text)' : 'var(--muted)', boxShadow: isActive ? '0 1px 4px rgba(0,0,0,0.08)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                          {t.label}
+                          {t.items.length > 0 && (
+                            <span style={{ fontSize: '0.65rem', fontWeight: 700, minWidth: 18, height: 18, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: isActive ? 'var(--gn-010)' : 'rgba(0,0,0,0.06)', color: isActive ? 'var(--gn-dk)' : 'var(--muted)', padding: '0 5px' }}>
+                              {t.items.length}
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {visibleItems.length === 0 && matchedFromOffers.length === 0 ? (
+                    <div style={{ padding: 40, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
+                      <Package size={24} style={{ color: 'var(--muted)', marginBottom: 10 }} />
+                      <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: 0 }}>
+                        {pkgSubTab === 'active' ? 'Inga aktiva paket' : pkgSubTab === 'previous' ? 'Inga slutförda paket' : 'Inga avbokade eller utgångna paket'}
+                      </p>
+                      {pkgSubTab === 'active' && (
+                        <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 6 }}>
+                          <button onClick={openPackageFlow} style={{ color: 'var(--gn-dk)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', padding: 0 }}>Skicka ett paket →</button>
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, opacity: isDimmed ? 0.7 : 1 }}>
+                      {visibleItems.map(pkg => <PkgCard key={pkg.id} pkg={pkg} />)}
+                      {matchedFromOffers.map(m => {
+                        const pkg = m.packages!
+                        const driver = m.drivers
+                        return (
+                          <div key={m.id} style={{ borderRadius: 18, border: '1px solid rgba(59,130,246,0.25)', background: 'rgba(59,130,246,0.03)', overflow: 'hidden' }}>
+                            <div style={{ padding: '10px 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <div>
+                                <span style={{ fontSize: '0.65rem', fontFamily: 'monospace', color: 'var(--muted)', fontWeight: 700 }}>{'GP-' + pkg.id.replace(/-/g, '').slice(0, 6).toUpperCase()}</span>
+                                <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', margin: '2px 0 0', letterSpacing: '-0.02em' }}>{pkg.from_city} → {pkg.to_city}</p>
+                              </div>
+                              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: getPackageStatusMeta('matched').color, background: getPackageStatusMeta('matched').bg, padding: '3px 9px', borderRadius: 999 }}>{getPackageStatusMeta('matched').label}</span>
+                            </div>
+                            {driver && (
+                              <div style={{ padding: '0 16px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--gn-010)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800, color: 'var(--gn-dk)', flexShrink: 0 }}>
+                                  {driver.name?.[0]?.toUpperCase() ?? '?'}
+                                </div>
+                                <div>
+                                  <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>{driver.name ?? 'Förare'}</p>
+                                  <p style={{ fontSize: '0.7rem', color: 'var(--muted)', margin: 0 }}>{m.proposed_price ? `${m.proposed_price} kr` : ''}{driver.rating_avg ? ` · ★ ${driver.rating_avg.toFixed(1)}` : ''}</p>
+                                </div>
+                              </div>
+                            )}
+                            <div style={{ padding: '0 16px 12px', borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                              <p style={{ fontSize: '0.72rem', color: 'var(--muted)', margin: '0 0 8px' }}>→ Gonow har matchat transporten och väntar på upphämtning</p>
+                              <Link href={`/paket/${pkg.id}`} style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--gn-dk)', textDecoration: 'none', padding: '7px 14px', borderRadius: 10, background: 'var(--gn-010)', border: '1px solid var(--gn-020)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                Spåra →
+                              </Link>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
+            {activeTab === 'my_bids' && (() => {
+              const mkGpId2 = (id: string) => 'GP-' + id.replace(/-/g, '').slice(0, 6).toUpperCase()
+              const pendingCount = myDriverOffers.filter(m => m.status === 'suggested').length
+
+              const statusStyle = (status: string) => {
+                if (status === 'suggested') return { label: 'Nytt erbjudande', color: '#b45309', bg: 'rgba(245,158,11,0.1)' }
+                if (status === 'customer_accepted') return { label: 'Accepterat av dig ✓', color: 'var(--gn-dk)', bg: 'var(--gn-010)' }
+                if (status === 'driver_pending_confirmation') return { label: 'Väntar på föraren', color: '#2563eb', bg: 'rgba(37,99,235,0.08)' }
+                if (status === 'matched') return { label: 'Transport klar', color: 'var(--gn-dk)', bg: 'var(--gn-010)' }
+                return { label: 'Avböjt', color: '#64748b', bg: 'rgba(148,163,184,0.1)' }
+              }
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', margin: '0 0 4px' }}>Erbjudanden</p>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: 0 }}>
+                      Transportförslag som Gonow har hittat för dina paket. Bekräfta det alternativ som passar bäst.
+                    </p>
+                  </div>
+
+                  {pendingCount > 0 && (
+                    <div style={{ padding: '10px 14px', borderRadius: 12, background: 'rgba(146,255,99,0.06)', border: '1px solid rgba(146,255,99,0.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--gn)', flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--gn-dk)' }}>
+                        {pendingCount} nytt erbjudande{pendingCount > 1 ? 'n' : ''} väntar på ditt svar
+                      </span>
+                    </div>
+                  )}
+
+                  {myDriverOffers.length === 0 ? (
+                    <div style={{ padding: 40, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
+                      <Package size={26} style={{ color: 'var(--muted)', marginBottom: 10 }} />
+                      <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: '0 0 4px' }}>Inga erbjudanden ännu</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--muted)', margin: 0 }}>Gonow Intelligent System söker transport åt dig automatiskt.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {myDriverOffers.map(match => {
+                        const isSuggested = match.status === 'suggested'
+                        const s = statusStyle(match.status)
+                        const pkg = match.packages
+                        const driver = match.drivers
+                        return (
+                          <div key={match.id} style={{ borderRadius: 18, border: `1px solid ${isSuggested ? 'rgba(245,158,11,0.25)' : 'var(--border)'}`, background: isSuggested ? 'rgba(245,158,11,0.03)' : 'var(--surface)', overflow: 'hidden' }}>
+                            {pkg && (
+                              <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: 'var(--surface-2)' }}>
+                                <div>
+                                  <span style={{ fontSize: '0.65rem', fontFamily: 'monospace', color: 'var(--muted)', fontWeight: 700, letterSpacing: '0.06em' }}>{mkGpId2(pkg.id)}</span>
+                                  <p style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text)', margin: '1px 0 0' }}>{pkg.from_city} → {pkg.to_city}</p>
+                                </div>
+                                <Link href={`/paket/${pkg.id}`} style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--gn-dk)', textDecoration: 'none', padding: '5px 10px', borderRadius: 8, background: 'var(--gn-010)', whiteSpace: 'nowrap' }}>
+                                  Spåra →
+                                </Link>
+                              </div>
+                            )}
+                            <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--gn-010)', border: '1px solid var(--gn-020)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 800, color: 'var(--gn-dk)', flexShrink: 0 }}>
+                                {driver?.name?.[0]?.toUpperCase() ?? '?'}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>{driver?.name ?? 'Gonow-transport'}</p>
+                                <p style={{ fontSize: '0.73rem', color: 'var(--muted)', margin: '2px 0 0' }}>
+                                  <strong style={{ color: 'var(--text)' }}>{match.proposed_price ?? '—'} kr</strong>
+                                  {driver?.rating_avg ? ` · ★ ${driver.rating_avg.toFixed(1)}` : ''}
+                                </p>
+                                {match.ai_message_driver && (
+                                  <p style={{ fontSize: '0.72rem', color: 'var(--muted)', margin: '3px 0 0', fontStyle: 'italic' }}>&ldquo;{match.ai_message_driver}&rdquo;</p>
+                                )}
+                              </div>
+                              {isSuggested ? (
+                                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                                  <button
+                                    onClick={() => handleMatchAction(match.id, 'customer_decline')}
+                                    disabled={actionMatchId === match.id}
+                                    style={{ padding: '7px 12px', borderRadius: 9, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', fontWeight: 600, cursor: actionMatchId === match.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', opacity: actionMatchId === match.id ? 0.6 : 1 }}
+                                  >
+                                    Avböj
+                                  </button>
+                                  <button
+                                    onClick={() => handleMatchAction(match.id, 'customer_accept')}
+                                    disabled={actionMatchId === match.id}
+                                    style={{ padding: '7px 14px', borderRadius: 9, border: 'none', background: 'var(--accent)', color: '#0a0a0a', fontWeight: 700, cursor: actionMatchId === match.id ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontSize: '0.78rem', opacity: actionMatchId === match.id ? 0.6 : 1 }}
+                                  >
+                                    {actionMatchId === match.id ? '…' : 'Acceptera'}
+                                  </button>
+                                </div>
+                              ) : (
+                                <span style={{ padding: '4px 10px', borderRadius: 999, fontSize: '0.68rem', fontWeight: 700, color: s.color, background: s.bg, flexShrink: 0 }}>{s.label}</span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
             {activeTab === 'profile' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {isMobile && (
                   <MobileSectionIntro
                     eyebrow="Profil"
-                    title="Spara allt en gång, använd överallt."
-                    subtitle="Kontakt, roll och fordonsdata ska återanvändas i bokning, support, verifiering och payout utan att du fyller om något."
+                    title="Spara allt en gång, använd Överallt."
+                    subtitle="Kontakt, roll och fordonsdata ska Återanvändas i bokning, support, verifiering och payout utan att du fyller om något."
                     meta={`${completion}% klart`}
                   />
                 )}
@@ -2089,7 +3262,7 @@ export default function ProfilPage() {
                     <div>
                       <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--muted)', marginBottom: 8 }}>Mina sidor</p>
                       <h2 style={{ fontSize: isMobile ? '1.2rem' : '1.45rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em', marginBottom: 8 }}>
-                        Ett konto som återanvänder allt över hela flödet
+                        Ett konto som Återanvänder allt Över hela flödet
                       </h2>
                       <p style={{ fontSize: '0.82rem', lineHeight: 1.7, color: 'var(--muted)', maxWidth: 640 }}>
                         Fyll kontakt, roll och fordonsdata en gång här, så ska bokningar, resor, acceptflöden och framtida payout-logik kunna använda samma källa utan dubbelarbete.
@@ -2113,11 +3286,11 @@ export default function ProfilPage() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.05fr 0.95fr', gap: 20 }}>
                 <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
-                  <SectionTitle title="Profil och onboarding" subtitle="Fyll allt en gång här så ska resten av appen kunna återanvända uppgifterna." />
+                  <SectionTitle title="Profil och onboarding" subtitle="Fyll allt en gång här så ska resten av appen kunna Återanvända uppgifterna." />
                   <div style={{ marginBottom: 16, padding: '14px 16px', borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
                     <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--muted)', marginBottom: 8 }}>Kontobas</p>
                     <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.65 }}>
-                      Kontaktuppgifter här ska återanvändas automatiskt i bokningar, supportärenden och statusuppdateringar.
+                      Kontaktuppgifter här ska Återanvändas automatiskt i bokningar, supportärenden och statusuppdateringar.
                     </p>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
@@ -2154,7 +3327,7 @@ export default function ProfilPage() {
                               style={{
                                 padding: '9px 16px', borderRadius: 999, cursor: 'pointer',
                                 fontFamily: 'inherit', fontWeight: 600, fontSize: '0.82rem',
-                                border: `1px solid ${selected ? 'rgba(34,197,94,0.4)' : 'var(--border)'}`,
+                                border: `1px solid ${selected ? 'var(--gn-040)' : 'var(--border)'}`,
                                 background: selected ? 'var(--accent-soft)' : 'var(--surface-2)',
                                 color: selected ? 'var(--text)' : 'var(--muted)',
                                 transition: 'all 0.15s',
@@ -2192,7 +3365,7 @@ export default function ProfilPage() {
                           style={{
                             padding: '9px 14px',
                             borderRadius: 999,
-                            border: `1px solid ${meta.role_intent === value ? 'rgba(34,197,94,0.38)' : 'var(--border)'}`,
+                            border: `1px solid ${meta.role_intent === value ? 'var(--gn-038)' : 'var(--border)'}`,
                             background: meta.role_intent === value ? 'var(--accent-soft)' : 'var(--surface-2)',
                             color: meta.role_intent === value ? 'var(--text)' : 'var(--muted)',
                             cursor: 'pointer',
@@ -2248,7 +3421,7 @@ export default function ProfilPage() {
                   <div style={{ marginTop: 16, padding: 18, borderRadius: 18, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
                     <p style={{ fontSize: '0.82rem', color: 'var(--text)', fontWeight: 700, marginBottom: 8 }}>Detta ger oss nu direkt</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.78rem', color: 'var(--muted)' }}>
-                      <span>Biluppgifter kan återanvändas i `/kor`.</span>
+                      <span>Biluppgifter kan Återanvändas i `/kor`.</span>
                       <span>Lediga säten kan börja visas tydligare i framtida bokningsflöden.</span>
                       <span>Det blir mycket enklare att bygga kapacitetslogik per resa härnäst.</span>
                     </div>
@@ -2258,14 +3431,170 @@ export default function ProfilPage() {
               </div>
             )}
 
+            {/* Ã¢â€â‚¬Ã¢â€â‚¬ Lift: platshållare Ã¢â€â‚¬Ã¢â€â‚¬ */}
+            {activeTab === 'my_lift_requests' && (
+              <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                <SectionTitle title="Mina liftresor" subtitle="Lifttjänster du beställt som passagerare." />
+                <div style={{ padding: 40, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
+                  <Users size={28} style={{ color: 'var(--muted)', marginBottom: 12 }} />
+                  <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>Kommer snart</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--muted)', lineHeight: 1.7 }}>Lift-bokningar som passagerare visas här. Funktionen är under uppbyggnad.</p>
+                </div>
+              </div>
+            )}
+            {activeTab === 'lift_matched' && (
+              <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                <SectionTitle title="Matchade resor" subtitle="Liftresor där du och en förare är matchade - bekräftade och klara." />
+                <div style={{ padding: 40, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
+                  <CheckCircle2 size={28} style={{ color: 'var(--muted)', marginBottom: 12 }} />
+                  <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>Kommer snart</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--muted)', lineHeight: 1.7 }}>Matchade liftresor visas här. Funktionen är under uppbyggnad.</p>
+                </div>
+              </div>
+            )}
+            {activeTab === 'lift_history' && (
+              <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                <SectionTitle title="Historik" subtitle="Avslutade liftresor och tidigare bokningar." />
+                <div style={{ padding: 40, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
+                  <Clock size={28} style={{ color: 'var(--muted)', marginBottom: 12 }} />
+                  <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>Kommer snart</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--muted)', lineHeight: 1.7 }}>Din lift-historik visas här. Funktionen är under uppbyggnad.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Ã¢â€â‚¬Ã¢â€â‚¬ Kör & tjäna: platshållare Ã¢â€â‚¬Ã¢â€â‚¬ */}
+            {activeTab === 'packages_on_route' && (
+              <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                <SectionTitle title="Paket längs rutten" subtitle="Öppna paket som matchar din planerade resa - ta med extra och tjäna mer." />
+                <div style={{ padding: 40, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
+                  <Package size={28} style={{ color: 'var(--muted)', marginBottom: 12 }} />
+                  <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>Kommer snart</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--muted)', lineHeight: 1.7 }}>Paket som matchar din rutt visas automatiskt här. Gonow-matchning är under uppbyggnad.</p>
+                </div>
+              </div>
+            )}
+            {activeTab === 'lift_on_route' && (
+              <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                <SectionTitle title="Lift längs rutten" subtitle="Passagerare som vill åka med på din planerade resa." />
+                <div style={{ padding: 40, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
+                  <Users size={28} style={{ color: 'var(--muted)', marginBottom: 12 }} />
+                  <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>Kommer snart</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--muted)', lineHeight: 1.7 }}>Liftförfrågningar längs din rutt visas automatiskt här. Funktionen är under uppbyggnad.</p>
+                </div>
+              </div>
+            )}
+            {activeTab === 'earnings' && (
+              <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                <SectionTitle title="Intäkter" subtitle="Sammanfattning av dina intjänade, utbetalade och kommande intäkter." />
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0,1fr))' : 'repeat(4, minmax(0,1fr))', gap: 14, marginBottom: 20 }}>
+                  {statCard('Tillgängligt', `${driverWallet.available} kr`, 'Redo för payout', <Wallet size={18} />, isDark, isMobile)}
+                  {statCard('På hold', `${driverWallet.hold} kr`, 'Pågående leveranser', <Shield size={18} />, isDark, isMobile)}
+                  {statCard('Pågående', `${driverWallet.processing} kr`, 'I payout-kö', <CreditCard size={18} />, isDark, isMobile)}
+                  {statCard('Utbetalt', `${driverWallet.paid} kr`, 'Historiskt totalt', <CheckCircle2 size={18} />, isDark, isMobile)}
+                </div>
+                <div style={{ padding: 20, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.7 }}>Detaljerade intäktsrapporter, exportfunktion och utbetalningsschema kommer snart.</p>
+                  {payoutReadyOrders[0] && (
+                    <button onClick={() => handleStartPayout(payoutReadyOrders[0].id)} className="btn-primary" style={{ marginTop: 16, padding: '11px 20px' }}>
+                      {payoutingId === payoutReadyOrders[0].id ? 'Startar payout...' : 'Starta payout'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'statistics' && (
+              <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                <SectionTitle title="Statistik" subtitle="Din prestandaöversikt som förare - resor, rating-trend, svarstid och mer." />
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, minmax(0,1fr))' : 'repeat(4, minmax(0,1fr))', gap: 14, marginBottom: 20 }}>
+                  {statCard('Genomförda', `${completedTrips}`, 'Levererade uppdrag totalt', <CheckCircle2 size={18} />, isDark, isMobile)}
+                  {statCard('Betyg', user.rating_avg ? user.rating_avg.toFixed(1) : '—', `${user.rating_count ?? 0} omdömen`, <Star size={18} />, isDark, isMobile)}
+                  {statCard('Gonow Score', `${gonowScore?.score ?? 0}`, gonowScore?.tier.label ?? 'Ny förare', <Shield size={18} />, isDark, isMobile)}
+                  {statCard('Utbetalt', `${driverWallet.paid} kr`, 'Historiskt totalt', <Wallet size={18} />, isDark, isMobile)}
+                </div>
+                <div style={{ padding: 32, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
+                  <Star size={28} style={{ color: 'var(--muted)', marginBottom: 12 }} />
+                  <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>Detaljerad statistik - kommer snart</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--muted)', lineHeight: 1.7 }}>
+                    Rating-trend, genomsnittlig svarstid, acceptansgrad och inkomstgraf per månad.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Ã¢â€â‚¬Ã¢â€â‚¬ Konto: platshållare Ã¢â€â‚¬Ã¢â€â‚¬ */}
+            {activeTab === 'bankid' && (
+              <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                <SectionTitle title="BankID-verifiering" subtitle="Verifiera din identitet för ökad trovärdighet och +15 poäng i Gonow Score." />
+                {user?.bankid_verified ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '32px 24px', borderRadius: 18, background: 'var(--gn-006)', border: '1px solid var(--gn-022)', textAlign: 'center' }}>
+                    <Shield size={36} style={{ color: 'var(--gn)' }} />
+                    <p style={{ fontWeight: 700, fontSize: '1rem', color: isDark ? '#fff' : '#111' }}>Du är BankID-verifierad</p>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
+                      {user.bankid_name ? `Verifierad som ${user.bankid_name}` : 'Din identitet är bekräftad med BankID.'}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 14px', borderRadius: 999, background: 'var(--gn-012)', border: '1px solid var(--gn-025)', fontSize: '0.75rem', fontWeight: 700, color: 'var(--gn-dk)' }}>
+                      <Shield size={12} /> BankID-verifierad
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 12 }}>
+                      {[
+                        { icon: Shield,       title: '+15 Gonow Score',    desc: 'Verifierade förare prioriteras i matchningar.' },
+                        { icon: CheckCircle2, title: 'Verifieringsbadge',  desc: 'Syns på din profil och för avsändare.' },
+                        { icon: Shield,       title: 'Fler uppdrag',       desc: 'Avsändare väljer hellre verifierade förare.' },
+                      ].map(({ icon: Icon, title, desc }) => (
+                        <div key={title} style={{ padding: '14px 16px', borderRadius: 14, background: isDark ? 'rgba(255,255,255,0.03)' : '#f8f9fa', border: '1px solid var(--border)' }}>
+                          <Icon size={18} style={{ color: 'var(--gn)', marginBottom: 8 }} />
+                          <p style={{ fontWeight: 700, fontSize: '0.82rem', color: isDark ? '#fff' : '#111', marginBottom: 4 }}>{title}</p>
+                          <p style={{ fontSize: '0.74rem', color: 'var(--muted)', lineHeight: 1.5 }}>{desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: isMobile ? 'center' : 'flex-start' }}>
+                      <BankIDVerify
+                        userId={user?.id ?? ''}
+                        isDark={isDark}
+                        onVerified={() => {
+                          setUser(prev => prev ? { ...prev, bankid_verified: true } : prev)
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {activeTab === 'payment' && (
+              <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                <SectionTitle title="Betalning" subtitle="Hantera dina betalningsuppgifter och utbetalningskonto." />
+                <div style={{ padding: 40, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
+                  <CreditCard size={28} style={{ color: 'var(--muted)', marginBottom: 12 }} />
+                  <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>Kommer snart</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--muted)', lineHeight: 1.7 }}>Stripe Connect-konto och utbetalningsinställningar kopplas hit. Bygg klart Stripe-flödet och kör din första riktiga payout.</p>
+                </div>
+              </div>
+            )}
+            {activeTab === 'settings' && (
+              <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
+                <SectionTitle title="Inställningar" subtitle="Aviseringar, synlighet, integritetsinställningar och mer." />
+                <div style={{ padding: 40, borderRadius: 18, background: 'var(--surface-2)', border: '1px dashed var(--border)', textAlign: 'center' }}>
+                  <Mail size={28} style={{ color: 'var(--muted)', marginBottom: 12 }} />
+                  <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>Kommer snart</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--muted)', lineHeight: 1.7 }}>SMS-notiser via Twilio, e-postpreferenser och kontoinställningar är under uppbyggnad.</p>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'carriers' && (
               <div style={{ ...panelStyle(false, isDark, isMobile), padding: 24 }}>
-                <SectionTitle title="Utforska förare" subtitle="En inloggad premium-vy där användaren kan jämföra bärare på rating, aktivitet och kapacitet." />
+                <SectionTitle title="Utforska förare" subtitle="En inloggad premium-vy där användaren kan jämföra förare på rating, aktivitet och kapacitet." />
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0,1fr))', gap: 12, marginBottom: 18 }}>
                   {[
                     { label: 'Förare', value: carriers.length, hint: 'visas nu' },
                     { label: 'Verifierade', value: carriers.filter(c => c.bankidVerified).length, hint: 'kvalitet / tillit' },
-                    { label: 'Snittrating', value: carriers.length ? (carriers.reduce((sum, c) => sum + c.rating, 0) / carriers.length).toFixed(1) : '0.0', hint: 'över katalogen' },
+                    { label: 'Snittrating', value: carriers.length ? (carriers.reduce((sum, c) => sum + c.rating, 0) / carriers.length).toFixed(1) : '0.0', hint: 'Över katalogen' },
                     { label: 'Aktiva säten', value: carriers.reduce((sum, c) => sum + c.activeSeats, 0), hint: 'samlad kapacitet' },
                   ].map((item) => (
                     <div key={item.label} style={{ padding: 16, borderRadius: 16, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
@@ -2283,7 +3612,7 @@ export default function ProfilPage() {
                           <p style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>{carrier.name}</p>
                           <p style={{ fontSize: '0.76rem', color: 'var(--muted)', lineHeight: 1.5 }}>{carrier.nextRoute}</p>
                         </div>
-                        <div style={{ padding: '5px 10px', borderRadius: 999, background: carrier.bankidVerified ? 'rgba(34,197,94,0.12)' : 'rgba(148,163,184,0.12)', color: carrier.bankidVerified ? '#15803d' : 'var(--muted)', fontSize: '0.68rem', fontWeight: 700 }}>
+                        <div style={{ padding: '5px 10px', borderRadius: 999, background: carrier.bankidVerified ? 'var(--gn-012)' : 'rgba(148,163,184,0.12)', color: carrier.bankidVerified ? 'var(--gn-dk)' : 'var(--muted)', fontSize: '0.68rem', fontWeight: 700 }}>
                           {carrier.bankidVerified ? 'Verifierad' : 'Ny'}
                         </div>
                       </div>
@@ -2324,6 +3653,20 @@ export default function ProfilPage() {
         carrierId={viewProfileUserId}
         onClose={() => setViewProfileUserId(null)}
       />
+
+      {pendingRating && userId && (
+        <RatingModal
+          orderId={pendingRating.orderId}
+          fromUserId={userId}
+          toUserId={pendingRating.toUserId}
+          toUserName={pendingRating.toName}
+          role={pendingRating.role}
+          onDone={() => setPendingRating(null)}
+        />
+      )}
     </div>
   )
 }
+
+
+

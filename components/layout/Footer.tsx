@@ -18,13 +18,13 @@ const COLS = [
     ],
   },
   {
-    title: 'För bärare',
+    title: 'Transport med Gonow',
     links: [
-      ['Bli bärare', '/kor'],
+      ['Bli transportör', '/kor'],
       ['Hur det fungerar', '#how'],
       ['Betalningar & utbet.', '#'],
       ['Krav & behörighet', '#'],
-      ['Bärare-FAQ', '#'],
+      ['Transportör-FAQ', '#'],
     ],
   },
   {
@@ -55,6 +55,16 @@ export default function Footer() {
   const [email, setEmail] = useState('')
   const [state, setState] = useState<'idle' | 'loading' | 'done'>('idle')
   const [isMobile, setIsMobile] = useState(false)
+  const [accent, setAccent] = useState<'green' | 'blue'>('green')
+
+  useEffect(() => {
+    setAccent((localStorage.getItem('accent') ?? 'green') as 'green' | 'blue')
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'accent') setAccent((e.newValue ?? 'green') as 'green' | 'blue')
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -73,32 +83,77 @@ export default function Footer() {
     setState('done')
   }
 
+  function openPackageFlow() {
+    window.dispatchEvent(new CustomEvent('gonow_open_package_booking'))
+  }
+
   return (
-    <footer style={{ background: 'var(--footer-bg)', borderTop: '1px solid var(--footer-border)' }}>
+    <footer style={{ background: 'var(--footer-bg)', borderTop: '1px solid var(--footer-border)', position: 'relative', zIndex: 1 }}>
       <div style={{ borderBottom: '1px solid var(--footer-divider)', padding: isMobile ? '40px 20px' : '60px 24px' }}>
-        <div style={{ maxWidth: 1260, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 28 : 64, alignItems: 'center' }}>
+        <div
+          style={{
+            maxWidth: 1260,
+            margin: '0 auto',
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+            gap: isMobile ? 28 : 64,
+            alignItems: 'center',
+          }}
+        >
           <div>
-            <p style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--footer-kicker)', textTransform: 'uppercase', marginBottom: 14 }}>
+            <p
+              style={{
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                letterSpacing: '0.14em',
+                color: 'var(--footer-kicker)',
+                textTransform: 'uppercase',
+                marginBottom: 14,
+              }}
+            >
               Tidigt tillträde
             </p>
-            <h3 style={{ fontSize: 'clamp(1.5rem, 2.5vw, 2rem)', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: 10 }}>
+            <h3
+              style={{
+                fontSize: 'clamp(1.5rem, 2.5vw, 2rem)',
+                fontWeight: 700,
+                color: 'var(--text)',
+                letterSpacing: '-0.03em',
+                lineHeight: 1.15,
+                marginBottom: 10,
+                textShadow: '0 1px 3px rgba(0,0,0,0.15)',
+              }}
+            >
               Få tillgång innan
               <br />
               allmän lansering.
             </h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--muted)', lineHeight: 1.7, maxWidth: 380 }}>
-              Gå med på väntelistan, vi meddelar dig direkt när Gonow lanserar i din stad. Inga spam.
+            <p style={{ fontSize: '0.85rem', color: 'var(--muted)', lineHeight: 1.7, maxWidth: 380, opacity: 0.9 }}>
+              Gå med på väntelistan, vi meddelar dig direkt när Gonow lanserar i din stad. Ingen spam.
             </p>
           </div>
 
           <div>
             {state === 'done' ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span style={{ color: 'var(--success)', fontSize: '1.1rem', fontWeight: 700 }}>✓</span>
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: '50%',
+                    background: 'var(--success-soft)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span style={{ color: 'var(--success)', fontSize: '1.1rem', fontWeight: 700 }}>OK</span>
                 </div>
                 <div>
-                  <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>Du är med på listan!</p>
+                  <p style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>
+                    Du är med på listan
+                  </p>
                   <p style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Vi hör av oss vid lansering i din stad.</p>
                 </div>
               </div>
@@ -122,8 +177,12 @@ export default function Footer() {
                     transition: 'border-color 0.15s',
                     fontFamily: 'inherit',
                   }}
-                  onFocus={(e) => { e.target.style.borderColor = 'var(--accent)' }}
-                  onBlur={(e) => { e.target.style.borderColor = 'var(--border)' }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = 'var(--accent)'
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'var(--border)'
+                  }}
                 />
                 <button
                   type="submit"
@@ -154,25 +213,76 @@ export default function Footer() {
 
       <div style={{ padding: isMobile ? '40px 20px 36px' : '64px 24px 56px' }}>
         <div style={{ maxWidth: 1260, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '2fr 1fr 1fr 1fr 1fr', gap: isMobile ? 24 : 32 }}>
-            <div style={{ background: 'var(--footer-panel-bg)', border: '1px solid var(--footer-divider)', borderRadius: 20, padding: 24, gridColumn: isMobile ? '1 / -1' : undefined }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr 1fr' : '2fr 1fr 1fr 1fr 1fr',
+              gap: isMobile ? 24 : 32,
+            }}
+          >
+            <div
+              style={{
+                background: 'var(--footer-panel-bg)',
+                border: '1px solid var(--footer-divider)',
+                borderRadius: 20,
+                padding: 24,
+                gridColumn: isMobile ? '1 / -1' : undefined,
+              }}
+            >
               <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 9, marginBottom: 18, textDecoration: 'none' }}>
-                <div style={{ width: 36, height: 36, borderRadius: 11, background: '#0a0a0a', border: '1.5px solid rgba(34, 197, 94, 0.45)', boxShadow: '0 0 18px rgba(34,197,94,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Image src="/logo-mark.png" alt="Gonow logo" width={66} height={66} style={{ width: 66, height: 66, minWidth: 66, minHeight: 66, objectFit: 'contain', flexShrink: 0, display: 'block' }} />
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 11,
+                    background: '#0a0a0a',
+                    border: '1.5px solid var(--gn-045)',
+                    boxShadow: '0 0 18px var(--gn-018)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Image
+                    src={accent === 'blue' ? '/logo-mark-blue.png' : '/logo-mark.png'}
+                    alt="Gonow logo"
+                    width={66}
+                    height={66}
+                    style={{ width: 66, height: 66, minWidth: 66, minHeight: 66, objectFit: 'contain', flexShrink: 0, display: 'block' }}
+                  />
                 </div>
                 <span style={{ fontWeight: 700, fontSize: '1.05rem', letterSpacing: '-0.025em', color: 'var(--text)' }}>Gonow</span>
               </Link>
 
               <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.75, marginBottom: 24, maxWidth: 230 }}>
-                P2P-logistik i Sverige. Vi kopplar samman avsändare och resenärer som ändå åker samma väg.
+                Gonow samordnar transporten från bokning till leverans, med spårning, bekräftelse och ett sammanhållet ansvar hela vägen.
               </p>
 
-              <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 10 }}>
+              <p
+                style={{
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.12em',
+                  color: 'var(--muted)',
+                  textTransform: 'uppercase',
+                  marginBottom: 10,
+                }}
+              >
                 Tillgängligt i
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 28 }}>
                 {CITIES.map((c) => (
-                  <span key={c} style={{ fontSize: '0.7rem', color: 'var(--muted)', background: 'var(--footer-chip-bg)', padding: '3px 10px', borderRadius: 100, border: '1px solid var(--footer-divider)' }}>
+                  <span
+                    key={c}
+                    style={{
+                      fontSize: '0.7rem',
+                      color: 'var(--muted)',
+                      background: 'var(--footer-chip-bg)',
+                      padding: '3px 10px',
+                      borderRadius: 100,
+                      border: '1px solid var(--footer-divider)',
+                    }}
+                  >
                     {c}
                   </span>
                 ))}
@@ -221,21 +331,63 @@ export default function Footer() {
 
             {COLS.map((col) => (
               <div key={col.title}>
-                <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 18 }}>
+                <p
+                  style={{
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.12em',
+                    color: 'var(--muted)',
+                    textTransform: 'uppercase',
+                    marginBottom: 18,
+                  }}
+                >
                   {col.title}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-                  {col.links.map(([label, href]) => (
-                    <Link
-                      key={label}
-                      href={href}
-                      style={{ fontSize: '0.82rem', color: 'var(--muted)', transition: 'color 0.15s', textDecoration: 'none', lineHeight: 1.4 }}
-                      onMouseEnter={(e) => { (e.target as HTMLElement).style.color = 'var(--text)' }}
-                      onMouseLeave={(e) => { (e.target as HTMLElement).style.color = 'var(--muted)' }}
-                    >
-                      {label}
-                    </Link>
-                  ))}
+                  {col.links.map(([label, href]) =>
+                    href === '/skicka' ? (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={openPackageFlow}
+                        style={{
+                          fontSize: '0.82rem',
+                          color: 'var(--muted)',
+                          transition: 'color 0.15s',
+                          textDecoration: 'none',
+                          lineHeight: 1.4,
+                          background: 'transparent',
+                          border: 'none',
+                          padding: 0,
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                        }}
+                        onMouseEnter={(e) => {
+                          ;(e.currentTarget as HTMLElement).style.color = 'var(--text)'
+                        }}
+                        onMouseLeave={(e) => {
+                          ;(e.currentTarget as HTMLElement).style.color = 'var(--muted)'
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ) : (
+                      <Link
+                        key={label}
+                        href={href}
+                        style={{ fontSize: '0.82rem', color: 'var(--muted)', transition: 'color 0.15s', textDecoration: 'none', lineHeight: 1.4 }}
+                        onMouseEnter={(e) => {
+                          ;(e.currentTarget as HTMLElement).style.color = 'var(--text)'
+                        }}
+                        onMouseLeave={(e) => {
+                          ;(e.currentTarget as HTMLElement).style.color = 'var(--muted)'
+                        }}
+                      >
+                        {label}
+                      </Link>
+                    )
+                  )}
                 </div>
               </div>
             ))}
@@ -244,7 +396,18 @@ export default function Footer() {
       </div>
 
       <div style={{ borderTop: '1px solid var(--footer-divider)', padding: '18px 24px' }}>
-        <div style={{ maxWidth: 1260, margin: '0 auto', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div
+          style={{
+            maxWidth: 1260,
+            margin: '0 auto',
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>© 2026 Gonow AB</span>
             <span style={{ fontSize: '0.72rem', color: 'var(--muted)', opacity: 0.5 }}>·</span>
@@ -254,11 +417,32 @@ export default function Footer() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.68rem', color: 'var(--muted)', border: '1px solid var(--footer-divider)', background: 'var(--footer-chip-hover)', padding: '4px 12px', borderRadius: 100 }}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                fontSize: '0.68rem',
+                color: 'var(--muted)',
+                border: '1px solid var(--footer-divider)',
+                background: 'var(--footer-chip-hover)',
+                padding: '4px 12px',
+                borderRadius: 100,
+              }}
+            >
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--success)', display: 'inline-block' }} />
               BankID-verifierat
             </span>
-            <span style={{ fontSize: '0.68rem', color: 'var(--muted)', border: '1px solid var(--footer-divider)', background: 'var(--footer-chip-hover)', padding: '4px 12px', borderRadius: 100 }}>
+            <span
+              style={{
+                fontSize: '0.68rem',
+                color: 'var(--muted)',
+                border: '1px solid var(--footer-divider)',
+                background: 'var(--footer-chip-hover)',
+                padding: '4px 12px',
+                borderRadius: 100,
+              }}
+            >
               Trygg-Hansa 250 000 kr
             </span>
           </div>

@@ -3,6 +3,7 @@ export type OrderType = 'package' | 'pickup' | 'return' | 'lift'
 export type OrderStatus =
   | 'pending'
   | 'matched'
+  | 'paid'
   | 'picked_up'
   | 'in_transit'
   | 'delivered'
@@ -18,6 +19,9 @@ export interface User {
   phone?: string
   avatar_url?: string
   bankid_verified: boolean
+  bankid_name?: string | null
+  bankid_personal_number?: string | null
+  bankid_verified_at?: string | null
   stripe_account_id?: string
   role: UserRole
   rating_avg: number
@@ -87,6 +91,10 @@ export interface Order {
   carrier_payout: number
   stripe_payment_intent_id?: string
   stripe_transfer_id?: string
+  payment_provider?: string
+  payment_status?: string
+  order_phase?: string
+  metadata?: Record<string, unknown>
   status: OrderStatus
   pickup_qr_code?: string
   delivery_photo_url?: string

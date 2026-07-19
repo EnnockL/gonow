@@ -2,14 +2,15 @@ import { OrderStatus } from '@/lib/types'
 import { CheckCircle2, Circle, Loader2 } from 'lucide-react'
 
 const STEPS: { status: OrderStatus; label: string; desc: string }[] = [
-  { status: 'matched', label: 'Matchad', desc: 'Bärare accepterade ditt uppdrag' },
+  { status: 'matched', label: 'Transport klar', desc: 'Gonow har säkrat transporten och väntar på betalning' },
+  { status: 'paid', label: 'Betald', desc: 'Betalningen är säkrad hos Gonow' },
   { status: 'picked_up', label: 'Upphämtad', desc: 'Paketet är hämtat' },
-  { status: 'in_transit', label: 'På väg', desc: 'Resan pågår — spåra live' },
+  { status: 'in_transit', label: 'På väg', desc: 'Resan pågår - spåra live' },
   { status: 'delivered', label: 'Levererad', desc: 'Framme hos mottagaren' },
   { status: 'confirmed', label: 'Bekräftad', desc: 'Mottagaren har scannat QR-koden' },
 ]
 
-const ORDER: OrderStatus[] = ['pending', 'matched', 'picked_up', 'in_transit', 'delivered', 'confirmed']
+const ORDER: OrderStatus[] = ['pending', 'matched', 'paid', 'picked_up', 'in_transit', 'delivered', 'confirmed']
 
 interface Props { status: OrderStatus }
 

@@ -21,7 +21,7 @@ export function useRoutePrice() {
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState<string | null>(null)
 
-  const calculate = useCallback(async (from: string, to: string, weight_kg = 1) => {
+  const calculate = useCallback(async (from: string, to: string, weight_kg = 1, urgency: 'today' | 'tomorrow' | 'flexible' = 'flexible') => {
     if (!from.trim() || !to.trim()) return
     setLoading(true)
     setError(null)
@@ -32,7 +32,7 @@ export function useRoutePrice() {
       const dist = await distRes.json()
       if (!distRes.ok) throw new Error(dist.error ?? 'Ruttfel')
 
-      const priceRes = await fetch(`/api/price?distance_km=${dist.distance_km}&weight_kg=${weight_kg}`)
+      const priceRes = await fetch(`/api/price?distance_km=${dist.distance_km}&weight_kg=${weight_kg}&urgency=${urgency}`)
       const price = await priceRes.json()
       if (!priceRes.ok) throw new Error(price.error ?? 'Prisfel')
 

@@ -23,7 +23,7 @@ const SECTIONS = [
   {
     id: 'gemenskap',
     label: 'Gemenskap & vänlighet',
-    color: '#22c55e',
+    color: 'var(--gn)',
     quotes: [
       'Vi byggde inte en budfirma. Vi byggde ett sätt att hjälpa varandra.',
       'Förr knackade man på grannens dörr. Nu finns appen för det.',
@@ -40,7 +40,7 @@ const SECTIONS = [
   {
     id: 'klimat',
     label: 'Klimat & hållbarhet',
-    color: '#16a34a',
+    color: 'var(--gn-dk)',
     quotes: [
       'Fyra av fem bilar kör ensamma till jobbet. Vi fyller de tomma platserna.',
       'Det grönaste paketet är det som redan var på väg.',
@@ -83,7 +83,7 @@ const SECTIONS = [
   {
     id: 'trygghet',
     label: 'Trygghet & förtroende',
-    color: '#22c55e',
+    color: 'var(--gn)',
     quotes: [
       'BankID-verifierad. Försäkrad. Betygsatt. Trygg.',
       'Vi vet vem du är. Vi vet vem som kör. Det räcker.',
@@ -288,7 +288,7 @@ function QuoteCard({ quote, isMobile }: { quote: string; isMobile: boolean }) {
       }}
       onMouseEnter={(e) => {
         const el = e.currentTarget as HTMLElement
-        el.style.borderColor = 'rgba(34,197,94,0.45)'
+        el.style.borderColor = 'var(--gn-045)'
         el.style.background = 'var(--accent-softer)'
       }}
       onMouseLeave={(e) => {
@@ -325,7 +325,7 @@ function QuoteChip({ text, isMobile }: { text: string; isMobile: boolean }) {
         cursor: 'pointer',
       }}
       onMouseEnter={(e) => {
-        ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(34,197,94,0.5)'
+        ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--gn-050)'
       }}
       onMouseLeave={(e) => {
         ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'

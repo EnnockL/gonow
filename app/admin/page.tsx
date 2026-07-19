@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { Package, Users, TrendingUp, AlertTriangle, RefreshCw, CheckCircle2 } from 'lucide-react'
 
@@ -23,7 +24,7 @@ const STATUS_DOT: Record<string, string> = {
   confirmed: '#34d399',
   disputed: '#f87171',
   pending: '#fbbf24',
-  matched: '#22c55e',
+  matched: 'var(--gn)',
   in_transit: '#a78bfa',
   delivered: '#34d399',
 }
@@ -73,7 +74,7 @@ export default function AdminPage() {
   }
 
   const statCards = [
-    { icon: Package, label: 'Totala ordrar', value: stats.totalOrders, accent: '#22c55e', delta: '+12%' },
+    { icon: Package, label: 'Totala ordrar', value: stats.totalOrders, accent: 'var(--gn)', delta: '+12%' },
     { icon: Users, label: 'Aktiva resor', value: stats.activeTrips, accent: '#7bf0a8', delta: '+5%' },
     { icon: TrendingUp, label: 'Väntande utbet.', value: stats.pendingPayouts, accent: '#34d399', delta: null },
     { icon: AlertTriangle, label: 'Tvister', value: stats.disputed, accent: '#f87171', delta: stats.disputed > 0 ? `${stats.disputed} aktiva` : null },
@@ -90,6 +91,21 @@ export default function AdminPage() {
             <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text)', lineHeight: 1.1 }}>
               Admin Dashboard
             </h1>
+            <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Link href="/admin/logistics" style={{ fontSize: '0.78rem', fontWeight: 700, padding: '6px 14px', borderRadius: 10, background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', color: '#d97706', textDecoration: 'none' }}>
+                AI Dispatcher →
+              </Link>
+              <Link href="/forecast" style={{ fontSize: '0.78rem', fontWeight: 700, padding: '6px 14px', borderRadius: 10, background: 'var(--gn-010)', border: '1px solid var(--gn-025)', color: 'var(--gn-dk)', textDecoration: 'none' }}>
+                AI Forecast →
+              </Link>
+              <Link href="/admin/logistics/opportunities" style={{ fontSize: '0.78rem', fontWeight: 700, padding: '6px 14px', borderRadius: 10, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', color: '#2563eb', textDecoration: 'none' }}>
+                Logistikmöjligheter →
+              </Link>
+              <Link href="/admin/dispatcher" style={{ fontSize: '0.78rem', fontWeight: 700, padding: '6px 14px', borderRadius: 10, background: 'var(--gn-010)', border: '1px solid var(--gn-025)', color: 'var(--gn-dk)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gn)', display: 'inline-block' }} />
+                Dispatcher Dashboard →
+              </Link>
+            </div>
           </div>
           <button
             onClick={load}

@@ -1,36 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase'
+import { calcPackagePrice, calcCarrierPayout, verifyPricingEngine } from '@/lib/price'
+
+// Run once on cold start — confirms the engine is correct after deploy
+if (process.env.NODE_ENV !== 'test') {
+  const v = verifyPricingEngine()
+  const prefix = v.ok ? '✅ Gonow Prismotor V1.4 OK' : '❌ Gonow Prismotor V1.4 FEL'
+  console.log(`\n${prefix}`)
+  v.routes.forEach(r => {
+    const capStr = r.lift.capped ? ' [CAP]' : ''
+    const rel    = r.pkgLtLift ? '✅' : (r.note ? '⚠️ ' : '❌')
+    console.log(
+      `  ${r.label.padEnd(30)} paket ${String(r.pkg.recommended).padStart(4)} kr` +
+      ` | lift ${String(r.lift.perSeat).padStart(4)} kr/säte${capStr}  ${rel}`
+    )
+  })
+  if (v.warnings.length) v.warnings.forEach(w => console.warn(w))
+  console.log('')
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
+
+  // ?verify=1 → returnerar hela verifieringsrapporten som JSON
+  if (searchParams.get('verify') === '1') {
+    const result = verifyPricingEngine()
+    return NextResponse.json(result, { status: result.ok ? 200 : 500 })
+  }
+
   const distance_km = parseFloat(searchParams.get('distance_km') ?? '0')
-  const weight_kg   = parseFloat(searchParams.get('weight_kg')   ?? '1')
+  const weight_kg   = parseFloat(searchParams.get('weight_kg')   ?? '2')
+  const urgency     = (searchParams.get('urgency') ?? 'flexible') as 'flexible' | 'tomorrow' | 'today' | 'express'
 
   if (!distance_km || distance_km <= 0) {
     return NextResponse.json({ error: 'distance_km krävs' }, { status: 400 })
   }
 
-  const supabase = createClient()
-  const { data: pricing } = await supabase
-    .from('pricing')
-    .select('*')
-    .single() as { data: { base_fee: number; per_km: number; per_kg: number; commission_pct: number } | null }
-
-  const p = pricing ?? { base_fee: 49, per_km: 0.85, per_kg: 8.00, commission_pct: 15 }
-
-  const price         = Math.round(p.base_fee + distance_km * p.per_km + weight_kg * p.per_kg)
-  const commission    = Math.round(price * (p.commission_pct / 100))
-  const carrier_payout = price - commission
+  const result = calcPackagePrice({ km: distance_km, kg: weight_kg, urgency })
+  const split  = calcCarrierPayout(result.recommended)
 
   return NextResponse.json({
-    price,
-    commission,
-    carrier_payout,
+    price:          result.recommended,
+    ceiling:        result.ceiling,
+    commission:     split.gonowCommission,
+    carrier_payout: split.carrierPayout,
     breakdown: {
-      base_fee:   p.base_fee,
-      km_fee:     Math.round(distance_km * p.per_km),
-      kg_fee:     Math.round(weight_kg   * p.per_kg),
-      commission_pct: p.commission_pct,
+      base_fee:    result.breakdown.base,
+      km_fee:      result.breakdown.distance,
+      kg_fee:      result.breakdown.weight,
+      urgency_fee: result.breakdown.urgency,
     },
   })
 }

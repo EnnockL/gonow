@@ -1,23 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 
 export default function CTASection() {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768)
-    onResize()
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
-
   return (
     <section
+      className="gn-cta-section"
       style={{
-        padding: isMobile ? '72px 16px' : '120px 24px',
         borderTop: '1px solid var(--border)',
         position: 'relative',
         overflow: 'hidden',
@@ -55,32 +45,26 @@ export default function CTASection() {
             marginBottom: 20,
           }}
         >
-          Vad väntar du på?
+          Du bokar.
           <br />
-          Någon kör redan din väg.
+          <span style={{ color: 'var(--accent-dark)' }}>Vi tar ansvar.</span>
+          <br />
+          Ditt paket kommer fram.
         </h2>
         <p
           style={{
-            fontSize: isMobile ? '0.94rem' : '1rem',
+            fontSize: '1rem',
             lineHeight: 1.7,
             color: 'var(--muted)',
             maxWidth: 480,
-            margin: isMobile ? '0 auto 28px' : '0 auto 40px',
+            margin: '0 auto 40px',
           }}
         >
-          Skicka ditt första paket på under 2 minuter. BankID-verifierade bärare. Betalning frigörs vid leverans.
+          Skicka på några sekunder. Gonow tar ansvar för hela transporten från den stunden.
         </p>
-        <div
-          style={{
-            display: 'flex',
-            gap: 12,
-            justifyContent: 'center',
-            flexWrap: 'wrap',
-            flexDirection: isMobile ? 'column' : 'row',
-          }}
-        >
-          <Link
-            href="/skicka"
+        <div className="gn-btn-row" style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('gonow_open_package_booking'))}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -88,25 +72,22 @@ export default function CTASection() {
               gap: 8,
               background: 'var(--accent)',
               color: '#0a0a0a',
-              padding: isMobile ? '14px 22px' : '14px 32px',
+              padding: '14px 32px',
               borderRadius: 10,
               fontSize: '0.9rem',
               fontWeight: 700,
-              textDecoration: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
               transition: 'opacity 0.15s',
-              width: isMobile ? '100%' : 'auto',
             }}
-            onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLElement).style.opacity = '0.88'
-            }}
-            onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLElement).style.opacity = '1'
-            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.88' }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
           >
             Skicka ett paket <ArrowRight size={16} />
-          </Link>
+          </button>
           <Link
-            href="/kor"
+            href="/varfor-gonow"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -114,23 +95,18 @@ export default function CTASection() {
               gap: 8,
               background: 'transparent',
               color: 'var(--text)',
-              padding: isMobile ? '13px 22px' : '13px 32px',
+              padding: '13px 32px',
               borderRadius: 10,
               border: '1px solid var(--border-strong)',
               fontSize: '0.9rem',
               fontWeight: 500,
               textDecoration: 'none',
               transition: 'border-color 0.15s',
-              width: isMobile ? '100%' : 'auto',
             }}
-            onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)'
-            }}
-            onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'
-            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)' }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)' }}
           >
-            Kör & tjäna pengar
+            Läs hur det fungerar
           </Link>
         </div>
       </div>

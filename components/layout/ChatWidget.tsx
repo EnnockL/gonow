@@ -6,8 +6,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { format, isToday, isYesterday } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import CarrierProfileModal from '@/components/carrier/CarrierProfileModal'
+import { authedFetch } from '@/lib/auth/authed-fetch'
 
 interface Conversation {
+  id: string
   other_user_id: string
   other_user_name: string
   last_message: string
@@ -73,7 +75,7 @@ export default function ChatWidget() {
 
   const fetchConvs = useCallback(async () => {
     if (!userId) return
-    const res = await fetch(`/api/messages/conversations?user_id=${userId}`).then(r => r.json()).catch(() => ({ conversations: [] }))
+    const res = await authedFetch('/api/messages/conversations').then(r => r.json()).catch(() => ({ conversations: [] }))
     const list: Conversation[] = res.conversations ?? []
     setConvs(list)
     // Compute unread badge
@@ -84,8 +86,11 @@ export default function ChatWidget() {
 
   const fetchThread = useCallback(async () => {
     if (!userId || !active) return
-    const res = await fetch(`/api/messages?user_id=${userId}&with=${active.other_user_id}`).then(r => r.json()).catch(() => ({ messages: [] }))
-    setThread(res.messages ?? [])
+    const res = await authedFetch(`/api/conversations/${encodeURIComponent(active.id)}/messages`).then(r => r.json()).catch(() => ({ messages: [] }))
+    setThread((res.messages ?? []).map((message: Message & { body?: string }) => ({
+      ...message,
+      content: message.body ?? message.content ?? '',
+    })))
   }, [userId, active])
 
   // Poll conversations
@@ -130,10 +135,10 @@ export default function ChatWidget() {
     if (!reply.trim() || !userId || !active) return
     setSending(true)
     try {
-      const res = await fetch('/api/messages', {
+      const res = await authedFetch(`/api/conversations/${encodeURIComponent(active.id)}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender_id: userId, receiver_id: active.other_user_id, content: reply.trim() }),
+        body: JSON.stringify({ body: reply.trim() }),
       })
       if (!res.ok) throw new Error()
       const optimistic: Message = {
@@ -187,7 +192,7 @@ export default function ChatWidget() {
           )}
           {view === 'thread' && active ? (
             <button onClick={() => setProfileId(active.other_user_id)} style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>
-              <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, rgba(34,197,94,0.35), rgba(34,197,94,0.15))', border: '1.5px solid rgba(34,197,94,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: '#15803d' }}>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, var(--gn-035), var(--gn-015))', border: '1.5px solid var(--gn-040)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 800, color: 'var(--gn-dk)' }}>
                 {initials(active.other_user_name)}
               </div>
               <span style={{ fontSize: '0.88rem', fontWeight: 700, color: isDark ? '#fafafa' : '#0a0a0a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -209,23 +214,23 @@ export default function ChatWidget() {
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {convs.length === 0 ? (
               <div style={{ padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
-                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(34,197,94,0.15)', border: '1.5px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <MessageCircle size={22} style={{ color: '#22c55e' }} />
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--gn-015)', border: '1.5px solid var(--gn-030)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MessageCircle size={22} style={{ color: 'var(--gn)' }} />
                 </div>
                 <p style={{ fontSize: '0.84rem', fontWeight: 700, color: isDark ? '#fafafa' : '#0a0a0a', margin: 0 }}>
                   Inga konversationer ännu
                 </p>
                 <p style={{ fontSize: '0.72rem', color: isDark ? '#a3a3a3' : '#737373', margin: 0, lineHeight: 1.5 }}>
-                  Hitta en bärare och starta ett samtal via deras profil.
+                  Hitta en transport och starta en säker dialog i Gonow.
                 </p>
-                <a href="/profil?tab=carriers" onClick={() => setOpen(false)} style={{ marginTop: 6, padding: '9px 20px', borderRadius: 999, background: '#22c55e', color: '#0a0a0a', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>
-                  Utforska förare
+                <a href="/resor" onClick={() => setOpen(false)} style={{ marginTop: 6, padding: '9px 20px', borderRadius: 999, background: 'var(--gn)', color: '#0a0a0a', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', display: 'inline-block' }}>
+                  Utforska transporter
                 </a>
               </div>
             ) : convs.map(conv => {
               const isMe = conv.last_sender_id === userId
               return (
-                <button key={conv.other_user_id} onClick={() => openThread(conv)} style={{
+                <button key={conv.id} onClick={() => openThread(conv)} style={{
                   width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 11,
                   padding: '11px 14px',
                   background: 'transparent', border: 'none',
@@ -235,7 +240,7 @@ export default function ChatWidget() {
                   onMouseEnter={e => (e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
-                  <div style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, rgba(34,197,94,0.3), rgba(34,197,94,0.12))', border: '1.5px solid rgba(34,197,94,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, color: '#15803d' }}>
+                  <div style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, var(--gn-030), var(--gn-012))', border: '1.5px solid var(--gn-035)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, color: 'var(--gn-dk)' }}>
                     {initials(conv.other_user_name)}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -288,7 +293,7 @@ export default function ChatWidget() {
                       <div style={{
                         maxWidth: '78%', padding: '8px 12px',
                         borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                        background: isMe ? '#22c55e' : (isDark ? '#2a2a2a' : '#e4e6eb'),
+                        background: isMe ? 'var(--gn)' : (isDark ? '#2a2a2a' : '#e4e6eb'),
                         color: isMe ? '#0a0a0a' : (isDark ? '#fafafa' : '#111'),
                         fontSize: '0.82rem', lineHeight: 1.45,
                         wordBreak: 'break-word',
@@ -325,8 +330,8 @@ export default function ChatWidget() {
                 disabled={!reply.trim() || sending}
                 style={{
                   width: 34, height: 34, flexShrink: 0, borderRadius: '50%', border: 'none',
-                  background: reply.trim() ? (sent ? 'rgba(34,197,94,0.15)' : '#22c55e') : (isDark ? '#222' : '#e5e7eb'),
-                  color: reply.trim() ? (sent ? '#16a34a' : '#0a0a0a') : (isDark ? '#555' : '#aaa'),
+                  background: reply.trim() ? (sent ? 'var(--gn-015)' : 'var(--gn)') : (isDark ? '#222' : '#e5e7eb'),
+                  color: reply.trim() ? (sent ? 'var(--gn-dk)' : '#0a0a0a') : (isDark ? '#555' : '#aaa'),
                   cursor: reply.trim() ? 'pointer' : 'not-allowed',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'all 0.15s',
@@ -344,14 +349,14 @@ export default function ChatWidget() {
         onClick={() => open ? setOpen(false) : openWidget()}
         style={{
           width: 52, height: 52, borderRadius: '50%',
-          background: '#22c55e', border: 'none',
-          boxShadow: '0 4px 20px rgba(34,197,94,0.4)',
+          background: 'var(--gn)', border: 'none',
+          boxShadow: '0 4px 20px var(--gn-040)',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           position: 'relative', transition: 'transform 0.15s, box-shadow 0.15s',
           flexShrink: 0, pointerEvents: 'auto',
         }}
-        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.08)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 24px rgba(34,197,94,0.5)' }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(34,197,94,0.4)' }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.08)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 24px var(--gn-050)' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px var(--gn-040)' }}
       >
         {open
           ? <X size={20} style={{ color: '#0a0a0a' }} />

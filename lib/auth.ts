@@ -67,6 +67,12 @@ export async function getAuthUser() {
   return data.user ?? null
 }
 
+export async function loginWithSession(accessToken: string, refreshToken: string) {
+  const supabase = createClient()
+  const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+  if (error) throw new Error(error.message)
+}
+
 export async function getUserProfile(userId: string) {
   const supabase = createClient()
   const { data } = await supabase.from('users').select('*').eq('id', userId).single()

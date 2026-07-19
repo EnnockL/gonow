@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Mail, Lock, User, Phone, Eye, EyeOff, ExternalLink } from 'lucide-react'
-import { getAuthUser, resendSignupOtp, signIn, signUp } from '@/lib/auth'
+import { getAuthUser, loginWithSession, resendSignupOtp, signIn, signUp } from '@/lib/auth'
 import { saveSignupEmail } from '@/lib/pending-booking'
+import BankIDVerify from '@/components/auth/BankIDVerify'
 
 interface Props {
   onClose: () => void
@@ -15,7 +16,7 @@ interface Props {
   initialEmail?: string
 }
 
-type Mode = 'login' | 'signup' | 'verify'
+type Mode = 'login' | 'signup' | 'verify' | 'bankid'
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -56,7 +57,7 @@ function Field({
         type={type}
         {...props}
         style={inputStyle}
-        onFocus={(e) => (e.target.style.borderColor = '#22c55e')}
+        onFocus={(e) => (e.target.style.borderColor = 'var(--gn)')}
         onBlur={(e) => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
       />
       {rightSlot && (
@@ -179,7 +180,9 @@ export default function AuthModal({
       ? 'Logga in'
       : mode === 'signup'
         ? 'Skapa konto'
-        : 'Bekräfta din e-post'
+        : mode === 'bankid'
+          ? 'Logga in med BankID'
+          : 'Bekräfta din e-post'
 
   return createPortal(
     <div
@@ -222,7 +225,7 @@ export default function AuthModal({
         >
           <div>
             {reason && mode !== 'verify' && (
-              <p style={{ fontSize: '0.7rem', color: 'rgba(34,197,94,0.8)', marginBottom: 4, fontWeight: 500 }}>
+              <p style={{ fontSize: '0.7rem', color: 'var(--gn-080)', marginBottom: 4, fontWeight: 500 }}>
                 {reason}
               </p>
             )}
@@ -250,7 +253,7 @@ export default function AuthModal({
           </button>
         </div>
 
-        {mode !== 'verify' && (
+        {mode !== 'verify' && mode !== 'bankid' && (
           <div style={{ display: 'flex', gap: 4, padding: '16px 24px 0' }}>
             {(['login', 'signup'] as const).map((tab) => (
               <button
@@ -268,8 +271,8 @@ export default function AuthModal({
                   fontFamily: 'inherit',
                   fontSize: '0.82rem',
                   fontWeight: 500,
-                  background: mode === tab ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.05)',
-                  color: mode === tab ? '#22c55e' : 'rgba(255,255,255,0.45)',
+                  background: mode === tab ? 'var(--gn-015)' : 'rgba(255,255,255,0.05)',
+                  color: mode === tab ? 'var(--gn)' : 'rgba(255,255,255,0.45)',
                   transition: 'all 0.15s',
                 }}
               >
@@ -279,15 +282,51 @@ export default function AuthModal({
           </div>
         )}
 
+        {mode === 'bankid' && (
+          <div style={{ padding: '20px 24px 24px' }}>
+            <BankIDVerify
+              isDark
+              mode="login"
+              onLoginSuccess={async (tokens) => {
+                try {
+                  await loginWithSession(tokens.access_token, tokens.refresh_token)
+                  onSuccess?.()
+                  window.location.href = redirectTo || '/profil'
+                } catch {
+                  setError('Kunde inte slutföra inloggningen. Försök igen.')
+                  setMode('login')
+                }
+              }}
+              onNoAccount={() => { /* BankIDVerify visar felet i sin egna UI */ }}
+            />
+            <button
+              type="button"
+              onClick={() => setMode('login')}
+              style={{
+                display: 'block',
+                margin: '14px auto 0',
+                background: 'none',
+                border: 'none',
+                color: 'rgba(255,255,255,0.35)',
+                cursor: 'pointer',
+                fontSize: '0.76rem',
+                fontFamily: 'inherit',
+              }}
+            >
+              ← Tillbaka till e-post
+            </button>
+          </div>
+        )}
+
         <form
           onSubmit={handleSubmit}
-          style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}
+          style={{ padding: '20px 24px 24px', display: mode === 'bankid' ? 'none' : 'flex', flexDirection: 'column', gap: 12 }}
         >
           {mode === 'verify' ? (
             <>
               <div style={{ padding: '8px 0 2px', textAlign: 'center' }}>
                 <div style={{ fontSize: '2rem', marginBottom: 12 }}>✉</div>
-                <p style={{ color: '#22c55e', fontWeight: 600, fontSize: '0.95rem' }}>Öppna mailet och klicka länken</p>
+                <p style={{ color: 'var(--gn)', fontWeight: 600, fontSize: '0.95rem' }}>Öppna mailet och klicka länken</p>
                 <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', marginTop: 8, lineHeight: 1.7 }}>
                   Vi skickade ett bekräftelsemail till
                   <br />
@@ -299,7 +338,7 @@ export default function AuthModal({
               </div>
 
               {resent && (
-                <p style={{ fontSize: '0.76rem', color: '#22c55e', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.76rem', color: 'var(--gn)', textAlign: 'center' }}>
                   Nytt bekräftelsemail skickat.
                 </p>
               )}
@@ -431,7 +470,7 @@ export default function AuthModal({
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#22c55e',
+                    color: 'var(--gn)',
                     cursor: resending ? 'not-allowed' : 'pointer',
                     fontSize: '0.75rem',
                     fontFamily: 'inherit',
@@ -454,7 +493,7 @@ export default function AuthModal({
                   padding: '12px',
                   borderRadius: 10,
                   border: 'none',
-                  background: loading ? 'rgba(34,197,94,0.5)' : '#22c55e',
+                  background: loading ? 'var(--gn-050)' : 'var(--gn)',
                   color: '#0a0a0a',
                   fontSize: '0.9rem',
                   fontWeight: 700,
@@ -476,7 +515,7 @@ export default function AuthModal({
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: '#22c55e',
+                        color: 'var(--gn)',
                         cursor: 'pointer',
                         fontSize: 'inherit',
                         fontFamily: 'inherit',
@@ -495,7 +534,7 @@ export default function AuthModal({
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: '#22c55e',
+                        color: 'var(--gn)',
                         cursor: 'pointer',
                         fontSize: 'inherit',
                         fontFamily: 'inherit',
@@ -507,6 +546,43 @@ export default function AuthModal({
                   </>
                 )}
               </p>
+
+              {/* BankID login separator */}
+              {mode === 'login' && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                    <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.28)' }}>eller</span>
+                    <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMode('bankid')}
+                    style={{
+                      width: '100%',
+                      padding: '11px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(255,255,255,0.14)',
+                      background: 'rgba(255,255,255,0.05)',
+                      color: '#ffffff',
+                      fontSize: '0.88rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 10,
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <rect width="24" height="24" rx="5" fill="#235971"/>
+                      <text x="12" y="16" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold" fontFamily="Arial">BID</text>
+                    </svg>
+                    Logga in med BankID
+                  </button>
+                </>
+              )}
             </>
           )}
         </form>

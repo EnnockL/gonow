@@ -5,6 +5,7 @@ import { Shield, Star, MapPin, User, Send, CheckCircle2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { useAuth } from '@/hooks/useAuth'
+import { authedFetch } from '@/lib/auth/authed-fetch'
 
 interface Props {
   name: string
@@ -103,10 +104,10 @@ export default function CarrierProfile({ name, carrierId, tripId, mutedBadge }: 
     setSending(true)
     setChatError(null)
     try {
-      const res = await fetch('/api/messages', {
+      const res = await authedFetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender_id: userId, receiver_id: carrierId, trip_id: tripId, content: message }),
+        body: JSON.stringify({ receiver_id: carrierId, trip_id: tripId, content: message }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error)
@@ -130,7 +131,7 @@ export default function CarrierProfile({ name, carrierId, tripId, mutedBadge }: 
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 2 }}>
             <p style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.01em', margin: 0 }}>{name}</p>
             {bankid && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 100, background: mutedBadge ? 'var(--text)' : 'rgba(34,197,94,0.1)', color: mutedBadge ? 'var(--bg)' : '#22c55e', border: mutedBadge ? '1px solid var(--text)' : '1px solid rgba(34,197,94,0.22)' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.62rem', fontWeight: 700, padding: '2px 7px', borderRadius: 100, background: mutedBadge ? 'var(--text)' : 'var(--gn-010)', color: mutedBadge ? 'var(--bg)' : 'var(--gn)', border: mutedBadge ? '1px solid var(--text)' : '1px solid var(--gn-022)' }}>
                 <Shield size={8} /> BankID
               </span>
             )}
@@ -161,7 +162,7 @@ export default function CarrierProfile({ name, carrierId, tripId, mutedBadge }: 
               border: 'none', cursor: 'pointer',
               background: tab === t.key ? 'var(--surface)' : 'transparent',
               color: tab === t.key ? 'var(--text)' : 'var(--muted)',
-              borderBottom: `2px solid ${tab === t.key ? '#22c55e' : 'transparent'}`,
+              borderBottom: `2px solid ${tab === t.key ? 'var(--gn)' : 'transparent'}`,
               transition: 'all 0.15s',
             }}
           >
@@ -214,7 +215,7 @@ export default function CarrierProfile({ name, carrierId, tripId, mutedBadge }: 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {sent ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '20px 0' }}>
-              <CheckCircle2 size={40} style={{ color: '#15803d' }} />
+              <CheckCircle2 size={40} style={{ color: 'var(--gn-dk)' }} />
               <p style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text)', margin: 0 }}>Meddelande skickat!</p>
               <p style={{ fontSize: '0.76rem', color: 'var(--muted)', margin: 0, textAlign: 'center' }}>
                 {name} ser ditt meddelande och kan svara dig direkt.
@@ -242,7 +243,7 @@ export default function CarrierProfile({ name, carrierId, tripId, mutedBadge }: 
                 type="button"
                 onClick={handleSend}
                 disabled={!message.trim() || sending || !userId}
-                style={{ width: '100%', padding: '11px', borderRadius: 11, border: 'none', background: message.trim() && userId ? '#22c55e' : 'var(--surface-2)', color: message.trim() && userId ? '#0a0a0a' : 'var(--muted)', cursor: message.trim() && userId ? 'pointer' : 'not-allowed', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.86rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all 0.15s' }}
+                style={{ width: '100%', padding: '11px', borderRadius: 11, border: 'none', background: message.trim() && userId ? 'var(--gn)' : 'var(--surface-2)', color: message.trim() && userId ? '#0a0a0a' : 'var(--muted)', cursor: message.trim() && userId ? 'pointer' : 'not-allowed', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.86rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'all 0.15s' }}
               >
                 <Send size={13} /> {sending ? 'Skickar...' : 'Skicka meddelande'}
               </button>

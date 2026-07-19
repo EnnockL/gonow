@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import AuthModal from '@/components/auth/AuthModal'
 import CarrierProfileModal from '@/components/carrier/CarrierProfileModal'
 import LiftChat from '@/components/lift/LiftChat'
+import RatingModal from '@/components/RatingModal'
 import { LiftCardSkeleton } from '@/components/ui/Skeleton'
 
 interface LiftRequest {
@@ -264,21 +265,21 @@ function LiftPricingBox({ pricing, loading, hasRoute }: {
 }) {
   const box: React.CSSProperties = {
     borderRadius: 14, padding: '14px 16px',
-    border: '1.5px solid rgba(34,197,94,0.25)',
-    background: 'linear-gradient(135deg, rgba(34,197,94,0.07) 0%, rgba(34,197,94,0.03) 100%)',
+    border: '1.5px solid var(--gn-025)',
+    background: 'linear-gradient(135deg, var(--gn-007) 0%, var(--gn-003) 100%)',
   }
   const row: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', padding: '4px 0' }
 
   if (!hasRoute) return (
     <div style={{ ...box, display: 'flex', alignItems: 'center', gap: 10 }}>
-      <Info size={15} style={{ color: '#22c55e', flexShrink: 0 }} />
+      <Info size={15} style={{ color: 'var(--gn)', flexShrink: 0 }} />
       <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: 0, lineHeight: 1.5 }}>Fyll i städer ovan för att se prisuppskattning.</p>
     </div>
   )
 
   if (loading || !pricing) return (
     <div style={{ ...box, display: 'flex', alignItems: 'center', gap: 10 }}>
-      <Loader2 size={15} style={{ color: '#22c55e', animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+      <Loader2 size={15} style={{ color: 'var(--gn)', animation: 'spin 1s linear infinite', flexShrink: 0 }} />
       <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: 0 }}>Beräknar pris...</p>
     </div>
   )
@@ -286,12 +287,12 @@ function LiftPricingBox({ pricing, loading, hasRoute }: {
   return (
     <div style={box}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#22c55e', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Gonow prisuppskattning</p>
+        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--gn)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Gonow prisuppskattning</p>
         <span style={{ fontSize: '0.65rem', color: 'var(--muted)', background: 'var(--surface-2)', border: '1px solid var(--border)', padding: '2px 7px', borderRadius: 999 }}>{pricing.distanceKm} km</span>
       </div>
       <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-        <div style={{ flex: 1, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
-          <p style={{ fontSize: '1.25rem', fontWeight: 900, color: '#22c55e', margin: '0 0 2px', lineHeight: 1 }}>{pricing.recommendedPrice} kr</p>
+        <div style={{ flex: 1, background: 'var(--gn-010)', border: '1px solid var(--gn-020)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+          <p style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--gn)', margin: '0 0 2px', lineHeight: 1 }}>{pricing.recommendedPrice} kr</p>
           <p style={{ fontSize: '0.62rem', color: 'var(--muted)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Rekommenderat</p>
         </div>
         <div style={{ flex: 1, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
@@ -299,7 +300,7 @@ function LiftPricingBox({ pricing, loading, hasRoute }: {
           <p style={{ fontSize: '0.62rem', color: 'var(--muted)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Maxpris (tak)</p>
         </div>
       </div>
-      <div style={{ borderTop: '1px solid rgba(34,197,94,0.15)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ borderTop: '1px solid var(--gn-015)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <div style={row}><span style={{ color: 'var(--muted)' }}>Föraren får ca</span><span style={{ fontWeight: 700, color: 'var(--text)' }}>{pricing.carrierPayout} kr</span></div>
         <div style={row}><span style={{ color: 'var(--muted)' }}>Gonow avgift (15%)</span><span style={{ color: 'var(--muted)' }}>{pricing.split.gonowCommission} kr</span></div>
         <div style={row}><span style={{ color: 'var(--muted)' }}>Försäkringspool (5%)</span><span style={{ color: 'var(--muted)' }}>{pricing.split.insurancePool} kr</span></div>
@@ -314,19 +315,21 @@ function LiftPricingBox({ pricing, loading, hasRoute }: {
 // ─── MyLiftCard ──────────────────────────────────────────────────────────────
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  open:      { label: 'Öppen',    color: '#16a34a', bg: 'rgba(34,197,94,0.08)',  border: 'rgba(34,197,94,0.2)'  },
+  open:      { label: 'Öppen',    color: 'var(--gn-dk)', bg: 'var(--gn-008)',  border: 'var(--gn-020)'  },
   offered:   { label: 'Erbjuden', color: '#d97706', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.3)' },
   matched:   { label: 'Matchad',  color: '#2563eb', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.2)' },
+  completed: { label: 'Avslutad', color: 'var(--gn-dk)', bg: 'var(--gn-008)', border: 'var(--gn-020)' },
   cancelled: { label: 'Avbruten', color: '#dc2626', bg: 'rgba(239,68,68,0.07)',  border: 'rgba(239,68,68,0.2)'  },
   expired:   { label: 'Utgången', color: 'var(--muted)', bg: 'var(--surface-2)', border: 'var(--border)'         },
 }
 
-function MyLiftCard({ lift, onAccept, onDecline, onViewCarrier, onCancel }: {
+function MyLiftCard({ lift, onAccept, onDecline, onViewCarrier, onCancel, onComplete }: {
   lift: LiftRequest
   onAccept: (id: string) => void
   onDecline: (id: string) => void
   onViewCarrier: (id: string) => void
   onCancel: (id: string) => void
+  onComplete: (id: string) => void
 }) {
   const meta = STATUS_META[lift.status] ?? STATUS_META.open
   const carrierName = lift.carrier?.name?.split(' ')[0] ?? 'Förare'
@@ -403,6 +406,12 @@ function MyLiftCard({ lift, onAccept, onDecline, onViewCarrier, onCancel }: {
             </button>
           </div>
           <LiftChat liftId={lift.id} />
+          <button
+            onClick={() => onComplete(lift.id)}
+            style={{ padding: '10px', minHeight: 44, borderRadius: 10, border: 'none', background: 'var(--gn)', color: '#0a0a0a', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}
+          >
+            Resan är klar — betygsätt föraren
+          </button>
         </div>
       )}
     </div>
@@ -453,7 +462,7 @@ function LiftCard({ lift, isDriver, onOffer, onViewProfile }: { lift: LiftReques
         style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4, borderTop: '1px solid var(--border)', cursor: lift.passenger_id ? 'pointer' : 'default' }}
       >
         {avatar
-          ? <img src={avatar} alt={userName} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(34,197,94,0.3)' }} />
+          ? <img src={avatar} alt={userName} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--gn-030)' }} />
           : <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, color: '#0a0a0a' }}>{userName[0]}</div>
         }
         <div style={{ flex: 1 }}>
@@ -497,6 +506,7 @@ export default function LiftPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [profileUserId, setProfileUserId] = useState<string | null>(null)
   const [myLiftTab, setMyLiftTab] = useState<string | null>(null)
+  const [pendingLiftRating, setPendingLiftRating] = useState<{ liftId: string; toUserId: string; toName: string } | null>(null)
 
   function handlePublishClick() {
     if (!userId) {
@@ -552,6 +562,16 @@ export default function LiftPage() {
     return r
   }, [lifts, filter, today, tomorrow, tab, userId])
 
+  const driverOpenCount = useMemo(
+    () => lifts.filter((lift) => lift.passenger_id !== userId && ['open', 'offered'].includes(lift.status)).length,
+    [lifts, userId]
+  )
+
+  const passengerActiveCount = useMemo(
+    () => myLifts.filter((lift) => ['open', 'offered', 'matched'].includes(lift.status)).length,
+    [myLifts]
+  )
+
   async function handleOffer(liftId: string) {
     if (!userId) { setShowAuth(true); return }
     const res = await fetch(`/api/lift/${liftId}`, {
@@ -586,6 +606,21 @@ export default function LiftPage() {
     if (res.ok) setMyLifts(prev => prev.map(l => l.id === liftId ? { ...l, status: 'open', carrier_id: null, carrier: undefined } : l))
   }
 
+  async function handleComplete(liftId: string) {
+    const lift = myLifts.find(l => l.id === liftId)
+    if (!lift || !lift.carrier_id) return
+    const res = await fetch(`/api/lift/${liftId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' }),
+    })
+    if (res.ok) {
+      setMyLifts(prev => prev.map(l => l.id === liftId ? { ...l, status: 'completed' } : l))
+      const carrierName = lift.carrier?.name ?? 'Föraren'
+      setPendingLiftRating({ liftId, toUserId: lift.carrier_id!, toName: carrierName })
+    }
+  }
+
   async function handleCancel(liftId: string) {
     const lift = myLifts.find(l => l.id === liftId)
     const isMatched = lift?.status === 'matched'
@@ -609,27 +644,63 @@ export default function LiftPage() {
     <div style={{ minHeight: '100vh', background: 'var(--page-gradient)', paddingTop: 88, paddingBottom: 80 }}>
       {toast && (
         <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', zIndex: 20000, background: '#0a0a0a', color: '#fff', padding: '12px 22px', borderRadius: 999, fontSize: '0.85rem', fontWeight: 600, boxShadow: '0 8px 32px rgba(0,0,0,0.28)', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', animation: 'toast-in 0.2s ease both' }}>
-          <span style={{ color: '#22c55e' }}>✓</span> {toast}
+          <span style={{ color: 'var(--gn)' }}>✓</span> {toast}
         </div>
       )}
 
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: isMobile ? '0 16px' : '0 24px' }}>
-        <div style={{ marginBottom: 28 }}>
-          <h1 style={{ fontSize: isMobile ? '1.6rem' : '2rem', fontWeight: 900, color: 'var(--text)', margin: 0, letterSpacing: '-0.03em', lineHeight: 1.1 }}>Liftbräda</h1>
-          <p style={{ fontSize: '0.88rem', color: 'var(--muted)', marginTop: 6, marginBottom: 0, lineHeight: 1.6 }}>Passagerare publicerar resor — förare längs vägen erbjuder plats.</p>
-        </div>
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: isMobile ? '0 16px 28px' : '0 24px' }}>
+        <section
+          style={{
+            marginBottom: isMobile ? 18 : 22,
+            padding: isMobile ? '20px 16px' : '24px 24px 22px',
+            borderRadius: isMobile ? 22 : 28,
+            border: '1px solid color-mix(in srgb, var(--border) 82%, var(--gn) 18%)',
+            background: 'linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, var(--gn) 4%) 0%, var(--surface) 100%)',
+            boxShadow: '0 24px 52px rgba(15, 23, 42, 0.08)',
+          }}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.2fr) minmax(260px, 0.8fr)', gap: 18, alignItems: 'stretch' }}>
+            <div>
+              <p style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--gn-dk)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Samåkning med Gonow</p>
+              <h1 style={{ fontSize: isMobile ? '1.7rem' : '2.2rem', fontWeight: 900, color: 'var(--text)', margin: '10px 0 0', letterSpacing: '-0.04em', lineHeight: 1.02 }}>
+                {tab === 'passenger' ? 'Boka plats lugnt och tydligt.' : 'Fyll lediga platser smartare.'}
+              </h1>
+              <p style={{ fontSize: isMobile ? '0.86rem' : '0.92rem', color: 'var(--muted)', marginTop: 12, marginBottom: 0, lineHeight: 1.7, maxWidth: 560 }}>
+                {tab === 'passenger'
+                  ? 'Publicera resan en gång. Gonow visar den för rätt förare längs vägen och håller hela upplevelsen sammanhängande.'
+                  : 'Se passagerare som redan vill åka din väg och svara i ett renare operationsflöde utan brus.'}
+              </p>
+            </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: 4, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 4 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+              {[
+                { value: tab === 'passenger' ? String(passengerActiveCount) : String(driverOpenCount), label: tab === 'passenger' ? 'aktiva resor' : 'öppna behov', hint: tab === 'passenger' ? 'Under uppsikt nu' : 'Redo att svara på' },
+                { value: String(filtered.length), label: 'visas i vyn', hint: 'Filtrerad lista just nu' },
+                { value: tab === 'passenger' ? 'En förfrågan' : 'En plats i taget', label: 'flödesprincip', hint: 'Lugnt och tydligt' },
+                { value: 'Gonow', label: 'ansvarig part', hint: 'Ett sammanhållet flöde' },
+              ].map((item) => (
+                <div key={item.label} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: isMobile ? 16 : 18, padding: isMobile ? '13px 12px 11px' : '14px 14px 12px' }}>
+                  <div style={{ fontSize: isMobile ? '1.04rem' : '1.18rem', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.04em' }}>{item.value}</div>
+                  <div style={{ fontSize: isMobile ? '0.66rem' : '0.72rem', fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 10 }}>{item.label}</div>
+                  <div style={{ fontSize: isMobile ? '0.68rem' : '0.7rem', color: 'var(--muted)', marginTop: 5, lineHeight: 1.45 }}>{item.hint}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <div style={{ display: 'flex', alignItems: 'stretch', justifyContent: 'space-between', gap: 12, marginBottom: isMobile ? 16 : 18, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 4, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 4, width: isMobile ? '100%' : 'auto' }}>
             {(['passenger', 'driver'] as const).map(t => (
               <button key={t} onClick={() => setTab(t)} style={{
-                padding: '8px 16px', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                fontSize: '0.82rem', fontWeight: 700,
+                flex: isMobile ? 1 : undefined,
+                padding: isMobile ? '10px 12px' : '9px 16px', borderRadius: 11, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: '0.8rem', fontWeight: 800,
                 background: tab === t ? 'var(--accent)' : 'transparent',
                 color: tab === t ? '#0a0a0a' : 'var(--muted)',
                 transition: 'all 0.15s',
               }}>
-                {t === 'passenger' ? '👥 Passagerare' : '🚗 Förare'}
+                {t === 'passenger' ? 'Passagerare' : 'Förare'}
               </button>
             ))}
           </div>
@@ -637,7 +708,10 @@ export default function LiftPage() {
             <button onClick={handlePublishClick} style={{
               display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
               background: 'var(--accent)', color: '#0a0a0a', border: 'none', borderRadius: 999,
-              padding: isMobile ? '9px 14px' : '10px 20px', fontSize: isMobile ? '0.78rem' : '0.85rem', fontWeight: 700,
+              width: isMobile ? '100%' : 'auto',
+              justifyContent: 'center',
+              minHeight: 46,
+              padding: isMobile ? '0 14px' : '10px 20px', fontSize: isMobile ? '0.8rem' : '0.85rem', fontWeight: 800,
               cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
             }}>
               <Plus size={15} /> Publicera din resa
@@ -645,25 +719,25 @@ export default function LiftPage() {
           )}
         </div>
 
-        <div style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: isMobile ? 16 : 18 }}>
           {tab === 'passenger' ? (
             <>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', margin: '0 0 4px' }}>Behöver skjuts?</h2>
-              <p style={{ fontSize: '0.82rem', color: 'var(--muted)', margin: 0 }}>Publicera din resa — förare längs vägen ser den och erbjuder dig plats.</p>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', margin: '0 0 4px' }}>Behöver du skjuts?</h2>
+              <p style={{ fontSize: isMobile ? '0.84rem' : '0.82rem', color: 'var(--muted)', margin: 0, lineHeight: 1.6 }}>Publicera en gång och låt Gonow hålla ihop nästa steg med svar, matchning och bekräftelse.</p>
             </>
           ) : (
             <>
               <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', margin: '0 0 4px' }}>Passagerare längs din rutt</h2>
-              <p style={{ fontSize: '0.82rem', color: 'var(--muted)', margin: 0 }}>Öppna liftförfrågningar som du kan ta med på din resa.</p>
+              <p style={{ fontSize: isMobile ? '0.84rem' : '0.82rem', color: 'var(--muted)', margin: 0, lineHeight: 1.6 }}>Öppna behov som passar din resa, presenterade i en renare förarvy.</p>
             </>
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none', marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none', marginBottom: isMobile ? 18 : 22 }}>
           {FILTERS.map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{
-              flexShrink: 0, padding: '7px 14px', borderRadius: 999, border: '1px solid',
-              fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+              flexShrink: 0, padding: isMobile ? '9px 14px' : '8px 14px', borderRadius: 999, border: '1px solid',
+              fontSize: isMobile ? '0.8rem' : '0.78rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
               background: filter === f ? 'var(--accent)' : 'var(--surface)',
               color: filter === f ? '#0a0a0a' : 'var(--muted)',
               borderColor: filter === f ? 'var(--accent)' : 'var(--border)',
@@ -715,7 +789,7 @@ export default function LiftPage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {((myLiftTab ?? defaultTab) === 'active' ? active : (myLiftTab ?? defaultTab) === 'open' ? open : history).map(lift => (
-                  <MyLiftCard key={lift.id} lift={lift} onAccept={handleAccept} onDecline={handleDecline} onViewCarrier={setProfileUserId} onCancel={handleCancel} />
+                  <MyLiftCard key={lift.id} lift={lift} onAccept={handleAccept} onDecline={handleDecline} onViewCarrier={setProfileUserId} onCancel={handleCancel} onComplete={handleComplete} />
                 ))}
               </div>
               <div style={{ height: 1, background: 'var(--border)', margin: '20px 0 4px' }} />
@@ -788,6 +862,16 @@ export default function LiftPage() {
       )}
       {profileUserId && (
         <CarrierProfileModal carrierId={profileUserId} onClose={() => setProfileUserId(null)} />
+      )}
+      {pendingLiftRating && userId && (
+        <RatingModal
+          orderId={pendingLiftRating.liftId}
+          fromUserId={userId}
+          toUserId={pendingLiftRating.toUserId}
+          toUserName={pendingLiftRating.toName}
+          role="sender"
+          onDone={() => setPendingLiftRating(null)}
+        />
       )}
     </div>
   )

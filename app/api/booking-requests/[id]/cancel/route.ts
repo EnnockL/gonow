@@ -1,3 +1,4 @@
+import { getRequestUser, unauthorized } from '@/lib/auth/require-auth'
 import { createServiceClient } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -6,50 +7,48 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getRequestUser(req)
+    if (!user) return unauthorized()
+
     const { id } = await params
     const supabase = createServiceClient()
 
-    // Try booking_requests first
-    const { data: booking, error: bookingLookupErr } = await supabase
+    const { data: booking, error: bookingError } = await supabase
       .from('booking_requests')
-      .select('id, status, order_id')
+      .select('id, sender_id, status, order_id')
       .eq('id', id)
       .single()
 
-    if (booking) {
-      if (!['pending', 'accepted'].includes(booking.status)) {
-        return NextResponse.json({ error: 'Kan bara avbryta förfrågningar som väntar eller accepterats.' }, { status: 409 })
-      }
-
-      await supabase.rpc('cancel_booking_request_status', { p_booking_request_id: id }).catch(() => null)
-
-      if (booking.order_id) {
-        await supabase.rpc('cancel_order_status', { p_order_id: booking.order_id }).catch(() => null)
-      }
-
-      return NextResponse.json({ ok: true })
+    if (bookingError || !booking) {
+      return NextResponse.json({ error: 'Förfrågan hittades inte.' }, { status: 404 })
     }
 
-    // Fallback: try orders table
-    const { data: order } = await supabase
-      .from('orders')
-      .select('id, status')
+    if (booking.sender_id !== user.id) {
+      return NextResponse.json({ error: 'Du får bara avbryta dina egna förfrågningar.' }, { status: 403 })
+    }
+
+    if (!['pending', 'accepted'].includes(booking.status)) {
+      return NextResponse.json(
+        { error: 'Kan bara avbryta förfrågningar som väntar eller accepterats.' },
+        { status: 409 }
+      )
+    }
+
+    const { error: bookingUpdateError } = await supabase
+      .from('booking_requests')
+      .update({ status: 'cancelled' })
       .eq('id', id)
-      .single()
 
-    if (!order) {
-      return NextResponse.json({ error: `Förfrågan hittades inte.` }, { status: 404 })
+    if (bookingUpdateError) {
+      return NextResponse.json({ error: bookingUpdateError.message }, { status: 500 })
     }
 
-    if (order.status !== 'pending') {
-      return NextResponse.json({ error: `Kan bara avbryta förfrågningar med status "väntar". (nuvarande: ${order.status})` }, { status: 409 })
-    }
-
-    // Use RPC to bypass PostgREST enum cache issue
-    const { error: rpcErr } = await supabase.rpc('cancel_order_status', { p_order_id: id })
-
-    if (rpcErr) {
-      return NextResponse.json({ error: `RPC-fel: ${rpcErr.message}` }, { status: 500 })
+    if (booking.order_id) {
+      await supabase
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('id', booking.order_id)
+        .eq('sender_id', user.id)
     }
 
     return NextResponse.json({ ok: true })

@@ -7,6 +7,7 @@ import { GonowScoreBadgeCompact } from '@/components/GonowScoreBadge'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { useAuth } from '@/hooks/useAuth'
+import { authedFetch } from '@/lib/auth/authed-fetch'
 
 interface CarrierProfile {
   id: string
@@ -119,7 +120,7 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
   useEffect(() => {
     if (tab !== 'chatt' || !carrierId || !userId) return
     setThreadLoading(true)
-    fetch(`/api/messages?user_id=${userId}&with=${carrierId}`)
+    authedFetch(`/api/messages?with=${carrierId}`)
       .then(r => r.json())
       .then(d => setThread(d.messages ?? []))
       .finally(() => setThreadLoading(false))
@@ -149,10 +150,10 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
     const optimistic: Message = { id: Math.random().toString(), sender_id: userId, receiver_id: carrierId, content, created_at: new Date().toISOString() }
     setThread(prev => [...prev, optimistic])
     try {
-      const res = await fetch('/api/messages', {
+      const res = await authedFetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender_id: userId, receiver_id: carrierId, content }),
+        body: JSON.stringify({ receiver_id: carrierId, content }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error)
@@ -185,11 +186,11 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
         transition: 'bottom 0.2s ease, max-height 0.2s ease',
       }}>
         {/* Header — always visible */}
-        <div style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.18) 0%, rgba(34,197,94,0.06) 100%)', borderBottom: '1px solid rgba(34,197,94,0.15)', padding: isMobile ? '18px 14px 12px' : '22px 20px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, position: 'relative', flexShrink: 0 }}>
+        <div style={{ background: 'linear-gradient(135deg, var(--gn-018) 0%, var(--gn-006) 100%)', borderBottom: '1px solid var(--gn-015)', padding: isMobile ? '18px 14px 12px' : '22px 20px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, position: 'relative', flexShrink: 0 }}>
           <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--muted)' }}>
             <X size={13} />
           </button>
-          <div style={{ width: 60, height: 60, borderRadius: 16, background: 'linear-gradient(135deg, rgba(34,197,94,0.35), rgba(34,197,94,0.15))', border: '2px solid rgba(34,197,94,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 800, color: '#15803d' }}>
+          <div style={{ width: 60, height: 60, borderRadius: 16, background: 'linear-gradient(135deg, var(--gn-035), var(--gn-015))', border: '2px solid var(--gn-050)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 800, color: 'var(--gn-dk)' }}>
             {loading ? '…' : initials}
           </div>
           {!loading && (
@@ -212,7 +213,7 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
         {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           {TABS.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)} style={{ flex: 1, padding: '11px 0', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.8rem', border: 'none', cursor: 'pointer', background: 'transparent', color: tab === t.key ? 'var(--text)' : 'var(--muted)', borderBottom: `2px solid ${tab === t.key ? '#22c55e' : 'transparent'}`, transition: 'all 0.15s' }}>
+            <button key={t.key} onClick={() => setTab(t.key)} style={{ flex: 1, padding: '11px 0', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.8rem', border: 'none', cursor: 'pointer', background: 'transparent', color: tab === t.key ? 'var(--text)' : 'var(--muted)', borderBottom: `2px solid ${tab === t.key ? 'var(--gn)' : 'transparent'}`, transition: 'all 0.15s' }}>
               {t.label}
             </button>
           ))}
@@ -225,7 +226,7 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
             <>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {profile?.bankid_verified && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 999, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', color: '#16a34a', fontSize: '0.72rem', fontWeight: 700 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 999, background: 'var(--gn-010)', border: '1px solid var(--gn-020)', color: 'var(--gn-dk)', fontSize: '0.72rem', fontWeight: 700 }}>
                     <Shield size={11} /> BankID verifierad
                   </span>
                 )}
@@ -308,7 +309,7 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
                             {isMe ? 'Du' : profile?.name?.split(' ')[0] ?? ''}
                           </span>
                         )}
-                        <div style={{ maxWidth: '78%', padding: '8px 12px', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px', background: isMe ? '#22c55e' : (isDark ? '#2a2a2a' : '#e4e6eb'), color: isMe ? '#0a0a0a' : (isDark ? '#fafafa' : '#111'), fontSize: '0.82rem', lineHeight: 1.45, wordBreak: 'break-word' }}>
+                        <div style={{ maxWidth: '78%', padding: '8px 12px', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px', background: isMe ? 'var(--gn)' : (isDark ? '#2a2a2a' : '#e4e6eb'), color: isMe ? '#0a0a0a' : (isDark ? '#fafafa' : '#111'), fontSize: '0.82rem', lineHeight: 1.45, wordBreak: 'break-word' }}>
                           {msg.content}
                         </div>
                       </div>
@@ -332,7 +333,7 @@ export default function CarrierProfileModal({ carrierId, onClose }: Props) {
                   type="button"
                   onClick={handleSend}
                   disabled={!message.trim() || sending || !userId}
-                  style={{ width: 34, height: 34, flexShrink: 0, borderRadius: '50%', border: 'none', background: message.trim() ? '#22c55e' : 'var(--border)', color: message.trim() ? '#0a0a0a' : 'var(--muted)', cursor: message.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                  style={{ width: 34, height: 34, flexShrink: 0, borderRadius: '50%', border: 'none', background: message.trim() ? 'var(--gn)' : 'var(--border)', color: message.trim() ? '#0a0a0a' : 'var(--muted)', cursor: message.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
                 >
                   <Send size={14} />
                 </button>

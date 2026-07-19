@@ -1,39 +1,29 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { MessageSquare, Route, MapPin } from 'lucide-react'
 
 const steps = [
   {
     icon: MessageSquare,
     num: '01',
-    title: 'Berätta vart det ska',
-    desc: 'Skriv fritt vad du vill skicka, varifrån och vart. Vår AI förstår naturligt språk, inga formulär att fylla i.',
+    title: 'Boka paketet.',
+    desc: 'Ange vart paketet ska, varifrån och när. Klart på några sekunder — utan krångel.',
   },
   {
     icon: Route,
     num: '02',
-    title: 'Vi matchar med en bärare',
-    desc: 'Systemet hittar BankID-verifierade bärare som redan kör din rutt. Du väljer, betalar och är klar.',
+    title: 'Gonow planerar transporten.',
+    desc: 'Gonow Intelligent System tar över och planerar den bästa transporten för ditt paket. Du behöver inte tänka på mer.',
   },
   {
     icon: MapPin,
     num: '03',
-    title: 'Spåra live tills det är framme',
-    desc: 'Realtidsspårning på kartan. Mottagaren bekräftar med QR-kod och betalning frigörs först vid leverans.',
+    title: 'Följ paketet tills det är framme.',
+    desc: 'Realtidsspårning hela vägen. Mottagaren bekräftar leveransen och du ser när paketet är framme.',
   },
 ]
 
 export default function HowItWorks() {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768)
-    onResize()
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
-
   return (
     <section
       className="section"
@@ -48,14 +38,14 @@ export default function HowItWorks() {
           style={{
             background: 'var(--service-card-bg)',
             border: '1px solid var(--service-card-border)',
-            borderRadius: isMobile ? 24 : 32,
+            borderRadius: 32,
             boxShadow: 'var(--service-card-shadow)',
-            padding: isMobile ? '32px 16px 16px' : '56px 24px 28px',
+            padding: '56px 24px 28px',
           }}
         >
-          <div style={{ textAlign: 'center', marginBottom: isMobile ? 28 : 56 }}>
+          <div style={{ textAlign: 'center', marginBottom: 56 }}>
             <p className="label" style={{ marginBottom: 10, color: 'var(--secondary-strong)' }}>
-              Hur det fungerar
+              Hur enkelt är det?
             </p>
             <h2
               style={{
@@ -65,20 +55,20 @@ export default function HowItWorks() {
                 color: 'var(--secondary-strong)',
               }}
             >
-              Tre steg. Det är allt.
+              Tre steg. Inte mer.
             </h2>
           </div>
 
-          <div className="mobile-stack" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: isMobile ? 10 : 2 }}>
+          <div className="mobile-stack" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
             {steps.map((step, index) => (
               <div
                 key={step.num}
                 style={{
-                  padding: isMobile ? '22px 18px' : '32px 28px',
-                  background: 'linear-gradient(180deg, #4ade80 0%, #22c55e 100%)',
+                  padding: '32px 28px',
+                  background: 'linear-gradient(180deg, var(--gn-lt2) 0%, var(--gn) 100%)',
                   border: '1px solid rgba(10,10,10,0.08)',
-                  borderRadius: isMobile ? 18 : 16,
-                  marginLeft: !isMobile && index > 0 ? -1 : 0,
+                  borderRadius: 16,
+                  marginLeft: index > 0 ? -1 : 0,
                   position: 'relative',
                   zIndex: 0,
                   transition: 'z-index 0s, background 0.15s, border-color 0.15s',
@@ -95,14 +85,14 @@ export default function HowItWorks() {
                   const el = e.currentTarget as HTMLElement
                   el.style.zIndex = '0'
                   el.style.borderColor = 'rgba(10,10,10,0.08)'
-                  el.style.background = 'linear-gradient(180deg, #4ade80 0%, #22c55e 100%)'
+                  el.style.background = 'linear-gradient(180deg, var(--gn-lt2) 0%, var(--gn) 100%)'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
                   <div
                     style={{
-                      width: isMobile ? 40 : 44,
-                      height: isMobile ? 40 : 44,
+                      width: 44,
+                      height: 44,
                       borderRadius: 12,
                       background: 'rgba(255,255,255,0.28)',
                       display: 'flex',
@@ -111,7 +101,7 @@ export default function HowItWorks() {
                       flexShrink: 0,
                     }}
                   >
-                    <step.icon size={isMobile ? 18 : 20} style={{ color: '#0a0a0a' }} />
+                    <step.icon size={20} style={{ color: '#0a0a0a' }} />
                   </div>
                   <span
                     style={{
@@ -127,7 +117,7 @@ export default function HowItWorks() {
                 </div>
                 <h3
                   style={{
-                    fontSize: isMobile ? '0.94rem' : '1rem',
+                    fontSize: '1rem',
                     fontWeight: 600,
                     color: '#0a0a0a',
                     marginBottom: 10,
@@ -136,7 +126,7 @@ export default function HowItWorks() {
                 >
                   {step.title}
                 </h3>
-                <p style={{ fontSize: isMobile ? '0.8rem' : '0.83rem', lineHeight: 1.65, color: 'rgba(10,10,10,0.72)' }}>
+                <p style={{ fontSize: '0.83rem', lineHeight: 1.65, color: 'rgba(10,10,10,0.72)' }}>
                   {step.desc}
                 </p>
               </div>

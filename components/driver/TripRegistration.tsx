@@ -135,25 +135,28 @@ export default function TripRegistration() {
     setStatus('loading')
 
     try {
-      const { createClient } = await import('@/lib/supabase')
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser() as unknown as { data: { user: { id: string } | null } }
-      let persistedTripId: string | undefined
-
-      if (user) {
-        const { data, error } = await supabase
-          .from('trips')
-          .insert({ ...form, carrier_id: user.id })
-          .select('id')
-          .single()
-        if (error) throw error
-        persistedTripId = data?.id
+      if (!userId) {
+        throw new Error('Du behöver vara inloggad för att registrera en resa.')
       }
 
-      // Always save locally so the trip shows in MyTrips panel
+      const res = await fetch('/api/trips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(form),
+      })
+
+      const payload = await res.json().catch(() => ({} as { error?: string; trip?: { id?: string } }))
+      if (!res.ok || !payload.trip?.id) {
+        throw new Error(payload.error || 'Resan kunde inte sparas i databasen.')
+      }
+
+      const persistedTripId = payload.trip.id
+
+      // Cache only trips that are already persisted in Supabase.
       saveTrip({
         id: persistedTripId,
-        carrier_id: user?.id || userId || undefined,
+        carrier_id: userId,
         ...form,
         carrier_name: carrier.name,
         carrier_phone: carrier.phone,
@@ -189,7 +192,7 @@ export default function TripRegistration() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            trip_id: persistedTripId ?? 'draft',
+            trip_id: persistedTripId,
             from_city: form.from_city,
             to_city: form.to_city,
             departure_at: form.departure_at,
@@ -204,8 +207,10 @@ export default function TripRegistration() {
       } catch { /* ignore */ } finally {
         setRecLoading(false)
       }
-    } catch {
-      setStatus('success') // still show success in demo
+    } catch (error) {
+      console.error('[TripRegistration] save failed:', error)
+      alert(error instanceof Error ? error.message : 'Resan kunde inte sparas.')
+      setStatus('error')
     }
   }
 
@@ -225,23 +230,23 @@ export default function TripRegistration() {
 
         {/* AI Recommendation */}
         {recLoading ? (
-          <div style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0.04) 100%)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 14, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Loader2 size={18} style={{ color: '#22c55e', animation: 'spin 1s linear infinite' }} />
+          <div style={{ background: 'linear-gradient(135deg, var(--gn-010) 0%, var(--gn-004) 100%)', border: '1px solid var(--gn-025)', borderRadius: 14, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Loader2 size={18} style={{ color: 'var(--gn)', animation: 'spin 1s linear infinite' }} />
             <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: 0 }}>AI scannar paket och passagerare längs rutten...</p>
           </div>
         ) : recommendation && recommendation.total_earnings > 0 ? (
-          <div style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.12) 0%, rgba(34,197,94,0.05) 100%)', border: '2px solid rgba(34,197,94,0.4)', borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ background: 'linear-gradient(135deg, var(--gn-012) 0%, var(--gn-005) 100%)', border: '2px solid var(--gn-040)', borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Sparkles size={16} style={{ color: '#22c55e', flexShrink: 0 }} />
+              <Sparkles size={16} style={{ color: 'var(--gn)', flexShrink: 0 }} />
               <p style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text)', margin: 0 }}>
-                AI hittade en kombination som ger dig <span style={{ color: '#22c55e' }}>+{recommendation.carrier_payout} kr</span>
+                AI hittade en kombination som ger dig <span style={{ color: 'var(--gn)' }}>+{recommendation.carrier_payout} kr</span>
               </p>
             </div>
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {recommendation.recommended_packages.length > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 8, padding: '5px 10px' }}>
-                  <PkgIcon size={13} style={{ color: '#22c55e' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'var(--gn-010)', border: '1px solid var(--gn-025)', borderRadius: 8, padding: '5px 10px' }}>
+                  <PkgIcon size={13} style={{ color: 'var(--gn)' }} />
                   <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)' }}>
                     {recommendation.recommended_packages.length} paket
                   </span>
@@ -320,7 +325,7 @@ export default function TripRegistration() {
 
       {/* Route preview */}
       {(routeLoading || route) && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--accent-softer)', borderRadius: 10, border: '1px solid rgba(34,197,94,0.2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--accent-softer)', borderRadius: 10, border: '1px solid var(--gn-020)' }}>
           {routeLoading
             ? <><Loader2 size={13} style={{ color: 'var(--accent)', animation: 'spin 1s linear infinite' }} /><span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>Beräknar rutt...</span></>
             : route && <>
@@ -352,7 +357,7 @@ export default function TripRegistration() {
             <button key={v.value} type="button" onClick={() => set('vehicle_type', v.value)} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '10px 4px',
               borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.72rem', fontWeight: 500,
-              border: `1px solid ${form.vehicle_type === v.value ? 'rgba(34,197,94,0.5)' : 'var(--border)'}`,
+              border: `1px solid ${form.vehicle_type === v.value ? 'var(--gn-050)' : 'var(--border)'}`,
               background: form.vehicle_type === v.value ? 'var(--accent-soft)' : 'var(--surface)',
               color: form.vehicle_type === v.value ? 'var(--accent)' : 'var(--muted)',
               transition: 'all 0.15s',
@@ -450,7 +455,7 @@ export default function TripRegistration() {
           {toggles.map(({ key, label }) => (
             <button key={key} type="button" onClick={() => set(key, !form[key])} style={{
               padding: '7px 14px', borderRadius: 100, fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
-              border: `1px solid ${form[key] ? 'rgba(34,197,94,0.4)' : 'var(--border)'}`,
+              border: `1px solid ${form[key] ? 'var(--gn-040)' : 'var(--border)'}`,
               background: form[key] ? 'var(--accent-soft)' : 'transparent',
               color: form[key] ? 'var(--accent)' : 'var(--muted)',
               transition: 'all 0.15s',
@@ -504,14 +509,14 @@ export default function TripRegistration() {
 
       {/* Potential earnings box */}
       {route && tripPotential && (
-        <div style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0.04) 100%)', border: '2px solid rgba(34,197,94,0.3)', borderRadius: 14, padding: '16px 18px' }}>
-          <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#22c55e', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px' }}>
+        <div style={{ background: 'linear-gradient(135deg, var(--gn-010) 0%, var(--gn-004) 100%)', border: '2px solid var(--gn-030)', borderRadius: 14, padding: '16px 18px' }}>
+          <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--gn)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px' }}>
             Din resa kan bli värd upp till {tripPotential.totalCarrierPayout} kr
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {form.allows_packages && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
-                <span style={{ color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}><PkgIcon size={13} style={{ color: '#22c55e' }} /> Paket (upp till 3 st)</span>
+                <span style={{ color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}><PkgIcon size={13} style={{ color: 'var(--gn)' }} /> Paket (upp till 3 st)</span>
                 <span style={{ fontWeight: 700, color: 'var(--text)' }}>{Math.round(tripPotential.packageEarnings * 0.8)} kr</span>
               </div>
             )}
@@ -521,9 +526,9 @@ export default function TripRegistration() {
                 <span style={{ fontWeight: 700, color: 'var(--text)' }}>{Math.round(tripPotential.liftEarnings * 0.8)} kr</span>
               </div>
             )}
-            <div style={{ borderTop: '1px solid rgba(34,197,94,0.2)', paddingTop: 8, marginTop: 2, display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
+            <div style={{ borderTop: '1px solid var(--gn-020)', paddingTop: 8, marginTop: 2, display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
               <span style={{ color: 'var(--text)', fontWeight: 600 }}>Total möjlig intäkt</span>
-              <span style={{ fontSize: '1.2rem', fontWeight: 900, color: '#22c55e' }}>{tripPotential.totalCarrierPayout} kr</span>
+              <span style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--gn)' }}>{tripPotential.totalCarrierPayout} kr</span>
             </div>
           </div>
           <p style={{ fontSize: '0.68rem', color: 'var(--muted)', margin: '10px 0 0', lineHeight: 1.5 }}>

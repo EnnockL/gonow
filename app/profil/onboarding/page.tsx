@@ -121,7 +121,7 @@ export default function OnboardingPage() {
         {step === 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24, animation: 'fade-in 0.25s ease both' }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--gn-012)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
                 <span style={{ fontSize: '1.8rem' }}>👋</span>
               </div>
               <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text)', margin: '0 0 8px', letterSpacing: '-0.03em' }}>
@@ -146,12 +146,12 @@ export default function OnboardingPage() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 14,
                     padding: '14px 16px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-                    background: form.role === value ? 'rgba(34,197,94,0.08)' : 'var(--surface)',
+                    background: form.role === value ? 'var(--gn-008)' : 'var(--surface)',
                     border: `2px solid ${form.role === value ? 'var(--accent)' : 'var(--border)'}`,
                     transition: 'all 0.15s',
                   }}
                 >
-                  <div style={{ width: 40, height: 40, borderRadius: 10, background: form.role === value ? 'rgba(34,197,94,0.15)' : 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: form.role === value ? 'var(--gn-015)' : 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Icon size={18} style={{ color: form.role === value ? 'var(--accent)' : 'var(--muted)' }} />
                   </div>
                   <div>
@@ -240,7 +240,7 @@ export default function OnboardingPage() {
                   onClick={() => setForm(f => ({ ...f, vehicleType: f.vehicleType === v ? '' : v }))}
                   style={{
                     padding: '12px 16px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', fontSize: '0.88rem', fontWeight: 600,
-                    background: form.vehicleType === v ? 'rgba(34,197,94,0.08)' : 'var(--surface)',
+                    background: form.vehicleType === v ? 'var(--gn-008)' : 'var(--surface)',
                     border: `2px solid ${form.vehicleType === v ? 'var(--accent)' : 'var(--border)'}`,
                     color: form.vehicleType === v ? 'var(--text)' : 'var(--muted)',
                     transition: 'all 0.15s',
@@ -270,8 +270,8 @@ export default function OnboardingPage() {
         {/* Step 3 — Klart */}
         {step === 3 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, textAlign: 'center', paddingTop: 24, animation: 'fade-in 0.3s ease both' }}>
-            <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <CheckCircle2 size={36} style={{ color: '#22c55e' }} />
+            <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--gn-012)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CheckCircle2 size={36} style={{ color: 'var(--gn)' }} />
             </div>
             <div>
               <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text)', margin: '0 0 10px', letterSpacing: '-0.03em' }}>Allt klart!</h2>

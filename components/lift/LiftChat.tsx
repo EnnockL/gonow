@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
@@ -89,7 +89,7 @@ export default function LiftChat({ liftId }: { liftId: string }) {
           <span style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>({messages.length})</span>
         )}
         {unread > 0 && !open && (
-          <span style={{ position: 'absolute', top: -5, right: -5, width: 16, height: 16, borderRadius: '50%', background: '#22c55e', color: '#0a0a0a', fontSize: '0.58rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span style={{ position: 'absolute', top: -5, right: -5, width: 16, height: 16, borderRadius: '50%', background: 'var(--gn)', color: '#0a0a0a', fontSize: '0.58rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {unread}
           </span>
         )}
@@ -109,7 +109,7 @@ export default function LiftChat({ liftId }: { liftId: string }) {
                   <div style={{
                     maxWidth: '80%', padding: '8px 12px',
                     borderRadius: isMe ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                    background: isMe ? '#22c55e' : 'var(--surface-2)',
+                    background: isMe ? 'var(--gn)' : 'var(--surface-2)',
                     color: isMe ? '#0a0a0a' : 'var(--text)',
                     fontSize: '0.83rem', lineHeight: 1.5,
                   }}>
@@ -141,7 +141,7 @@ export default function LiftChat({ liftId }: { liftId: string }) {
               disabled={sending || !text.trim()}
               style={{
                 padding: '8px 12px', borderRadius: 10, border: 'none',
-                background: text.trim() ? '#22c55e' : 'var(--border)',
+                background: text.trim() ? 'var(--gn)' : 'var(--border)',
                 color: text.trim() ? '#0a0a0a' : 'var(--muted)',
                 cursor: text.trim() ? 'pointer' : 'default',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',

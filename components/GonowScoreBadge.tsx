@@ -153,7 +153,7 @@ export function GonowScoreCard({
             </p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {nextRequirements.map(req => (
-                <div key={req.label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 10, background: req.done ? 'rgba(34,197,94,0.15)' : chipBg, border: `1px solid ${req.done ? 'rgba(34,197,94,0.35)' : chipBd}` }}>
+                <div key={req.label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 10, background: req.done ? 'var(--gn-015)' : chipBg, border: `1px solid ${req.done ? 'var(--gn-035)' : chipBd}` }}>
                   <span style={{ fontSize: '0.78rem' }}>{req.done ? '✅' : req.icon}</span>
                   <div>
                     <p style={{ fontSize: '0.68rem', fontWeight: 600, color: req.done ? muted : txt, textDecoration: req.done ? 'line-through' : 'none', margin: 0 }}>{req.label}</p>
@@ -179,10 +179,10 @@ export function GonowScoreCard({
           </span>
         )}
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 999, background: badgeBg, border: `1px solid ${badgeBd}`, fontSize: '0.68rem', fontWeight: 600, color: txt }}>
-          <CheckCircle2 size={10} style={{ color: '#34d399' }} /> {completedTrips} genomförda
+          <CheckCircle2 size={10} style={{ color: 'var(--gn)' }} /> {completedTrips} genomförda
         </span>
         {bankidVerified && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 999, background: 'rgba(52,211,153,0.2)', border: '1px solid rgba(52,211,153,0.4)', fontSize: '0.68rem', fontWeight: 600, color: isDark ? '#059669' : '#34d399' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 999, background: 'var(--gn-020)', border: '1px solid var(--gn-040)', fontSize: '0.68rem', fontWeight: 600, color: 'var(--gn-dk)' }}>
             <Shield size={10} /> BankID
           </span>
         )}

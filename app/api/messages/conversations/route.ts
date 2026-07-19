@@ -1,49 +1,47 @@
-import { createServiceClient } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
+import { getRequestUser, unauthorized } from '@/lib/auth/require-auth'
+
+type ConversationRow = {
+  id: string
+  context_type: string
+  context_route: string | null
+  unread_count: number
+  last_message: string | null
+  last_message_at: string | null
+  other_user: {
+    id: string
+    name: string
+    avatar_url: string | null
+    phone?: string | null
+  }
+}
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const userId = searchParams.get('user_id')
-  if (!userId) return NextResponse.json({ error: 'user_id krävs' }, { status: 400 })
+  const user = await getRequestUser(req)
+  if (!user) return unauthorized()
+  const userId = user.id
 
-  const supabase = createServiceClient()
+  const base = new URL('/api/conversations', req.url)
+  const forwarded = await fetch(base, { cache: 'no-store', headers: { Authorization: req.headers.get('Authorization')! } })
+  const json = await forwarded.json().catch(() => ({})) as { conversations?: ConversationRow[]; error?: string }
 
-  const { data: messages, error } = await supabase
-    .from('messages')
-    .select('*')
-    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-    .order('created_at', { ascending: false })
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (!messages || messages.length === 0) return NextResponse.json({ conversations: [] })
-
-  // Group by the other user, keep latest message per conversation
-  const convMap = new Map<string, { last_message: string; last_at: string; last_sender_id: string }>()
-  for (const msg of messages) {
-    const otherId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id
-    if (!convMap.has(otherId)) {
-      convMap.set(otherId, { last_message: msg.content, last_at: msg.created_at, last_sender_id: msg.sender_id })
-    }
+  if (!forwarded.ok) {
+    return NextResponse.json({ error: json.error ?? 'Kunde inte läsa konversationer.' }, { status: forwarded.status })
   }
 
-  const otherIds = [...convMap.keys()]
-  const { data: users } = await supabase
-    .from('users')
-    .select('id, name')
-    .in('id', otherIds)
-
-  const userMap = new Map((users ?? []).map((u: { id: string; name: string }) => [u.id, u.name]))
-
-  const conversations = otherIds.map(id => {
-    const conv = convMap.get(id)!
-    return {
-      other_user_id: id,
-      other_user_name: userMap.get(id) ?? 'Okänd',
-      last_message: conv.last_message,
-      last_at: conv.last_at,
-      last_sender_id: conv.last_sender_id,
-    }
-  }).sort((a, b) => b.last_at.localeCompare(a.last_at))
+  const conversations = (json.conversations ?? []).map((conv) => ({
+    id: conv.id,
+    other_user_id: conv.other_user.id,
+    other_user_name: conv.other_user.name ?? 'Okänd',
+    other_avatar: conv.other_user.avatar_url ?? null,
+    other_phone: conv.other_user.phone ?? null,
+    last_message: conv.last_message ?? '',
+    last_at: conv.last_message_at ?? '',
+    last_sender_id: (conv.unread_count ?? 0) > 0 ? conv.other_user.id : userId,
+    unread_count: conv.unread_count ?? 0,
+    context_type: conv.context_type,
+    context_route: conv.context_route,
+  }))
 
   return NextResponse.json({ conversations })
 }

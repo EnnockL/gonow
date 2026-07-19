@@ -429,7 +429,7 @@ declare
 begin
   v_carrier_id := public.fn_resolve_order_carrier_id(new);
 
-  if new.status = 'confirmed' and coalesce(old.status, '') <> 'confirmed' and v_carrier_id is not null then
+  if new.status = 'confirmed' and old.status is distinct from 'confirmed'::order_status and v_carrier_id is not null then
     perform public.fn_append_ledger_entry(
       new.id,
       null,
@@ -475,7 +475,9 @@ declare
 begin
   select * into v_order from public.orders where id = new.order_id;
 
-  if new.status in ('pending', 'processing') and coalesce(old.status, '') not in ('pending', 'processing') then
+  if new.status in ('pending', 'processing')
+     and old.status is distinct from 'pending'::payout_status
+     and old.status is distinct from 'processing'::payout_status then
     perform public.fn_append_ledger_entry(
       v_order.id,
       null,
@@ -491,7 +493,7 @@ begin
     );
   end if;
 
-  if new.status = 'paid' and coalesce(old.status, '') <> 'paid' then
+  if new.status = 'paid' and old.status is distinct from 'paid'::payout_status then
     perform public.fn_append_ledger_entry(
       v_order.id,
       null,

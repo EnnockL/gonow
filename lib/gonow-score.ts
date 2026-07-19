@@ -56,30 +56,42 @@ export function calculateGonowScore(input: GonowScoreInput): GonowScoreResult {
   const trips = input.completed_trips ?? input.rating_count
 
   // Rating: 35p (only counts when there are actual reviews)
-  const ratingPts = input.rating_count > 0 ? (input.rating_avg / 5) * 35 : 0
+  const ratingPts = Math.min(Math.max(
+    input.rating_count > 0 ? (input.rating_avg / 5) * 35 : 0,
+    0
+  ), 35)
 
   // BankID: 15p
   const bankidPts = input.bankid_verified ? 15 : 0
 
   // Trips: logarithmic 0→0, 1→7, 5→13, 20→20, 100→25 (max 25p)
-  const tripsPts = trips > 0 ? Math.min(Math.log(trips + 1) / Math.log(101) * 25, 25) : 0
+  const tripsPts = Math.min(Math.max(
+    trips > 0 ? Math.log(trips + 1) / Math.log(101) * 25 : 0,
+    0
+  ), 25)
 
   // Completion: 15p (completion_rate is 0–100)
-  const completionRate = input.completion_rate ?? (trips > 0 ? 95 : 0)
-  const completionPts = (completionRate / 100) * 15
+  const completionRate = Math.min(Math.max(
+    input.completion_rate ?? (trips > 0 ? 95 : 0),
+    0
+  ), 100)
+  const completionPts = Math.min(Math.max((completionRate / 100) * 15, 0), 15)
 
   // Punctuality: 5p bonus (future — show as locked until data exists)
   // punctuality_rate is 0–100
-  const punctualityRate = input.punctuality_rate ?? 0
-  const punctualityPts = (punctualityRate / 100) * 5
+  const punctualityRate = Math.min(Math.max(input.punctuality_rate ?? 0, 0), 100)
+  const punctualityPts  = Math.min(Math.max((punctualityRate / 100) * 5, 0), 5)
 
   // Response time: 5p bonus (10min=5p, 60min=2p, >60min=0)
   const avgMin = input.avg_response_min
-  const responsePts = avgMin == null ? 0
-    : avgMin <= 10  ? 5
-    : avgMin <= 30  ? 3
-    : avgMin <= 60  ? 1
-    : 0
+  const responsePts = Math.min(Math.max(
+    avgMin == null ? 0
+      : avgMin <= 10  ? 5
+      : avgMin <= 30  ? 3
+      : avgMin <= 60  ? 1
+      : 0,
+    0
+  ), 5)
 
   const raw = ratingPts + bankidPts + tripsPts + completionPts + punctualityPts + responsePts
   const score = Math.min(Math.round(raw), 100)

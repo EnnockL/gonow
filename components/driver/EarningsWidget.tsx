@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { calculateTripPotential } from '@/lib/pricing'
+import { calcTripPotential } from '@/lib/price'
 
 export default function EarningsWidget() {
   const [isMobile, setIsMobile] = useState(false)
@@ -16,16 +16,12 @@ export default function EarningsWidget() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  const result = useMemo(() => calculateTripPotential({
-    distanceKm: km,
-    packageCount: packages,
-    avgWeightKg: 3,
-    passengerCount: passengers,
-  }), [km, packages, passengers])
-
-  const { packageEarnings, liftEarnings, totalGross, totalCarrierPayout } = result
-  const commission = Math.round(totalGross * 0.15)
-  const payout = totalCarrierPayout
+  const { packageEarnings, liftEarnings, totalGross, carrierPayout, gonowCommission } = useMemo(
+    () => calcTripPotential({ km, packageCount: packages, avgWeightKg: 3, passengerCount: passengers }),
+    [km, packages, passengers]
+  )
+  const payout     = carrierPayout
+  const commission = gonowCommission
 
   const sliders = [
     { label: 'Avstånd', val: km, setVal: setKm, min: 50, max: 2000, step: 10, unit: 'km' },
@@ -83,8 +79,8 @@ export default function EarningsWidget() {
           style={{
             padding: '7px 12px',
             borderRadius: 999,
-            border: '1px solid rgba(34,197,94,0.18)',
-            background: 'rgba(34,197,94,0.08)',
+            border: '1px solid var(--gn-018)',
+            background: 'var(--gn-008)',
             fontSize: '0.76rem',
             fontWeight: 700,
             color: 'var(--success)',

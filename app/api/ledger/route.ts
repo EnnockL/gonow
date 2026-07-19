@@ -1,20 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { getRequestUser, unauthorized } from '@/lib/auth/require-auth'
 import { createServiceClient } from '@/lib/supabase'
+import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const carrierId = searchParams.get('carrier_id')
-
-  if (!carrierId) {
-    return NextResponse.json({ error: 'carrier_id krävs.' }, { status: 400 })
-  }
+  const user = await getRequestUser(req)
+  if (!user) return unauthorized()
 
   try {
     const supabase = createServiceClient()
     const { data, error } = await supabase
       .from('escrow_ledger')
       .select('*')
-      .eq('carrier_id', carrierId)
+      .eq('carrier_id', user.id)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -23,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ entries: data || [] })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Kunde inte läsa ledger.'
+    const message = error instanceof Error ? error.message : 'Kunde inte lasa ledger.'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

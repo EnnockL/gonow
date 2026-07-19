@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { X, Send, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { authedFetch } from '@/lib/auth/authed-fetch'
 
 interface Props {
   receiverId: string
@@ -23,10 +24,10 @@ export default function ChatModal({ receiverId, receiverName, tripId, onClose }:
     setSending(true)
     setError(null)
     try {
-      const res = await fetch('/api/messages', {
+      const res = await authedFetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sender_id: userId, receiver_id: receiverId, trip_id: tripId, content: message }),
+        body: JSON.stringify({ receiver_id: receiverId, trip_id: tripId, content: message }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error)
@@ -55,10 +56,10 @@ export default function ChatModal({ receiverId, receiverName, tripId, onClose }:
         <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-            background: 'linear-gradient(135deg, rgba(34,197,94,0.25), rgba(34,197,94,0.1))',
-            border: '1.5px solid rgba(34,197,94,0.3)',
+            background: 'linear-gradient(135deg, var(--gn-025), var(--gn-010))',
+            border: '1.5px solid var(--gn-030)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '0.82rem', fontWeight: 800, color: '#15803d',
+            fontSize: '0.82rem', fontWeight: 800, color: 'var(--gn-dk)',
           }}>
             {initials}
           </div>
@@ -75,7 +76,7 @@ export default function ChatModal({ receiverId, receiverName, tripId, onClose }:
         <div style={{ padding: 20 }}>
           {sent ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '20px 0' }}>
-              <CheckCircle2 size={40} style={{ color: '#15803d' }} />
+              <CheckCircle2 size={40} style={{ color: 'var(--gn-dk)' }} />
               <p style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)', margin: 0 }}>Meddelande skickat!</p>
               <p style={{ fontSize: '0.78rem', color: 'var(--muted)', margin: 0, textAlign: 'center' }}>
                 {receiverName} ser ditt meddelande i appen och kan svara dig direkt.
@@ -112,7 +113,7 @@ export default function ChatModal({ receiverId, receiverName, tripId, onClose }:
                 style={{
                   width: '100%', marginTop: 10, padding: '12px',
                   borderRadius: 12, border: 'none',
-                  background: message.trim() && userId ? '#22c55e' : 'var(--surface-2)',
+                  background: message.trim() && userId ? 'var(--gn)' : 'var(--surface-2)',
                   color: message.trim() && userId ? '#0a0a0a' : 'var(--muted)',
                   cursor: message.trim() && userId ? 'pointer' : 'not-allowed',
                   fontFamily: 'inherit', fontWeight: 700, fontSize: '0.88rem',

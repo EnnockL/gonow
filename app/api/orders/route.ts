@@ -1,3 +1,4 @@
+import { getRequestUser, unauthorized } from '@/lib/auth/require-auth'
 import { createServiceClient } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -12,20 +13,25 @@ function toOrderType(serviceType?: string) {
   }
 }
 
+function getPackageIdFromMetadata(metadata: unknown) {
+  if (!metadata || typeof metadata !== 'object') return null
+  const packageId = (metadata as Record<string, unknown>).package_id
+  return typeof packageId === 'string' && packageId.trim().length > 0 ? packageId : null
+}
+
 export async function GET(req: NextRequest) {
+  const user = await getRequestUser(req)
+  if (!user) return unauthorized()
+
   const { searchParams } = new URL(req.url)
-  const userId = searchParams.get('user_id')
   const tripId = searchParams.get('trip_id')
   const supabase = createServiceClient()
 
   const query = supabase
     .from('orders')
-    .select('*, trips(from_city, to_city, departure_at), booking_requests(sender_name, sender_phone, recipient_name, recipient_phone, recipient_email)')
+    .select('*, trips(from_city, to_city, departure_at)')
+    .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id},carrier_id.eq.${user.id}`)
     .order('created_at', { ascending: false })
-
-  if (userId) {
-    query.or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-  }
 
   if (tripId) {
     query.eq('trip_id', tripId)
@@ -35,31 +41,45 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const orders = (data ?? []) as Record<string, unknown>[]
+  const allUserIds = [
+    ...new Set(
+      [
+        ...orders.map((order) => order.sender_id as string),
+        ...orders.map((order) => (order.receiver_id || order.carrier_id) as string),
+      ].filter(Boolean),
+    ),
+  ]
 
-  // Batch fetch all relevant user IDs (senders + receivers/carriers)
-  const allUserIds = [...new Set([
-    ...orders.map(o => o.sender_id as string),
-    ...orders.map(o => (o.receiver_id || o.carrier_id) as string),
-  ].filter(Boolean))]
   const { data: allUsers } = allUserIds.length
     ? await supabase.from('users').select('id, name, phone').in('id', allUserIds)
     : { data: [] }
-  const userMap = new Map((allUsers ?? []).map((u: Record<string, string>) => [u.id, u]))
+  const userMap = new Map((allUsers ?? []).map((entry: Record<string, string>) => [entry.id, entry]))
 
-  // Batch fetch booking_request contact info
-  const brIds = [...new Set(orders.map(o => o.booking_request_id as string).filter(Boolean))]
-  const { data: brRows } = brIds.length
-    ? await supabase.from('booking_requests').select('id, sender_name, sender_phone, recipient_name, recipient_phone').in('id', brIds)
+  const bookingRequestIds = [
+    ...new Set(
+      orders
+        .filter((order) => !getPackageIdFromMetadata(order.metadata))
+        .map((order) => order.booking_request_id as string)
+        .filter(Boolean),
+    ),
+  ]
+  const { data: bookingRows } = bookingRequestIds.length
+    ? await supabase
+        .from('booking_requests')
+        .select('id, sender_name, sender_phone, recipient_name, recipient_phone')
+        .in('id', bookingRequestIds)
     : { data: [] }
-  const brMap = new Map((brRows ?? []).map((b: Record<string, string>) => [b.id, b]))
+  const bookingMap = new Map((bookingRows ?? []).map((entry: Record<string, string>) => [entry.id, entry]))
 
-  const enriched = orders.map(o => {
-    const carrierId = (o.receiver_id || o.carrier_id) as string | undefined
+  const enriched = orders.map((order) => {
+    const carrierId = (order.receiver_id || order.carrier_id) as string | undefined
     return {
-      ...o,
-      _sender: userMap.get(o.sender_id as string) ?? null,
+      ...order,
+      _sender: userMap.get(order.sender_id as string) ?? null,
       _carrier: carrierId ? userMap.get(carrierId) ?? null : null,
-      _booking_request: o.booking_request_id ? brMap.get(o.booking_request_id as string) ?? null : null,
+      _booking_request: order.booking_request_id
+        ? bookingMap.get(order.booking_request_id as string) ?? null
+        : null,
     }
   })
 
@@ -67,11 +87,14 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getRequestUser(req)
+  if (!user) return unauthorized()
+
   const body = await req.json()
   const supabase = createServiceClient()
 
-  if (!body?.sender_id || !body?.trip_id) {
-    return NextResponse.json({ error: 'sender_id och trip_id krävs.' }, { status: 400 })
+  if (!body?.trip_id) {
+    return NextResponse.json({ error: 'trip_id kravs.' }, { status: 400 })
   }
 
   const { data: trip, error: tripError } = await supabase
@@ -86,10 +109,11 @@ export async function POST(req: NextRequest) {
 
   const price = Number(body.price ?? body.price_est ?? 0)
   const commission = Math.round(price * 0.15 * 100) / 100
-  const carrier_payout = Math.round((price - commission) * 100) / 100
+  const carrierPayout = Math.round((price - commission) * 100) / 100
 
   const payload = {
-    sender_id: body.sender_id,
+    sender_id: user.id,
+    carrier_id: trip.carrier_id,
     receiver_id: trip.carrier_id,
     trip_id: trip.id,
     type: body.type || toOrderType(body.service_type),
@@ -99,7 +123,7 @@ export async function POST(req: NextRequest) {
     dropoff_address: body.dropoff_address || '',
     price,
     commission,
-    carrier_payout,
+    carrier_payout: carrierPayout,
     status: body.status || 'pending',
   }
 

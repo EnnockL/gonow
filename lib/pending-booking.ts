@@ -1,11 +1,17 @@
 export interface PendingBookingDraft {
-  trip_id: string
+  request_id: string
+  trip_id?: string
+  trip_from_city?: string
+  trip_to_city?: string
   service_type: 'package' | 'passenger' | 'return'
+  package_type?: 'package' | 'large' | 'pallet' | 'document' | 'return'
   seats_requested?: number
   weight_kg: number
   description: string
+  special_requirements?: string
   pickup_address: string
   dropoff_address: string
+  deadline?: 'today' | 'tomorrow' | 'flexible'
   sender_name: string
   sender_phone: string
   sender_email: string
@@ -33,8 +39,8 @@ export function loadPendingBookingDraft(): PendingBookingDraft | null {
     const raw = localStorage.getItem(PENDING_BOOKING_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw) as PendingBookingDraft
-    if (!parsed?.trip_id || !parsed?.service_type) return null
-    return parsed
+    if (!parsed?.service_type || !parsed?.request_id) return null
+    return { ...parsed, request_id: parsed.request_id || crypto.randomUUID() }
   } catch {
     return null
   }

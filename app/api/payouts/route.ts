@@ -1,19 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { getRequestUser, unauthorized } from '@/lib/auth/require-auth'
 import { createServiceClient } from '@/lib/supabase'
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const carrierId = searchParams.get('carrier_id')
-
-  if (!carrierId) {
-    return NextResponse.json({ error: 'carrier_id krävs.' }, { status: 400 })
-  }
+export async function GET(_req: NextRequest) {
+  const user = await getRequestUser(_req)
+  if (!user) return unauthorized()
 
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('payouts')
     .select('*')
-    .eq('carrier_id', carrierId)
+    .eq('carrier_id', user.id)
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -28,11 +25,14 @@ function resolveCarrierId(order: { carrier_id?: string | null; receiver_id?: str
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getRequestUser(req)
+  if (!user) return unauthorized()
+
   const body = await req.json().catch(() => ({}))
   const orderId = body?.order_id as string | undefined
 
   if (!orderId) {
-    return NextResponse.json({ error: 'order_id krävs.' }, { status: 400 })
+    return NextResponse.json({ error: 'order_id kravs.' }, { status: 400 })
   }
 
   const supabase = createServiceClient()
@@ -48,11 +48,15 @@ export async function POST(req: NextRequest) {
 
   const carrierId = resolveCarrierId(order)
   if (!carrierId) {
-    return NextResponse.json({ error: 'Order saknar bärare.' }, { status: 409 })
+    return NextResponse.json({ error: 'Order saknar barare.' }, { status: 409 })
+  }
+
+  if (carrierId !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   if (order.status !== 'confirmed') {
-    return NextResponse.json({ error: 'Payout kan bara startas efter mottagarbekräftelse.' }, { status: 409 })
+    return NextResponse.json({ error: 'Payout kan bara startas efter mottagarbekraftelse.' }, { status: 409 })
   }
 
   const { data: existingPayout } = await supabase
@@ -99,7 +103,7 @@ export async function POST(req: NextRequest) {
       bucket: 'carrier_in_payout',
       amount: order.carrier_payout ?? payout.amount ?? 0,
       currency: order.currency ?? 'sek',
-      note: 'Utbetalning initierad från förarsaldo',
+      note: 'Utbetalning initierad fran forarsaldo',
       metadata: {
         provider: payout.provider ?? 'stripe_connect',
       },

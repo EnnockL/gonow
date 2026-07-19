@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase'
 import { sendSmsNotification } from '@/lib/notifications'
+import { notify } from '@/lib/notify'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
@@ -46,14 +47,18 @@ export async function PATCH(
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     // Notiser vid statusändring
+    const route = `${data.from_city} → ${data.to_city}`
+    const liftLink = `/lift`
+
     if (body.status === 'offered' && data.passenger_id) {
       const { data: passenger } = await supabase.from('users').select('phone, name').eq('id', data.passenger_id).single()
       if (passenger?.phone) {
         await sendSmsNotification(
           passenger.phone,
-          `En förare har erbjudit dig plats på din resa ${data.from_city} → ${data.to_city}. Öppna Gonow för att acceptera.`
+          `En förare har erbjudit dig plats på din resa ${route}. Öppna Gonow för att acceptera.`
         )
       }
+      notify({ user_id: data.passenger_id, type: 'lift_offered', title: 'Förare erbjuder plats!', message: `En förare har erbjudit dig plats: ${route}. Öppna Gonow för att acceptera.` }).catch(() => {})
     }
 
     if (body.status === 'matched' && data.carrier_id) {
@@ -61,9 +66,10 @@ export async function PATCH(
       if (carrier?.phone) {
         await sendSmsNotification(
           carrier.phone,
-          `Passageraren har accepterat din plats på resan ${data.from_city} → ${data.to_city}. Kontakta passageraren för detaljer.`
+          `Passageraren har accepterat din plats på resan ${route}. Kontakta passageraren för detaljer.`
         )
       }
+      notify({ user_id: data.carrier_id, type: 'lift_matched', title: 'Lift accepterad!', message: `Passageraren accepterade din plats: ${route}.` }).catch(() => {})
     }
 
     return NextResponse.json({ lift_request: data })

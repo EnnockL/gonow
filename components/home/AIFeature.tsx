@@ -1,25 +1,40 @@
-'use client'
+import { ArrowRight, Package, Shield, Zap } from 'lucide-react'
+import OpenTripsButton from './OpenTripsButton'
 
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { ArrowRight, Zap, MapPin, Package, CheckCircle2, Clock } from 'lucide-react'
+const PROMISES = [
+  {
+    icon: Zap,
+    emoji: '⚡',
+    title: 'Mindre väntan',
+    desc: 'Vi arbetar för att ditt paket ska komma iväg så snabbt som möjligt utan onödiga stopp och terminalköer.',
+  },
+  {
+    icon: Shield,
+    emoji: '🛡️',
+    title: 'Trygg transport',
+    desc: 'Digital spårning, försäkring och säker identifiering genom hela transporten.',
+  },
+  {
+    icon: Package,
+    emoji: '📦',
+    title: 'Gonow tar ansvar',
+    desc: 'Från bokning till leverans ansvarar vi för hela transportkedjan. Du behöver inte tänka på vad som händer efter att du bokat.',
+  },
+]
+
+const COMPARISON = [
+  { label: 'Avlämning', traditional: 'Kör till ombud', gonow: 'Boka hemifrån' },
+  { label: 'Avgång', traditional: 'Väntar på terminal', gonow: 'Vi strävar efter snabb avgång' },
+  { label: 'Insyn', traditional: 'Begränsad', gonow: 'Realtidsspårning' },
+  { label: 'Ansvar', traditional: 'Flera aktörer', gonow: 'Ett ansvar - Gonow' },
+]
 
 export default function AIFeature() {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
-
   return (
     <section
+      className="gn-feature-section"
       style={{
         background: 'linear-gradient(180deg, var(--bg) 0%, var(--accent-softer) 28%, var(--accent-softer) 72%, var(--bg) 100%)',
-        padding: isMobile ? '72px 18px' : '140px 24px',
-        overflow: 'hidden',
       }}
     >
       <div
@@ -29,25 +44,14 @@ export default function AIFeature() {
           margin: '0 auto',
           display: 'grid',
           gridTemplateColumns: '1fr 1.15fr',
-          gap: isMobile ? 28 : 80,
+          gap: 80,
           alignItems: 'center',
         }}
       >
         <div>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginBottom: 22 }}>
-            <Zap size={13} fill="currentColor" style={{ color: 'var(--accent-dark)' }} />
-            <span
-              style={{
-                fontSize: '0.68rem',
-                fontWeight: 700,
-                letterSpacing: '0.13em',
-                textTransform: 'uppercase',
-                color: 'var(--accent-dark)',
-              }}
-            >
-              Ny AI-driven funktion
-            </span>
-          </div>
+          <p className="label" style={{ marginBottom: 16, color: 'var(--secondary-strong)' }}>
+            Vad Gonow ger dig
+          </p>
 
           <h2
             style={{
@@ -59,11 +63,9 @@ export default function AIFeature() {
               marginBottom: 20,
             }}
           >
-            Rätt bärare.
+            Tre löften.
             <br />
-            Rätt rutt.
-            <br />
-            På sekunder.
+            Inte mer.
           </h2>
 
           <p
@@ -72,54 +74,67 @@ export default function AIFeature() {
               color: 'var(--muted)',
               lineHeight: 1.8,
               maxWidth: 440,
-              marginBottom: isMobile ? 24 : 36,
+              marginBottom: 36,
             }}
           >
-            Gonow AI analyserar tusentals aktiva rutter i realtid och matchar ditt paket med den bärare som redan kör din väg.
+            Du bryr dig om fyra saker: hur enkelt det är, om du kan lita på oss, hur snabbt det går och vad det kostar. Startsidan ska besvara dem, inte förklara hur tekniken fungerar.
           </p>
 
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <Link
-              href="/skicka"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                background: 'var(--text)',
-                color: 'var(--bg)',
-                padding: '12px 24px',
-                borderRadius: 10,
-                width: isMobile ? '100%' : 'auto',
-                justifyContent: 'center',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                textDecoration: 'none',
-                transition: 'opacity 0.15s',
-              }}
-            >
-              Skicka något nu <ArrowRight size={14} />
-            </Link>
-            <Link
-              href="/kor"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                color: 'var(--text)',
-                padding: '12px 24px',
-                borderRadius: 10,
-                width: isMobile ? '100%' : 'auto',
-                justifyContent: 'center',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                textDecoration: 'none',
-                border: '1px solid var(--border-strong)',
-                background: 'var(--surface)',
-              }}
-            >
-              Bli bärare
-            </Link>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 36 }}>
+            {PROMISES.map(({ emoji, title, desc }) => (
+              <div
+                key={title}
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 14,
+                  padding: '16px 18px',
+                  borderRadius: 16,
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                }}
+              >
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 11,
+                    background: 'var(--accent-softer)',
+                    border: '1px solid var(--service-card-border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    fontSize: '1.1rem',
+                  }}
+                >
+                  {emoji}
+                </div>
+                <div>
+                  <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{title}</p>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6 }}>{desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
+
+          <OpenTripsButton
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              background: 'var(--text)',
+              color: 'var(--bg)',
+              padding: '12px 24px',
+              borderRadius: 10,
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              transition: 'opacity 0.15s',
+            }}
+          >
+            📦 Skicka paket <ArrowRight size={14} />
+          </OpenTripsButton>
         </div>
 
         <div style={{ position: 'relative' }}>
@@ -131,7 +146,7 @@ export default function AIFeature() {
               width: 300,
               height: 300,
               borderRadius: '50%',
-              background: 'rgba(34,197,94,0.28)',
+              background: 'var(--gn-028)',
               filter: 'blur(60px)',
               pointerEvents: 'none',
             }}
@@ -144,7 +159,7 @@ export default function AIFeature() {
               width: 180,
               height: 180,
               borderRadius: '50%',
-              background: 'rgba(34,197,94,0.18)',
+              background: 'var(--gn-018)',
               filter: 'blur(40px)',
               pointerEvents: 'none',
             }}
@@ -155,126 +170,80 @@ export default function AIFeature() {
               position: 'relative',
               background: 'var(--surface)',
               border: '1px solid var(--border)',
-              borderRadius: isMobile ? 20 : 24,
-              padding: isMobile ? 18 : 28,
+              borderRadius: 24,
+              overflow: 'hidden',
               boxShadow: '0 28px 64px rgba(0,0,0,0.10), 0 4px 16px rgba(0,0,0,0.06)',
             }}
           >
-            <div style={{ marginBottom: 20 }}>
-              <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 4 }}>
-                AI-matchning
+            <div
+              style={{
+                padding: '20px 24px 16px',
+                borderBottom: '1px solid var(--border)',
+                background: 'var(--surface-2)',
+              }}
+            >
+              <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 4 }}>
+                Varför Gonow
               </p>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
-                Bärare hittad på &lt;30 sek
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
+                Gonow jämfört med traditionell frakt
               </h3>
             </div>
 
-            <div
-              style={{
-                background: 'var(--accent-softer)',
-                border: '1px solid var(--service-card-border)',
-                borderRadius: 14,
-                padding: '16px 18px',
-                marginBottom: 14,
-              }}
-            >
-              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, paddingTop: 3, flexShrink: 0 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', border: '2px solid var(--text)' }} />
-                  <div style={{ width: 1.5, height: 26, background: 'rgba(34,197,94,0.5)' }} />
-                  <MapPin size={9} fill="currentColor" style={{ color: 'var(--text)' }} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)', marginBottom: 14, whiteSpace: isMobile ? 'normal' : 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    Göteborg C
-                  </p>
-                  <p style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)', whiteSpace: isMobile ? 'normal' : 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    Stockholm Centralstation
-                  </p>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <p style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em' }}>149 kr</p>
-                  <p style={{ fontSize: '0.65rem', color: 'var(--secondary-strong)', marginTop: 2, fontWeight: 600 }}>60% billigare</p>
-                </div>
-              </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                <thead>
+                  <tr>
+                    <th style={{ padding: '12px 20px', textAlign: 'left', fontWeight: 600, color: 'var(--muted)', fontSize: '0.72rem', letterSpacing: '0.06em', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}></th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--muted)', fontSize: '0.72rem', letterSpacing: '0.06em', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>Traditionell frakt</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: 'var(--secondary-strong)', fontSize: '0.72rem', letterSpacing: '0.06em', textTransform: 'uppercase', borderBottom: '1px solid var(--border)', background: 'var(--accent-softer)' }}>Gonow</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {COMPARISON.map((row, i) => (
+                    <tr key={row.label} style={{ borderBottom: i < COMPARISON.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                      <td style={{ padding: '14px 20px', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap' }}>{row.label}</td>
+                      <td style={{ padding: '14px 16px', color: 'var(--muted)' }}>{row.traditional}</td>
+                      <td style={{ padding: '14px 16px', color: 'var(--secondary-strong)', fontWeight: 600, background: 'var(--accent-softer)' }}>
+                        ✓ {row.gonow}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
             <div
               style={{
+                padding: '16px 24px',
+                borderTop: '1px solid var(--border)',
+                background: 'var(--accent-softer)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
-                padding: '11px 14px',
-                background: 'var(--surface-2)',
-                borderRadius: 12,
-                marginBottom: 14,
+                justifyContent: 'space-between',
+                gap: 12,
+                flexWrap: 'wrap',
               }}
             >
-              <div
+              <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--secondary-strong)', margin: 0 }}>
+                Du bokar. Vi tar ansvar. Ditt paket kommer fram.
+              </p>
+              <OpenTripsButton
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg,#22c55e,#16a34a)',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.9rem',
+                  gap: 6,
+                  fontSize: '0.78rem',
                   fontWeight: 700,
-                  color: '#0a0a0a',
-                  flexShrink: 0,
+                  color: 'var(--secondary-strong)',
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                  background: 'transparent',
+                  padding: 0,
                 }}
               >
-                M
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)' }}>Marcus L.</p>
-                <p style={{ fontSize: '0.67rem', color: 'var(--muted)' }}>BankID-verifierad · 4.97 ★</p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-                <Clock size={11} style={{ color: 'var(--muted)' }} />
-                <span style={{ fontSize: '0.7rem', color: 'var(--muted)', fontWeight: 500 }}>09:15</span>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0,1fr))', gap: 8, marginBottom: 16 }}>
-              {[
-                { icon: CheckCircle2, text: 'BankID' },
-                { icon: Package, text: 'Max 20 kg' },
-                { icon: Zap, text: 'Express' },
-              ].map(({ icon: Icon, text }) => (
-                <div
-                  key={text}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    background: 'var(--accent-softer)',
-                    border: '1px solid var(--service-card-border)',
-                    borderRadius: 8,
-                    padding: '7px 8px',
-                  }}
-                >
-                  <Icon size={11} style={{ color: 'var(--secondary-strong)', flexShrink: 0 }} />
-                  <span style={{ fontSize: '0.62rem', color: 'var(--muted)', fontWeight: 500, lineHeight: 1.3 }}>{text}</span>
-                </div>
-              ))}
-            </div>
-
-            <div
-              style={{
-                width: '100%',
-                background: '#22c55e',
-                borderRadius: 10,
-                padding: '13px 0',
-                fontSize: '0.875rem',
-                fontWeight: 700,
-                color: '#0a0a0a',
-                textAlign: 'center',
-                cursor: 'default',
-              }}
-            >
-              Bekräfta bokning →
+                Kom igång <ArrowRight size={12} />
+              </OpenTripsButton>
             </div>
           </div>
         </div>

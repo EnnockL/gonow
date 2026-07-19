@@ -1,13 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type Anthropic from '@anthropic-ai/sdk'
+import { z } from 'zod'
+
+const requestSchema = z.object({
+  message: z.string().trim().min(2).max(2000),
+  imageBase64: z.string().max(8_000_000).nullable().optional(),
+  imageMediaType: z.enum(['image/jpeg', 'image/png', 'image/gif', 'image/webp']).optional().default('image/jpeg'),
+  currentDraft: z.record(z.string(), z.unknown()).nullable().optional(),
+})
+
+const resultSchema = z.object({
+  type: z.enum(['package', 'pickup', 'return', 'lift']),
+  from_city: z.string().trim().min(2),
+  to_city: z.string().trim().min(2),
+  description: z.string().trim().min(1),
+  weight_kg: z.number().positive().nullable(),
+  departure_date: z.string().nullable(),
+  urgency: z.enum(['today', 'tomorrow', 'flexible']),
+  store_name: z.string().nullable(),
+  order_reference: z.string().nullable(),
+  passengers: z.number().int().positive().nullable(),
+  special_requirements: z.string().nullable(),
+  estimated_price_sek: z.number().nonnegative(),
+  confidence: z.number().min(0).max(1),
+})
+
+const searchableText = (value: string) => value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+const cleanLocation = (value: string) => value
+  .replace(/[,\s]+(?:leverera|leverans)$/i, '')
+  .replace(/\s+(?:idag|imorgon|nu)$/i, '')
+  .trim()
 
 // Extracts a full address (street, apt, postal code, city) after a keyword
 function extractLocation(text: string, keywords: string[]): string | null {
-  const lower = text.toLowerCase()
+  const lower = searchableText(text)
   for (const kw of keywords) {
-    const idx = lower.indexOf(kw)
+    const normalizedKeyword = searchableText(kw)
+    const idx = lower.indexOf(normalizedKeyword)
     if (idx === -1) continue
-    const after = text.slice(idx + kw.length).trimStart()
+    const after = text.slice(idx + normalizedKeyword.length).trimStart()
     // Stop at sentence-end or at "till"/"to" transition
     const match = after.match(/^(.{4,100}?)(?=\s+(?:till|to)\s|\s*[.!?]|$)/i)
     if (match) return match[1].trim()
@@ -18,18 +49,19 @@ function extractLocation(text: string, keywords: string[]): string | null {
 // Simulation: parse free text without calling Claude
 function simulateParse(message: string) {
   const lower = message.toLowerCase()
+  const searchable = searchableText(message)
 
   const type =
-    lower.includes('lift') || lower.includes('passagerare') || lower.includes('åk')
+    searchable.includes('lift') || searchable.includes('passagerare') || searchable.includes('ak ')
       ? 'lift'
-      : lower.includes('retur') || lower.includes('tillbaka')
+      : searchable.includes('retur') || searchable.includes('tillbaka')
       ? 'return'
-      : lower.includes('hämta') || lower.includes('ikea') || lower.includes('biltema') || lower.includes('butik')
+      : searchable.includes('hamta') || searchable.includes('ikea') || searchable.includes('biltema') || searchable.includes('butik')
       ? 'pickup'
       : 'package'
 
   // Try to extract full addresses first (with explicit keywords)
-  let fromRaw = extractLocation(message, ['från ', 'from ', 'avsändare: ', 'upphämtning: '])
+  let fromRaw = extractLocation(message, ['från ', 'fran ', 'from ', 'avsändare: ', 'avsandare: ', 'upphämtning: ', 'upphamtning: '])
   const toRaw = extractLocation(message, [' till ', ' to ', ' → ', ' -> ', 'leverans: ', 'destination: '])
 
   // If "från" was not written but "till" was, extract everything before "till" as from-address
@@ -54,8 +86,8 @@ function simulateParse(message: string) {
   ]
   const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
-  let from_city = fromRaw || 'Stockholm'
-  let to_city   = toRaw   || 'Göteborg'
+  let from_city = cleanLocation(fromRaw || 'Saknas')
+  let to_city   = cleanLocation(toRaw || 'Saknas')
 
   // City fallback (only when both are missing): find cities in text order
   if (!fromRaw && !toRaw) {
@@ -75,6 +107,7 @@ function simulateParse(message: string) {
 
   const storeNames = ['ikea', 'biltema', 'clas ohlson', 'h&m', 'zara', 'netonnet', 'elgiganten']
   const store_name = storeNames.find((s) => lower.includes(s))?.replace(/\b\w/g, (c) => c.toUpperCase()) || null
+  const hasSpecialRequirements = /\b(ömtålig|omtålig|fragile|portkod|ring|lämna|lamna|instruktion|kyl|frys|värdefull|vardefull)\b/i.test(message)
 
   const urgency = lower.includes('idag') || lower.includes('nu')
     ? 'today'
@@ -97,14 +130,16 @@ function simulateParse(message: string) {
     store_name,
     order_reference: null,
     passengers,
-    special_requirements: null,
+    special_requirements: hasSpecialRequirements ? message.slice(0, 240) : null,
     estimated_price_sek: 299,
     confidence: 0.82,
   }
 }
 
 export async function POST(req: NextRequest) {
-  const { message, imageBase64 } = await req.json()
+  const input = requestSchema.safeParse(await req.json().catch(() => null))
+  if (!input.success) return NextResponse.json({ success: false, error: 'Beskriv vad du vill skicka.' }, { status: 400 })
+  const { message, imageBase64, imageMediaType, currentDraft } = input.data
 
   const apiKey = process.env.ANTHROPIC_API_KEY
   const useSimulation =
@@ -114,7 +149,22 @@ export async function POST(req: NextRequest) {
 
   if (useSimulation) {
     await new Promise((r) => setTimeout(r, 800))
-    return NextResponse.json({ success: true, data: simulateParse(message) })
+    const next = simulateParse(message)
+    const normalizedMessage = searchableText(message)
+    const merged = currentDraft ? {
+      ...currentDraft,
+      ...(normalizedMessage.includes('fran ') || normalizedMessage.includes('from ') ? { from_city: next.from_city } : {}),
+      ...(normalizedMessage.includes(' till ') || normalizedMessage.includes(' to ') ? { to_city: next.to_city } : {}),
+      ...(/\d+(?:[.,]\d+)?\s*kg/i.test(message) ? { weight_kg: next.weight_kg } : {}),
+      ...(/\b(idag|imorgon|flexibel|nu)\b/i.test(message) ? { urgency: next.urgency, departure_date: next.departure_date } : {}),
+      ...(/\b(lift|retur|hämta|hamta|paket)\b/i.test(message) ? { type: next.type } : {}),
+      ...(/\b(ömtålig|omtålig|fragile|portkod|ring|lämna|lamna|instruktion|kyl|frys|värdefull|vardefull)\b/i.test(message) ? { special_requirements: message.slice(0, 240) } : {}),
+      confidence: next.confidence,
+      estimated_price_sek: next.estimated_price_sek,
+    } : next
+    const simulated = resultSchema.safeParse(merged)
+    if (!simulated.success) return NextResponse.json({ success: false, error: 'Kunde inte tolka bokningen.' }, { status: 422 })
+    return NextResponse.json({ success: true, data: simulated.data })
   }
 
   const { anthropic } = await import('@/lib/claude')
@@ -124,11 +174,16 @@ export async function POST(req: NextRequest) {
   if (imageBase64) {
     content.push({
       type: 'image',
-      source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 },
+      source: { type: 'base64', media_type: imageMediaType, data: imageBase64 },
     })
   }
 
-  content.push({ type: 'text', text: message })
+  content.push({
+    type: 'text',
+    text: currentDraft
+      ? `Current booking draft: ${JSON.stringify(currentDraft)}\n\nUser correction or addition: ${message}\n\nUpdate the existing draft using the user's latest message.`
+      : message,
+  })
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
@@ -136,6 +191,7 @@ export async function POST(req: NextRequest) {
     system: `You are a logistics assistant for Gonow, a Swedish P2P delivery platform.
 Extract delivery information from the user's message and return ONLY valid JSON.
 No markdown, no explanation — pure JSON only.
+Never guess a location. If origin or destination was not supplied, use the exact string "Saknas" for that field.
 
 Return this structure:
 {
@@ -162,8 +218,9 @@ Stockholm to Gothenburg = ~470km. Stockholm to Malmö = ~600km. Stockholm to Kir
   const text = response.content[0].type === 'text' ? response.content[0].text : ''
 
   try {
-    const parsed = JSON.parse(text)
-    return NextResponse.json({ success: true, data: parsed })
+    const parsed = resultSchema.safeParse(JSON.parse(text))
+    if (!parsed.success) return NextResponse.json({ success: false, error: 'AI-svaret saknar bokningsuppgifter.' }, { status: 422 })
+    return NextResponse.json({ success: true, data: parsed.data })
   } catch {
     return NextResponse.json({ success: false, error: 'Parse failed', raw: text }, { status: 400 })
   }

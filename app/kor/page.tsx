@@ -5,19 +5,20 @@ import TripRegistration from '@/components/driver/TripRegistration'
 import EarningsWidget from '@/components/driver/EarningsWidget'
 import MyTrips from '@/components/driver/MyTrips'
 import DemoDataPanel from '@/components/dev/DemoDataPanel'
+import TripOptimizer from '@/components/carrier/TripOptimizer'
 import { TrendingUp, Clock, Shield, Cpu, ArrowUpRight, Route, Wallet, Sparkles } from 'lucide-react'
 
 const perks = [
   { icon: TrendingUp, title: 'Upp till 85%', desc: 'Gonow tar 15% och resten är ditt.' },
   { icon: Clock, title: 'Egna tider', desc: 'Inga scheman. Kör när det passar.' },
   { icon: Shield, title: 'Försäkrat', desc: '250 000 kr via Trygg-Hansa per resa.' },
-  { icon: Cpu, title: 'AI-optimerad', desc: 'Vi fyller bilen med rätt mix automatiskt.' },
+  { icon: Cpu, title: 'Smart matchning', desc: 'Gonow fyller din resa med rätt uppdrag automatiskt.' },
 ]
 
 const metrics = [
   { label: 'Snittutbetalning / rutt', value: '1 964 kr', icon: Wallet },
   { label: 'Matchningstid', value: '< 4 min', icon: Sparkles },
-  { label: 'Aktiva bärare', value: '420+', icon: Route },
+  { label: 'Aktiva förare', value: '420+', icon: Route },
 ]
 
 export default function KorPage() {
@@ -36,7 +37,7 @@ export default function KorPage() {
         minHeight: '100vh',
         paddingTop: isMobile ? 68 : 80,
         paddingBottom: isMobile ? 48 : 96,
-        background: 'linear-gradient(180deg, transparent 0%, rgba(34,197,94,0.05) 100%)',
+        background: 'linear-gradient(180deg, transparent 0%, var(--gn-005) 100%)',
       }}
     >
       <div style={{ maxWidth: 1260, margin: '0 auto', padding: isMobile ? '0 14px' : '0 24px' }}>
@@ -79,7 +80,7 @@ export default function KorPage() {
                 Registrera vart du ska och när. Gonow matchar automatiskt paket, returer och passagerare längs rutten med hög trygghet, snabb payout och smart planering.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: isMobile ? 2 : 0 }}>
-                {['AI-optimerad fyllnadsgrad', 'BankID-verifierade uppdrag', 'Utbetalning efter avslutad resa'].map((item) => (
+                {['Smart fyllnadsgrad', 'BankID-verifierade uppdrag', 'Utbetalning efter avslutad resa'].map((item) => (
                   <span
                     key={item}
                     style={{
@@ -164,6 +165,7 @@ export default function KorPage() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, position: isMobile ? 'static' : 'sticky', top: 96 }}>
+            <TripOptimizer />
             <DemoDataPanel />
             <div>
               <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 10 }}>Mina resor</p>

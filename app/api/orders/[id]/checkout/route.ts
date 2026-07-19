@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createServiceClient } from '@/lib/supabase'
+import { getRequestUser, unauthorized } from '@/lib/auth/require-auth'
 
 function stripeConfigured() {
   const secretKey = process.env.STRIPE_SECRET_KEY
@@ -14,8 +15,20 @@ function stripeConfigured() {
   )
 }
 
+function mockCheckoutAllowed() {
+  if (process.env.ALLOW_MOCK_CHECKOUT === 'true') return true
+  if (process.env.ALLOW_MOCK_CHECKOUT === 'false') return false
+  return process.env.NODE_ENV !== 'production'
+}
+
 function getOrderCarrierId(order: { carrier_id?: string | null; receiver_id?: string | null }) {
   return order.carrier_id ?? order.receiver_id ?? ''
+}
+
+function getPackageIdFromMetadata(metadata: unknown) {
+  if (!metadata || typeof metadata !== 'object') return null
+  const packageId = (metadata as Record<string, unknown>).package_id
+  return typeof packageId === 'string' && packageId.trim().length > 0 ? packageId : null
 }
 
 async function ensurePaymentRecord(
@@ -82,13 +95,10 @@ async function updateOrderForCheckout(
     await supabase.from('orders').update(preferredPayload).eq('id', orderId)
     return
   } catch {
-    // Fall through to legacy-safe update below.
+    // Legacy/demo databases may still miss enterprise columns.
   }
 
-  await supabase
-    .from('orders')
-    .update({})
-    .eq('id', orderId)
+  await supabase.from('orders').update({}).eq('id', orderId)
 }
 
 async function updatePaymentCheckoutState(
@@ -101,7 +111,7 @@ async function updatePaymentCheckoutState(
   try {
     await supabase.from('payments').update(payload).eq('id', paymentId)
   } catch {
-    // Ignore until enterprise migration is applied.
+    // Ignore until all environments share the same migration level.
   }
 }
 
@@ -124,17 +134,31 @@ async function markPaymentPaidForMock(
           updated_at: paidAt,
         })
         .eq('id', paymentId)
-      return
     } catch {
-      // Fall back below for legacy/demo environments.
+      // Fall through to the legacy order update below.
     }
+  }
+
+  try {
+    await supabase
+      .from('orders')
+      .update({
+        status: 'paid',
+        payment_provider: 'stripe',
+        payment_status: 'paid',
+        order_phase: 'paid_held',
+        stripe_payment_intent_id: 'mock_checkout',
+      })
+      .eq('id', orderId)
+    return
+  } catch {
+    // Fall back to legacy-safe payload below.
   }
 
   await supabase
     .from('orders')
     .update({
-      status: 'matched',
-      confirmed_at: paidAt,
+      status: 'paid',
       stripe_payment_intent_id: 'mock_checkout',
     })
     .eq('id', orderId)
@@ -144,6 +168,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const user = await getRequestUser(req)
+  if (!user) return unauthorized()
+
   const { id } = await params
   const supabase = createServiceClient()
 
@@ -153,18 +180,15 @@ export async function POST(
     .eq('id', id)
     .single()
 
-  if (!stripeConfigured()) {
-    // Mock payment: still go through payments so escrow and ledger can be tested locally.
-    if (order && order.status === 'pending') {
-      const payment = await ensurePaymentRecord(supabase, order)
-      await updateOrderForCheckout(supabase, order.id, payment?.id)
-      await markPaymentPaidForMock(supabase, order.id, payment?.id)
-    }
-    return NextResponse.json({ mock: true, orderId: id })
-  }
-
   if (error || !order) {
     return NextResponse.json({ error: 'Order hittades inte.' }, { status: 404 })
+  }
+
+  if (order.sender_id !== user.id) {
+    return NextResponse.json(
+      { error: 'Bara kunden som skapade ordern kan starta betalningen.' },
+      { status: 403 }
+    )
   }
 
   if (order.status !== 'pending') {
@@ -174,55 +198,81 @@ export async function POST(
     )
   }
 
+  if (!stripeConfigured()) {
+    if (!mockCheckoutAllowed()) {
+      return NextResponse.json(
+        { error: 'Stripe är inte konfigurerat för denna miljö. Mock-betalning är avstängd.' },
+        { status: 503 }
+      )
+    }
+
+    const payment = await ensurePaymentRecord(supabase, order)
+    await updateOrderForCheckout(supabase, order.id, payment?.id)
+    await markPaymentPaidForMock(supabase, order.id, payment?.id)
+    return NextResponse.json({ mock: true, orderId: id })
+  }
+
   const origin = new URL(req.url).origin
   const amount = Math.max(300, Math.round(Number(order.price ?? 0) * 100))
   const payment = await ensurePaymentRecord(supabase, order)
   await updateOrderForCheckout(supabase, order.id, payment?.id)
+  const packageId = getPackageIdFromMetadata(order.metadata)
+  const successUrl = packageId
+    ? `${origin}/paket/${packageId}?payment=success`
+    : `${origin}/spara/${order.id}?payment=success`
+  const cancelUrl = packageId
+    ? `${origin}/paket/${packageId}?payment=cancelled`
+    : `${origin}/profil?payment=cancelled`
 
   let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>
   try {
     session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    success_url: `${origin}/spara/${order.id}?payment=success`,
-    cancel_url: `${origin}/profil?payment=cancelled`,
-    customer_email: undefined,
-    metadata: {
-      order_id: order.id,
-      payment_id: payment?.id || '',
-      sender_id: order.sender_id,
-      carrier_id: getOrderCarrierId(order),
-    },
-    payment_intent_data: {
+      mode: 'payment',
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      customer_email: undefined,
       metadata: {
         order_id: order.id,
         payment_id: payment?.id || '',
+        package_id: packageId || '',
         sender_id: order.sender_id,
         carrier_id: getOrderCarrierId(order),
       },
-      transfer_group: `order_${order.id}`,
-      capture_method: 'automatic_async',
-    },
-    line_items: [
-      {
-        quantity: 1,
-        price_data: {
-          currency: 'sek',
-          unit_amount: amount,
-          product_data: {
-            name: order.description || 'Gonow-leverans',
-            description:
-              order.pickup_address && order.dropoff_address
-                ? `${order.pickup_address} -> ${order.dropoff_address}`
-                : 'Betalning för Gonow-order',
+      payment_intent_data: {
+        metadata: {
+          order_id: order.id,
+          payment_id: payment?.id || '',
+          package_id: packageId || '',
+          sender_id: order.sender_id,
+          carrier_id: getOrderCarrierId(order),
+        },
+        transfer_group: `order_${order.id}`,
+        capture_method: 'automatic_async',
+      },
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: 'sek',
+            unit_amount: amount,
+            product_data: {
+              name: order.description || 'Gonow-leverans',
+              description:
+                order.pickup_address && order.dropoff_address
+                  ? `${order.pickup_address} -> ${order.dropoff_address}`
+                  : 'Betalning för Gonow-order',
+            },
           },
         },
-      },
-    ],
-  })
+      ],
+    })
   } catch (stripeErr) {
-    const msg = stripeErr instanceof Error ? stripeErr.message : String(stripeErr)
-    console.error('[checkout] stripe error:', msg)
-    return NextResponse.json({ error: `Betalning kunde inte skapas: ${msg}` }, { status: 500 })
+    const message = stripeErr instanceof Error ? stripeErr.message : String(stripeErr)
+    console.error('[checkout] stripe error:', message)
+    return NextResponse.json(
+      { error: `Betalning kunde inte skapas: ${message}` },
+      { status: 500 }
+    )
   }
 
   await updatePaymentCheckoutState(supabase, payment?.id, {

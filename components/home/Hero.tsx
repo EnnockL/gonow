@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowRight, Shield, Star, Package, MapPin } from 'lucide-react'
 import TripBookingModal, { type TripInfo } from '@/components/booking/TripBookingModal'
-import AllTripsModal from '@/components/booking/AllTripsModal'
 import { loadSharedActiveTrips, type ActiveTripRecord } from '@/lib/active-trips'
 
 const DEMO_TRIPS = [
@@ -28,7 +27,7 @@ function realTripToDisplay(trip: ActiveTripRecord) {
     id: trip.id,
     from: trip.from_city.split(',')[0].trim(),
     to: trip.to_city.split(',')[0].trim(),
-    carrier: trip.users?.name || 'Bärare',
+    carrier: trip.users?.name || 'Förare',
     rating: trip.users?.rating_count ? Number(trip.users.rating_avg || 0) : null as number | null,
     price,
     eta,
@@ -39,8 +38,11 @@ function realTripToDisplay(trip: ActiveTripRecord) {
 export default function Hero() {
   const [liveTrips, setLiveTrips] = useState(DEMO_TRIPS)
   const [booking, setBooking] = useState<TripInfo | null>(null)
-  const [showAllTrips, setShowAllTrips] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+
+  function openPackageFlow() {
+    window.dispatchEvent(new CustomEvent('gonow_open_package_booking'))
+  }
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -113,7 +115,7 @@ export default function Hero() {
                 }}
               />
               <span style={{ fontSize: '0.72rem', fontWeight: 500, color: 'var(--muted-2)', letterSpacing: '0.02em' }}>
-                Nu öppnar vi för tidiga användare
+                Du bokar. Gonow tar ansvar.
               </span>
             </div>
 
@@ -127,9 +129,9 @@ export default function Hero() {
                 marginBottom: isMobile ? 18 : 24,
               }}
             >
-              Någon kör redan
+              Skicka ditt paket
               <br />
-              <span style={{ color: 'var(--accent-dark)' }}>din väg.</span>
+              <span style={{ color: 'var(--accent-dark)' }}>på några sekunder.</span>
             </h1>
 
             <p
@@ -141,13 +143,12 @@ export default function Hero() {
                 maxWidth: 500,
               }}
             >
-              Skicka paket, hämta butiksorders och dela resor med vanliga människor som ändå är på väg dit.
-              <strong style={{ color: 'var(--muted-2)', fontWeight: 500 }}> 60% billigare än DHL.</strong>
+              Från den stunden tar Gonow ansvar för hela transporten — från bokning till leverans.
             </p>
 
             <div style={{ display: 'flex', gap: 12, marginBottom: isMobile ? 28 : 52, flexWrap: 'wrap' }}>
-              <Link
-                href="/skicka"
+              <button
+                onClick={openPackageFlow}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -160,7 +161,9 @@ export default function Hero() {
                   borderRadius: 10,
                   fontSize: '0.9rem',
                   fontWeight: 700,
-                  textDecoration: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
                   transition: 'opacity 0.15s',
                 }}
                 onMouseEnter={(e) => {
@@ -170,10 +173,10 @@ export default function Hero() {
                   ;(e.currentTarget as HTMLElement).style.opacity = '1'
                 }}
               >
-                Skicka något <ArrowRight size={16} />
-              </Link>
+                Skicka paket <ArrowRight size={16} />
+              </button>
               <Link
-                href="/kor"
+                href="/varfor-gonow"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -197,16 +200,16 @@ export default function Hero() {
                   ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'
                 }}
               >
-                Tjäna på din resa
+                Så fungerar det
               </Link>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 0, flexWrap: 'wrap' }}>
               {[
-                { icon: Shield, color: 'var(--success)', text: 'BankID-verifierat' },
-                { icon: Star, color: 'var(--warning)', text: '4.8 snittbetyg', fill: true },
-                { icon: Package, color: 'var(--secondary-strong)', text: '2 400+ på väntelistan' },
-              ].map(({ icon: Icon, color, text, fill }, i) => (
+                { emoji: '🛡️', text: 'Försäkrad transport' },
+                { emoji: '📦', text: 'Spåra paketet hela vägen' },
+                { emoji: '⚡', text: 'Strävar efter samma dags avgång' },
+              ].map(({ emoji, text }, i) => (
                 <span key={text} style={{ display: 'flex', alignItems: 'center' }}>
                   {i > 0 && (
                     <span
@@ -220,7 +223,7 @@ export default function Hero() {
                     />
                   )}
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.77rem', color: 'var(--muted)' }}>
-                    <Icon size={12} style={{ color, ...(fill ? { fill: color } : {}) }} />
+                    <span style={{ fontSize: '0.85rem' }}>{emoji}</span>
                     {text}
                   </span>
                 </span>
@@ -256,7 +259,7 @@ export default function Hero() {
                   position: 'absolute',
                   inset: 0,
                   background:
-                    'linear-gradient(135deg, rgba(34,197,94,0.1) 0%, transparent 35%, rgba(10,10,10,0.05) 100%)',
+                    'linear-gradient(135deg, var(--gn-010) 0%, transparent 35%, rgba(10,10,10,0.05) 100%)',
                   pointerEvents: 'none',
                 }}
               />
@@ -286,7 +289,7 @@ export default function Hero() {
                       WebkitBackdropFilter: 'blur(16px)',
                     }}
                   >
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 10px #22c55e' }} />
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gn)', boxShadow: '0 0 10px var(--gn)' }} />
                     <span style={{ fontSize: '0.76rem', color: '#ffffff', fontWeight: 600 }}>Stockholm live</span>
                   </div>
 
@@ -333,19 +336,19 @@ export default function Hero() {
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', display: 'inline-block', boxShadow: '0 0 6px #22c55e' }} />
-                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'rgba(255,255,255,0.92)' }}>Aktiva resor just nu</span>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gn)', display: 'inline-block', boxShadow: '0 0 6px var(--gn)' }} />
+                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'rgba(255,255,255,0.92)' }}>Kommande transporter</span>
                     </div>
                     <span
                       style={{
                         fontSize: '0.65rem',
                         fontWeight: 700,
                         letterSpacing: '0.08em',
-                        color: '#86efac',
-                        background: 'rgba(34,197,94,0.12)',
+                        color: 'var(--gn-lt)',
+                        background: 'var(--gn-012)',
                         padding: '3px 10px',
                         borderRadius: 100,
-                        border: '1px solid rgba(34,197,94,0.22)',
+                        border: '1px solid var(--gn-022)',
                       }}
                     >
                       LIVE
@@ -366,20 +369,20 @@ export default function Hero() {
                         cursor: 'pointer',
                         transition: 'background 0.15s',
                       }}
-                      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(34,197,94,0.07)')}
+                      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'var(--gn-007)')}
                       onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: trip.isReal ? '#22c55e' : 'rgba(34,197,94,0.55)', display: 'block' }} />
-                          <span style={{ width: 1, height: 16, background: 'linear-gradient(to bottom, #22c55e, #22c55e)', display: 'block' }} />
-                          <MapPin size={8} style={{ color: '#86efac' }} />
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: trip.isReal ? 'var(--gn)' : 'var(--gn-055)', display: 'block' }} />
+                          <span style={{ width: 1, height: 16, background: 'linear-gradient(to bottom, var(--gn), var(--gn))', display: 'block' }} />
+                          <MapPin size={8} style={{ color: 'var(--gn-lt)' }} />
                         </div>
                         <div style={{ minWidth: 0 }}>
                           <p style={{ fontSize: isMobile ? '0.8rem' : '0.85rem', fontWeight: 600, color: '#ffffff', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: isMobile ? 'normal' : 'nowrap' }}>{trip.from}</span>
                             {trip.isReal && (
-                              <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(34,197,94,0.2)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)', flexShrink: 0 }}>DIN</span>
+                              <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'var(--gn-020)', color: 'var(--gn)', border: '1px solid var(--gn-030)', flexShrink: 0 }}>DIN</span>
                             )}
                           </p>
                           <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.68)' }}>→ {trip.to}</p>
@@ -395,7 +398,7 @@ export default function Hero() {
                               <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.68)' }}>{trip.rating}</span>
                             </>
                           ) : (
-                            <span style={{ fontSize: '0.62rem', color: 'rgba(34,197,94,0.8)' }}>Ny bärare</span>
+                            <span style={{ fontSize: '0.62rem', color: 'var(--gn-080)' }}>Ny förare</span>
                           )}
                         </div>
                       </div>
@@ -408,7 +411,7 @@ export default function Hero() {
                   ))}
 
                   <button
-                    onClick={() => setShowAllTrips(true)}
+                    onClick={openPackageFlow}
                     style={{
                       width: '100%',
                       padding: '13px 20px',
@@ -422,7 +425,7 @@ export default function Hero() {
                     onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)')}
                     onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)')}
                   >
-                    Boka en av dessa <ArrowRight size={13} />
+                    Skicka paket <ArrowRight size={13} />
                   </button>
                 </div>
               </div>
@@ -459,21 +462,21 @@ export default function Hero() {
                 <Package size={15} style={{ color: 'var(--success)' }} />
               </div>
               <div>
-                <p style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1, letterSpacing: '-0.02em' }}>60%</p>
-                <p style={{ fontSize: '0.68rem', color: 'var(--muted)', marginTop: 2 }}>billigare än DHL</p>
+                <p style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1, letterSpacing: '-0.02em' }}>3×</p>
+                <p style={{ fontSize: '0.68rem', color: 'var(--muted)', marginTop: 2 }}>snabbare</p>
               </div>
             </div>
           </div>
         </div>
       </div>
-      {showAllTrips && (
-        <AllTripsModal
-          trips={liveTrips}
-          onBook={trip => setBooking(trip)}
-          onClose={() => setShowAllTrips(false)}
+      {booking && (
+        <TripBookingModal
+          trip={booking}
+          initialType="package"
+          lockType={true}
+          onClose={() => setBooking(null)}
         />
       )}
-      {booking && <TripBookingModal trip={booking} onClose={() => setBooking(null)} />}
     </section>
   )
 }

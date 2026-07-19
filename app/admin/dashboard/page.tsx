@@ -101,13 +101,13 @@ export default function AdminDashboard() {
   if (!kpis) return null
 
   const tiles: { icon: React.ElementType; label: string; value: string | number; color: string }[] = [
-    { icon: Package,     label: 'Paket idag',         value: kpis.packagesToday,                                      color: '#22c55e' },
+    { icon: Package,     label: 'Paket idag',         value: kpis.packagesToday,                                      color: 'var(--gn)' },
     { icon: Car,         label: 'Resor idag',          value: kpis.tripsToday,                                         color: '#34d399' },
     { icon: Activity,    label: 'Lift idag',           value: kpis.liftRequestsToday,                                  color: '#7bf0a8' },
-    { icon: Users,       label: 'Nya användare idag',  value: kpis.newUsersToday,                                      color: '#86efac' },
-    { icon: DollarSign,  label: 'GMV bokad (kr)',       value: kpis.gmvBooked.toLocaleString('sv-SE'),                  color: '#22c55e' },
-    { icon: DollarSign,  label: 'GMV levererad (kr)',   value: kpis.gmvDelivered.toLocaleString('sv-SE'),               color: '#16a34a' },
-    { icon: TrendingUp,  label: 'Konvertering',         value: `${kpis.conversionRate}%`,                               color: '#4ade80' },
+    { icon: Users,       label: 'Nya användare idag',  value: kpis.newUsersToday,                                      color: 'var(--gn-lt)' },
+    { icon: DollarSign,  label: 'GMV bokad (kr)',       value: kpis.gmvBooked.toLocaleString('sv-SE'),                  color: 'var(--gn)' },
+    { icon: DollarSign,  label: 'GMV levererad (kr)',   value: kpis.gmvDelivered.toLocaleString('sv-SE'),               color: 'var(--gn-dk)' },
+    { icon: TrendingUp,  label: 'Konvertering',         value: `${kpis.conversionRate}%`,                               color: 'var(--gn-lt2)' },
     { icon: Star,        label: 'Snittbetyg',           value: kpis.avgRating > 0 ? kpis.avgRating : '–',              color: '#fbbf24' },
   ]
 

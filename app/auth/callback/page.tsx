@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase'
-import { saveBooking } from '@/lib/bookings'
+import { authedFetch } from '@/lib/auth/authed-fetch'
 import {
   clearPendingBookingDraft,
   clearSignupEmail,
@@ -45,7 +45,7 @@ export default function AuthCallbackPage() {
         body: JSON.stringify({
           id: user.id,
           email: user.email,
-          name: user.user_metadata?.name || user.email?.split('@')[0] || 'Anvandare',
+          name: user.user_metadata?.name || user.email?.split('@')[0] || 'Användare',
           phone: user.user_metadata?.phone || null,
         }),
       }).catch(() => {})
@@ -60,11 +60,37 @@ export default function AuthCallbackPage() {
       const draft = loadPendingBookingDraft()
       if (draft) {
         try {
-          await saveBooking({
-            ...draft,
-            sender_id: user.id,
-            sender_email: draft.sender_email || user.email || '',
+          const description =
+            draft.description?.trim() ||
+            (draft.service_type === 'return'
+              ? 'Returuppdrag via vald resa'
+              : draft.service_type === 'passenger'
+                ? 'Passagerarförfrågan via vald resa'
+                : 'Paket via vald resa')
+
+          const res = await authedFetch('/api/packages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Idempotency-Key': draft.request_id },
+            body: JSON.stringify({
+              ...(draft.trip_id ? { trip_id: draft.trip_id } : {}),
+              service_type: draft.service_type,
+              from_city: draft.trip_from_city || draft.pickup_address,
+              from_address: draft.pickup_address,
+              to_city: draft.trip_to_city || draft.dropoff_address,
+              to_address: draft.dropoff_address,
+              description,
+              weight_kg: draft.service_type === 'passenger' ? 0 : draft.weight_kg,
+              price_ceiling: draft.price_est ?? null,
+              package_type: draft.package_type ?? (draft.service_type === 'return' ? 'return' : 'package'),
+              receiver_name: draft.recipient_name,
+              receiver_phone: draft.recipient_phone,
+              deadline: 'flexible',
+            }),
           })
+          const payload = await res.json().catch(() => ({}))
+          if (!res.ok) {
+            throw new Error(payload.error || 'Din bokning kunde inte återupptas.')
+          }
           clearPendingBookingDraft()
         } catch {
           handled = false
@@ -80,7 +106,7 @@ export default function AuthCallbackPage() {
     if (hash.includes('error=')) {
       const hp = new URLSearchParams(hash.slice(1))
       const code = hp.get('error_code')
-      setError(code === 'otp_expired' || code === 'access_denied' ? 'expired' : hp.get('error_description') || 'Nagot gick fel')
+      setError(code === 'otp_expired' || code === 'access_denied' ? 'expired' : hp.get('error_description') || 'Något gick fel')
       return
     }
 
@@ -190,24 +216,24 @@ export default function AuthCallbackPage() {
   if (error) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: 16, padding: 24, textAlign: 'center' }}>
-        <div style={{ fontSize: '2.5rem' }}>⏱</div>
+        <div style={{ fontSize: '2.5rem' }}>⏱️</div>
         <h2 style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--text)', maxWidth: 360 }}>
-          {error === 'expired' ? 'Lanken har gatt ut' : 'Nagot gick fel'}
+          {error === 'expired' ? 'Länken har gått ut' : 'Något gick fel'}
         </h2>
         <p style={{ color: 'var(--muted)', fontSize: '0.85rem', maxWidth: 320, lineHeight: 1.7 }}>
           {error === 'expired'
-            ? 'Bekraftelselnaken ar for gammal. Begar en ny sa skickar vi en f�rsk lank.'
+            ? 'Bekräftelselänken är för gammal. Begär en ny så skickar vi en färsk länk.'
             : error}
         </p>
         {resent ? (
-          <p style={{ color: '#22c55e', fontSize: '0.85rem' }}>Ny lank skickad, kolla inkorgen.</p>
+          <p style={{ color: 'var(--gn)', fontSize: '0.85rem' }}>Ny länk skickad, kolla inkorgen.</p>
         ) : (
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
             <button
               onClick={resendEmail}
-              style={{ padding: '11px 20px', borderRadius: 10, background: '#22c55e', color: '#0a0a0a', fontWeight: 700, fontSize: '0.85rem', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+              style={{ padding: '11px 20px', borderRadius: 10, background: 'var(--gn)', color: '#0a0a0a', fontWeight: 700, fontSize: '0.85rem', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
             >
-              Skicka ny lank
+              Skicka ny länk
             </button>
             <a href="/" style={{ padding: '11px 20px', borderRadius: 10, border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: '0.85rem', textDecoration: 'none' }}>
               Tillbaka
@@ -220,8 +246,8 @@ export default function AuthCallbackPage() {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: 16 }}>
-      <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid #22c55e', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
-      <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>Loggar in och aterupptar din bokning...</p>
+      <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid var(--gn)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+      <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>Loggar in och återupptar din bokning...</p>
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )

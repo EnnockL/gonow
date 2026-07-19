@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { MapPin, Clock, Car, Users, Package as PkgIcon, Star, Shield, Route } from 'lucide-react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { Car, Clock, Package as PackageIcon, Route, Shield, Star, Users } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import AuthModal from '@/components/auth/AuthModal'
 import TripBookingModal, { type TripInfo } from '@/components/booking/TripBookingModal'
@@ -41,6 +41,12 @@ const VEHICLE_LABELS: Record<string, string> = {
   flight: 'Flyg',
 }
 
+const CARD_SURFACE: CSSProperties = {
+  background: 'linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, white 6%) 0%, var(--surface) 100%)',
+  border: '1px solid color-mix(in srgb, var(--border) 84%, var(--gn) 16%)',
+  boxShadow: '0 24px 50px rgba(15, 23, 42, 0.08)',
+}
+
 function formatDep(iso: string): string {
   const d = new Date(iso)
   const today = new Date()
@@ -49,11 +55,14 @@ function formatDep(iso: string): string {
   tomorrow.setDate(today.getDate() + 1)
   const day = new Date(iso)
   day.setHours(0, 0, 0, 0)
-  const prefix = day.getTime() === today.getTime() ? 'Idag' : day.getTime() === tomorrow.getTime() ? 'Imorgon' : d.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })
+  const prefix =
+    day.getTime() === today.getTime()
+      ? 'Idag'
+      : day.getTime() === tomorrow.getTime()
+        ? 'Imorgon'
+        : d.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })
   return `${prefix} kl ${d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`
 }
-
-// ─── toTripInfo — konverterar Trip → TripInfo för TripBookingModal ────────────
 
 function toTripInfo(trip: Trip): TripInfo {
   return {
@@ -71,9 +80,34 @@ function toTripInfo(trip: Trip): TripInfo {
   }
 }
 
-// ─── TripCard ─────────────────────────────────────────────────────────────────
+function StatCard({ value, label, hint }: { value: string; label: string; hint: string }) {
+  return (
+    <div
+      style={{
+        background: 'var(--surface-2)',
+        border: '1px solid var(--border)',
+        borderRadius: 18,
+        padding: '14px 14px 12px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        minHeight: 122,
+      }}
+    >
+      <div style={{ fontSize: '1.75rem', fontWeight: 950, color: 'var(--text)', letterSpacing: '-0.05em' }}>{value}</div>
+      <div>
+        <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
+        <div style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: 5, lineHeight: 1.55 }}>{hint}</div>
+      </div>
+    </div>
+  )
+}
 
-function TripCard({ trip, onBookSeat, onSendPackage }: {
+function TripCard({
+  trip,
+  onBookSeat,
+  onSendPackage,
+}: {
   trip: Trip
   onBookSeat: (trip: Trip) => void
   onSendPackage: (trip: Trip) => void
@@ -86,21 +120,86 @@ function TripCard({ trip, onBookSeat, onSendPackage }: {
   const verified = carrier?.bankid_verified ?? false
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 18, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* Route + time */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-        <div>
-          <p style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
-            {trip.from_city}
-          </p>
-          <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '2px 0 0' }}>→ {trip.to_city}</p>
+    <div
+      style={{
+        ...CARD_SURFACE,
+        borderRadius: 24,
+        padding: 22,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 16,
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          right: '-18%',
+          bottom: '-44%',
+          width: 220,
+          height: 220,
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(146,255,99,0.16) 0%, rgba(146,255,99,0.04) 38%, transparent 72%)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <span
+            style={{
+              alignSelf: 'flex-start',
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              color: 'var(--gn-dk)',
+              background: 'var(--gn-010)',
+              border: '1px solid var(--gn-020)',
+              padding: '6px 10px',
+              borderRadius: 999,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+            }}
+          >
+            Aktiv rutt
+          </span>
+          <div>
+            <p style={{ fontSize: '1.18rem', fontWeight: 900, color: 'var(--text)', margin: 0, letterSpacing: '-0.03em' }}>
+              {trip.from_city} <span style={{ color: 'var(--muted)' }}>→</span> {trip.to_city}
+            </p>
+            <p style={{ fontSize: '0.82rem', color: 'var(--muted)', margin: '4px 0 0', lineHeight: 1.6 }}>
+              Registrerad för snabb bokning, paket eller samåkning.
+            </p>
+          </div>
         </div>
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <p style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)', margin: 0, display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
+
+        <div
+          style={{
+            textAlign: 'right',
+            flexShrink: 0,
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
+            borderRadius: 16,
+            padding: '10px 12px',
+            minWidth: 126,
+          }}
+        >
+          <p
+            style={{
+              fontSize: '0.8rem',
+              fontWeight: 800,
+              color: 'var(--text)',
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              justifyContent: 'flex-end',
+            }}
+          >
             <Clock size={12} /> {formatDep(trip.departure_at)}
           </p>
           {trip.vehicle_type && (
-            <p style={{ fontSize: '0.68rem', color: 'var(--muted)', margin: '3px 0 0' }}>
+            <p style={{ fontSize: '0.68rem', color: 'var(--muted)', margin: '5px 0 0' }}>
               <Car size={10} style={{ display: 'inline', marginRight: 3 }} />
               {VEHICLE_LABELS[trip.vehicle_type] ?? trip.vehicle_type}
             </p>
@@ -108,68 +207,95 @@ function TripCard({ trip, onBookSeat, onSendPackage }: {
         </div>
       </div>
 
-      {/* Capacity + pricing */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(164px, 1fr))', gap: 10 }}>
         {trip.allows_passengers && trip.seats_available > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 8, padding: '5px 10px' }}>
-            <Users size={13} style={{ color: '#22c55e' }} />
-            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)' }}>
-              {trip.seats_available} platser{trip.price_per_seat ? ` · från ${trip.price_per_seat} kr` : ''}
+          <div style={{ background: 'var(--gn-008)', border: '1px solid var(--gn-020)', borderRadius: 16, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <Users size={13} style={{ color: 'var(--gn)' }} />
+              <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Passagerare</span>
+            </div>
+            <span style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text)' }}>
+              {trip.seats_available === 1 ? '1 plats kvar' : `${trip.seats_available} platser kvar`}
             </span>
+            {trip.price_per_seat && <span style={{ fontSize: '0.74rem', color: 'var(--gn-dk)', fontWeight: 700 }}>Från {trip.price_per_seat} kr / plats</span>}
           </div>
         )}
+
         {trip.allows_packages && trip.weight_capacity_kg > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, padding: '5px 10px' }}>
-            <PkgIcon size={13} style={{ color: '#3b82f6' }} />
-            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text)' }}>
-              {trip.weight_capacity_kg} kg utrymme{trip.price_per_kg ? ` · ${trip.price_per_kg} kr/kg` : ''}
+          <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.18)', borderRadius: 16, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <PackageIcon size={13} style={{ color: 'var(--gn)' }} />
+              <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Paketutrymme</span>
+            </div>
+            <span style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text)' }}>
+              {trip.weight_capacity_kg === 1 ? '1 kg ledigt' : `${trip.weight_capacity_kg} kg ledigt`}
             </span>
+            {trip.price_per_kg && <span style={{ fontSize: '0.74rem', color: 'var(--gn-dk)', fontWeight: 700 }}>{trip.price_per_kg} kr / kg</span>}
           </div>
         )}
       </div>
 
-      {/* Carrier */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-        {avatar
-          ? <img src={avatar} alt={name} style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover' }} />
-          : <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 800, color: '#0a0a0a' }}>{name[0]}</div>
-        }
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+        {avatar ? (
+          <img src={avatar} alt={name} style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover' }} />
+        ) : (
+          <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 900, color: '#0a0a0a' }}>
+            {name[0]}
+          </div>
+        )}
+
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text)' }}>{name}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text)' }}>{name}</span>
             {verified && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.62rem', fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '2px 6px', borderRadius: 999 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.62rem', fontWeight: 700, color: 'var(--gn)', background: 'var(--gn-010)', padding: '4px 8px', borderRadius: 999 }}>
                 <Shield size={9} /> BankID
               </span>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
             <Star size={11} fill="#f59e0b" style={{ color: '#f59e0b' }} />
-            <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{rating.toFixed(1)} ({ratingCount} omdömen)</span>
+            <span style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>{rating.toFixed(1)} • {ratingCount} omdömen</span>
           </div>
         </div>
       </div>
 
-      {/* CTAs */}
       <div style={{ display: 'flex', gap: 8 }}>
         {trip.allows_passengers && trip.seats_available > 0 && (
-          <button onClick={() => onBookSeat(trip)} style={{
-            flex: 1, minHeight: 44, background: 'var(--accent)', color: '#0a0a0a', border: 'none', borderRadius: 10,
-            fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'opacity 0.15s',
-          }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          <button
+            onClick={() => onBookSeat(trip)}
+            style={{
+              flex: 1,
+              minHeight: 46,
+              background: 'var(--accent)',
+              color: '#0a0a0a',
+              border: 'none',
+              borderRadius: 12,
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
           >
             Boka plats
           </button>
         )}
+
         {trip.allows_packages && trip.weight_capacity_kg > 0 && (
-          <button onClick={() => onSendPackage(trip)} style={{
-            flex: 1, minHeight: 44, background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 10,
-            fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'opacity 0.15s',
-          }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          <button
+            onClick={() => onSendPackage(trip)}
+            style={{
+              flex: 1,
+              minHeight: 46,
+              background: 'var(--surface-2)',
+              color: 'var(--text)',
+              border: '1px solid var(--border)',
+              borderRadius: 12,
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
           >
             Skicka paket →
           </button>
@@ -178,9 +304,6 @@ function TripCard({ trip, onBookSeat, onSendPackage }: {
     </div>
   )
 }
-
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function ResorPage() {
   const [trips, setTrips] = useState<Trip[]>([])
@@ -211,8 +334,8 @@ export default function ResorPage() {
 
   useEffect(() => {
     fetch('/api/trips?status=active')
-      .then(r => r.json())
-      .then(d => setTrips(d.trips ?? []))
+      .then((r) => r.json())
+      .then((d) => setTrips(d.trips ?? []))
       .catch(() => setTrips([]))
       .finally(() => setLoading(false))
   }, [])
@@ -228,63 +351,133 @@ export default function ResorPage() {
   tomorrow.setDate(today.getDate() + 1)
 
   const filtered = useMemo(() => {
-    let r = trips
+    let result = trips
     switch (filter) {
       case 'Idag': {
         const end = new Date(today)
         end.setHours(23, 59, 59, 999)
-        r = r.filter(t => { const d = new Date(t.departure_at); return d >= today && d <= end })
+        result = result.filter((t) => {
+          const d = new Date(t.departure_at)
+          return d >= today && d <= end
+        })
         break
       }
       case 'Imorgon': {
-        const tEnd = new Date(tomorrow)
-        tEnd.setHours(23, 59, 59, 999)
-        r = r.filter(t => { const d = new Date(t.departure_at); return d >= tomorrow && d <= tEnd })
+        const end = new Date(tomorrow)
+        end.setHours(23, 59, 59, 999)
+        result = result.filter((t) => {
+          const d = new Date(t.departure_at)
+          return d >= tomorrow && d <= end
+        })
         break
       }
-      case 'Stockholm':    r = r.filter(t => t.from_city.includes('Stockholm') || t.to_city.includes('Stockholm')); break
-      case 'Göteborg':     r = r.filter(t => t.from_city.includes('Göteborg') || t.to_city.includes('Göteborg')); break
-      case 'Norrland':     r = r.filter(t => ['Umeå','Luleå','Sundsvall','Östersund','Härnösand'].some(c => t.from_city.includes(c) || t.to_city.includes(c))); break
-      case 'Lediga platser': r = r.filter(t => t.allows_passengers && t.seats_available > 0); break
-      case 'Godsutrymme':  r = r.filter(t => t.allows_packages && t.weight_capacity_kg > 0); break
+      case 'Stockholm':
+        result = result.filter((t) => t.from_city.includes('Stockholm') || t.to_city.includes('Stockholm'))
+        break
+      case 'Göteborg':
+        result = result.filter((t) => t.from_city.includes('Göteborg') || t.to_city.includes('Göteborg'))
+        break
+      case 'Norrland':
+        result = result.filter((t) => ['Umeå', 'Luleå', 'Sundsvall', 'Östersund', 'Härnösand'].some((city) => t.from_city.includes(city) || t.to_city.includes(city)))
+        break
+      case 'Lediga platser':
+        result = result.filter((t) => t.allows_passengers && t.seats_available > 0)
+        break
+      case 'Godsutrymme':
+        result = result.filter((t) => t.allows_packages && t.weight_capacity_kg > 0)
+        break
     }
-    return r
-  }, [trips, filter])
+    return result
+  }, [filter, today, tomorrow, trips])
+
+  const stats = [
+    { value: String(trips.length), label: 'aktiva resor', hint: 'Verifierade rutter i nätverket just nu' },
+    { value: String(trips.filter((t) => t.seats_available > 0).length), label: 'med lediga platser', hint: 'Samåkning och persontransporter' },
+    { value: String(trips.filter((t) => t.weight_capacity_kg > 0).length), label: 'med paketutrymme', hint: 'Bokningsbara fraktmöjligheter' },
+  ]
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--page-gradient)', paddingTop: 88, paddingBottom: 80 }}>
       {toast && (
-        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', zIndex: 20000, background: '#0a0a0a', color: '#fff', padding: '12px 22px', borderRadius: 999, fontSize: '0.85rem', fontWeight: 600, boxShadow: '0 8px 32px rgba(0,0,0,0.28)', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap', animation: 'toast-in 0.2s ease both' }}>
-          <span style={{ color: '#22c55e' }}>✓</span> {toast}
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 28,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 20000,
+            background: '#0a0a0a',
+            color: '#fff',
+            padding: '12px 22px',
+            borderRadius: 999,
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <span style={{ color: 'var(--gn)' }}>✓</span> {toast}
         </div>
       )}
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: isMobile ? '0 16px' : '0 24px' }}>
-        <div style={{ marginBottom: 28 }}>
-          <h1 style={{ fontSize: isMobile ? '1.6rem' : '2rem', fontWeight: 900, color: 'var(--text)', margin: 0, letterSpacing: '-0.03em', lineHeight: 1.1 }}>Aktiva resor</h1>
-          <p style={{ fontSize: '0.88rem', color: 'var(--muted)', marginTop: 6, marginBottom: 0, lineHeight: 1.6 }}>
-            Registrerade resor med ledigt utrymme — ta med ett paket eller boka en plats.
-          </p>
+        <div style={{ ...CARD_SURFACE, borderRadius: isMobile ? 26 : 30, padding: isMobile ? '20px 18px' : '28px 28px 24px', marginBottom: 24, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', left: -32, bottom: -52, width: 180, height: 180, borderRadius: '50%', background: 'radial-gradient(circle, rgba(146,255,99,0.16) 0%, rgba(146,255,99,0.03) 50%, transparent 76%)' }} />
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.25fr) minmax(280px, 0.75fr)', gap: 22, position: 'relative' }}>
+            <div>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.72rem', fontWeight: 800, color: 'var(--gn-dk)', background: 'var(--gn-010)', border: '1px solid var(--gn-020)', padding: '7px 12px', borderRadius: 999, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}>
+                <Route size={13} /> Marketplace live
+              </span>
+              <h1 style={{ fontSize: isMobile ? '1.8rem' : '2.35rem', fontWeight: 950, color: 'var(--text)', margin: 0, letterSpacing: '-0.05em', lineHeight: 1.02 }}>
+                Bokningsbara resor
+                <br />
+                för paket och personer.
+              </h1>
+              <p style={{ fontSize: isMobile ? '0.92rem' : '0.98rem', color: 'var(--muted)', marginTop: 12, marginBottom: 0, lineHeight: 1.7, maxWidth: 640 }}>
+                Jämför aktiva rutter, verifierade förare och tillgänglig kapacitet i ett lugnt, tydligt flöde som känns premium på både mobil och desktop.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+              {stats.map((item) => (
+                <StatCard key={item.label} value={item.value} label={item.label} hint={item.hint} />
+              ))}
+            </div>
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none', marginBottom: 24 }}>
-          {FILTERS.map(f => (
-            <button key={f} onClick={() => setFilter(f)} style={{
-              flexShrink: 0, padding: '7px 14px', borderRadius: 999, border: '1px solid',
-              fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-              background: filter === f ? 'var(--accent)' : 'var(--surface)',
-              color: filter === f ? '#0a0a0a' : 'var(--muted)',
-              borderColor: filter === f ? 'var(--accent)' : 'var(--border)',
-              transition: 'all 0.15s',
-            }}>
-              {f}
+          {FILTERS.map((item) => (
+            <button
+              key={item}
+              onClick={() => setFilter(item)}
+              style={{
+                flexShrink: 0,
+                padding: '8px 14px',
+                borderRadius: 999,
+                border: '1px solid',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                background: filter === item ? 'var(--accent)' : 'var(--surface)',
+                color: filter === item ? '#0a0a0a' : 'var(--muted)',
+                borderColor: filter === item ? 'var(--accent)' : 'var(--border)',
+              }}
+            >
+              {item}
             </button>
           ))}
         </div>
 
         {loading ? (
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
-            {Array.from({ length: 4 }).map((_, i) => <TripCardSkeleton key={i} />)}
+            {Array.from({ length: 4 }).map((_, index) => (
+              <TripCardSkeleton key={index} />
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, padding: '64px 0', textAlign: 'center' }}>
@@ -296,25 +489,37 @@ export default function ResorPage() {
                 {filter === 'Alla' ? 'Inga aktiva resor hittades' : `Inga resor för "${filter}"`}
               </p>
               <p style={{ fontSize: '0.84rem', color: 'var(--muted)', maxWidth: 280, margin: '0 auto' }}>
-                {filter === 'Alla'
-                  ? 'Inga förare har registrerat en resa just nu. Kolla tillbaka snart!'
-                  : 'Prova ett annat filter eller visa alla resor.'}
+                {filter === 'Alla' ? 'Inga förare har registrerat en resa just nu. Kolla tillbaka snart.' : 'Prova ett annat filter eller visa alla resor.'}
               </p>
             </div>
             {filter !== 'Alla' && (
-              <button onClick={() => setFilter('Alla')} style={{ minHeight: 44, padding: '0 20px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 10, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button
+                onClick={() => setFilter('Alla')}
+                style={{
+                  minHeight: 44,
+                  padding: '0 20px',
+                  background: 'var(--surface-2)',
+                  color: 'var(--text)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 10,
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
                 Visa alla resor
               </button>
             )}
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16, animation: 'fade-in 0.3s ease both' }}>
-            {filtered.map(trip => (
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+            {filtered.map((trip) => (
               <TripCard
                 key={trip.id}
                 trip={trip}
-                onBookSeat={trip => openModal(trip, 'passenger')}
-                onSendPackage={trip => openModal(trip, 'package')}
+                onBookSeat={(selectedTrip) => openModal(selectedTrip, 'passenger')}
+                onSendPackage={(selectedTrip) => openModal(selectedTrip, 'package')}
               />
             ))}
           </div>
@@ -323,18 +528,27 @@ export default function ResorPage() {
 
       {showAuth && (
         <AuthModal
-          onClose={() => { setShowAuth(false); setPendingModal(null) }}
+          onClose={() => {
+            setShowAuth(false)
+            setPendingModal(null)
+          }}
           onSuccess={() => {
             setShowAuth(false)
-            if (pendingModal) { setModalTrip(pendingModal); setPendingModal(null) }
+            if (pendingModal) {
+              setModalTrip(pendingModal)
+              setPendingModal(null)
+              showToast('Du är inloggad. Fortsätt med bokningen.')
+            }
           }}
-          reason={pendingModal?.type === 'package' ? 'Logga in för att skicka paket' : 'Logga in för att boka plats'}
+          reason="Logga in för att boka plats"
         />
       )}
+
       {modalTrip && (
         <TripBookingModal
           trip={toTripInfo(modalTrip.trip)}
           initialType={modalTrip.type}
+          lockType={true}
           onClose={() => setModalTrip(null)}
         />
       )}
