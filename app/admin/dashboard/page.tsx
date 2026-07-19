@@ -68,13 +68,10 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (authLoading) return
-    if (profile?.role !== 'admin') {
-      setLoading(false)
-      return
-    }
-    load()
+    if (profile?.role !== 'admin') return
+    const initial = window.setTimeout(() => void load(), 0)
     const interval = setInterval(load, 60_000)
-    return () => clearInterval(interval)
+    return () => { clearTimeout(initial); clearInterval(interval) }
   }, [authLoading, profile?.role, load])
 
   if (authLoading || loading) {
@@ -112,7 +109,7 @@ export default function AdminDashboard() {
   ]
 
   return (
-    <div style={{ minHeight: '100vh', paddingTop: 80, paddingBottom: 80, background: 'var(--page-gradient)' }}>
+    <div className="admin-page admin-overview" style={{ minHeight: '100vh', paddingTop: 80, paddingBottom: 80, background: 'var(--page-gradient)' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px' }}>
 
         <div style={{ paddingTop: 32, paddingBottom: 32, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>

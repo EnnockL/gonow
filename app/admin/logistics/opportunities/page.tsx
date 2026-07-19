@@ -77,7 +77,10 @@ export default function LogisticsOpportunitiesPage() {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    const initial = window.setTimeout(() => void load(), 0)
+    return () => clearTimeout(initial)
+  }, [load])
 
   async function handleAccept(oppId: string) {
     if (!userId) return
@@ -132,7 +135,7 @@ export default function LogisticsOpportunitiesPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--page-gradient)', paddingTop: 88, paddingBottom: 80 }}>
+    <div className="admin-page admin-opportunities" style={{ minHeight: '100vh', background: 'var(--page-gradient)', paddingTop: 88, paddingBottom: 80 }}>
       {toast && (
         <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', zIndex: 20000, background: '#0a0a0a', color: '#fff', padding: '12px 22px', borderRadius: 999, fontSize: '0.85rem', fontWeight: 600, boxShadow: '0 8px 32px rgba(0,0,0,0.28)', whiteSpace: 'nowrap' }}>
           <span style={{ color: 'var(--gn)' }}>✓</span> {toast}

@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
-import { Menu, Truck, X, Moon, Sun } from 'lucide-react'
+import { Activity, Boxes, ChevronDown, Menu, Route, Truck, X, Moon, Sun, Zap } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { signOut } from '@/lib/auth'
 import AuthModal from '@/components/auth/AuthModal'
@@ -64,6 +64,14 @@ const links: { href: string; label: string; soon?: boolean }[] = [
   { href: '/uppdrag',     label: 'Uppdrag' },
   { href: '/kor',         label: 'Kör & tjäna' },
   { href: '/meddelanden', label: 'Chat', soon: true },
+]
+
+const adminLinks = [
+  { href: '/admin/dashboard', label: 'Översikt', description: 'KPI och affärsläge', icon: Activity },
+  { href: '/admin/dispatcher', label: 'Dispatcher', description: 'Liveflöde och Guardian', icon: Zap },
+  { href: '/admin/logistics', label: 'Logistik', description: 'Transportkö och tilldelning', icon: Truck },
+  { href: '/admin/logistics/opportunities', label: 'Uppdrag', description: 'Logistikmöjligheter', icon: Boxes },
+  { href: '/forecast', label: 'Forecast', description: 'Prognoser och avgångar', icon: Route },
 ]
 
 const EASE = 'cubic-bezier(0.4, 0, 0.2, 1)'
@@ -241,21 +249,23 @@ export default function Navbar() {
       }
       lastY.current = y
     }
-    onResize()
-    onScroll()
+    const initial = window.setTimeout(() => {
+      onResize()
+      onScroll()
+      const saved = (() => { try { return localStorage.getItem('theme') } catch { return null } })()
+      const isDark = saved === 'dark'
+      setTheme(isDark ? 'dark' : 'light')
+      applyTheme(isDark)
 
-    const saved = (() => { try { return localStorage.getItem('theme') } catch { return null } })()
-    const isDark = saved === 'dark'
-    setTheme(isDark ? 'dark' : 'light')
-    applyTheme(isDark)
-
-    const savedAccent = (() => { try { return localStorage.getItem('accent-theme') } catch { return null } })()
-    const accentKey: AccentKey = savedAccent === 'blue' ? 'blue' : 'green'
-    setAccent(accentKey)
-    applyAccent(accentKey, isDark)
+      const savedAccent = (() => { try { return localStorage.getItem('accent-theme') } catch { return null } })()
+      const accentKey: AccentKey = savedAccent === 'blue' ? 'blue' : 'green'
+      setAccent(accentKey)
+      applyAccent(accentKey, isDark)
+    }, 0)
     window.addEventListener('resize', onResize)
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => {
+      clearTimeout(initial)
       window.removeEventListener('resize', onResize)
       window.removeEventListener('scroll', onScroll)
     }
@@ -400,25 +410,6 @@ export default function Navbar() {
         {/* Right actions */}
         <div style={{ display: isDesktop ? 'flex' : 'none', alignItems: 'center', gap: scrolled ? 8 : 14, flexShrink: 0 }}>
 
-          {/* Accent colour switcher — admin only */}
-          <div style={{ display: profile?.role === 'admin' ? 'flex' : 'none', alignItems: 'center', gap: 5, padding: '4px 8px', borderRadius: 999, border: '1px solid var(--border)', background: 'var(--surface)' }}>
-            {(['green', 'blue'] as AccentKey[]).map(key => (
-              <button
-                key={key}
-                onClick={() => switchAccent(key)}
-                title={key === 'green' ? 'Grön tema' : 'Blå tema'}
-                style={{
-                  width: 14, height: 14, borderRadius: '50%', border: 'none', padding: 0,
-                  background: key === 'green' ? '#22c55e' : '#3B82F6',
-                  cursor: 'pointer', flexShrink: 0,
-                  outline: accent === key ? `2px solid ${key === 'green' ? '#22c55e' : '#3B82F6'}` : '2px solid transparent',
-                  outlineOffset: 2,
-                  transition: 'outline-color 0.15s',
-                }}
-              />
-            ))}
-          </div>
-
           {/* Dark mode toggle */}
           <button type="button"
             aria-label={dark ? 'Ljust läge' : 'Mörkt läge'}
@@ -445,23 +436,46 @@ export default function Navbar() {
             {dark ? <Sun size={14} /> : <Moon size={14} />}
           </button>
 
-          {/* Admin links — only for role=admin */}
+          {/* Consolidated operations menu — only for admins. */}
           {profile?.role === 'admin' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Link href="/admin/dashboard" style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent)', background: 'var(--gn-010)', border: '1px solid var(--gn-025)', borderRadius: 8, padding: '4px 10px', textDecoration: 'none', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                Admin
-              </Link>
-              <Link href="/admin/logistics" style={{ fontSize: '0.72rem', fontWeight: 700, color: '#d97706', background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.35)', borderRadius: 8, padding: '4px 10px', textDecoration: 'none', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                Logistik
-              </Link>
-              <Link href="/forecast" style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--gn-dk)', background: 'var(--gn-010)', border: '1px solid var(--gn-025)', borderRadius: 8, padding: '4px 10px', textDecoration: 'none', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                Forecast
-              </Link>
-              <Link href="/admin/dispatcher" style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--gn-dk)', background: 'var(--gn-010)', border: '1px solid var(--gn-025)', borderRadius: 8, padding: '4px 10px', textDecoration: 'none', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--gn)' }} />
-                Dispatcher
-              </Link>
-            </div>
+            <details style={{ position: 'relative' }}>
+              <summary style={{ listStyle: 'none', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: '0.6rem', fontWeight: 800, color: 'var(--gn-dk)', background: 'var(--gn-010)', border: '1px solid var(--gn-025)', borderRadius: 8, padding: '5px 7px', letterSpacing: '0.035em', textTransform: 'uppercase', userSelect: 'none' }}>
+                <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--gn)', boxShadow: '0 0 0 2px var(--gn-010)' }} />
+                Ops
+                <ChevronDown size={10} />
+              </summary>
+              <div style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, width: 272, padding: 8, borderRadius: 16, background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 22px 60px rgba(0,0,0,0.2)', zIndex: 200 }}>
+                <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid var(--border)', marginBottom: 5 }}>
+                  <strong style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text)' }}>Gonow Operations</strong>
+                  <span style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>Intern administration och drift</span>
+                </div>
+                {adminLinks.map(({ href, label, description, icon: Icon }) => (
+                  <Link key={href} href={href} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 11, color: 'var(--text)', textDecoration: 'none' }}>
+                    <span style={{ width: 30, height: 30, borderRadius: 9, display: 'grid', placeItems: 'center', color: 'var(--gn-dk)', background: 'var(--gn-010)' }}><Icon size={14} /></span>
+                    <span><strong style={{ display: 'block', fontSize: '0.72rem' }}>{label}</strong><small style={{ display: 'block', marginTop: 2, color: 'var(--muted)', fontSize: '0.6rem' }}>{description}</small></span>
+                  </Link>
+                ))}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 5, padding: '10px', borderTop: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--muted)' }}>Accentfärg</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                    {(['green', 'blue'] as AccentKey[]).map(key => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => switchAccent(key)}
+                        aria-label={key === 'green' ? 'Använd grön accent' : 'Använd blå accent'}
+                        style={{
+                          width: 16, height: 16, borderRadius: '50%', border: 'none', padding: 0,
+                          background: key === 'green' ? '#22c55e' : '#3B82F6', cursor: 'pointer',
+                          outline: accent === key ? `2px solid ${key === 'green' ? '#22c55e' : '#3B82F6'}` : '2px solid transparent',
+                          outlineOffset: 2,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </details>
           )}
 
 
@@ -630,6 +644,16 @@ export default function Navbar() {
                 {l.label}
               </Link>
             ))}
+            {profile?.role === 'admin' && (
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                <p style={{ padding: '4px 14px 8px', fontSize: '0.64rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>Operations</p>
+                {adminLinks.map(({ href, label, icon: Icon }) => (
+                  <Link key={href} href={href} onClick={() => setOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 12, color: 'var(--text)', textDecoration: 'none', fontSize: '0.86rem', fontWeight: 650 }}>
+                    <Icon size={15} color="var(--gn-dk)" /> {label}
+                  </Link>
+                ))}
+              </div>
+            )}
             <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
               {userId && profile ? (
                 <>

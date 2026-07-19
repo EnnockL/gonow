@@ -59,23 +59,25 @@ export default function Footer() {
   const [isMobile, setIsMobile] = useState(false)
   const [accent, setAccent] = useState<'green' | 'blue'>('green')
 
-  if (path.startsWith('/admin')) return null
-
   useEffect(() => {
-    setAccent((localStorage.getItem('accent') ?? 'green') as 'green' | 'blue')
+    const initial = window.setTimeout(() => {
+      setAccent((localStorage.getItem('accent') ?? 'green') as 'green' | 'blue')
+    }, 0)
     const onStorage = (e: StorageEvent) => {
       if (e.key === 'accent') setAccent((e.newValue ?? 'green') as 'green' | 'blue')
     }
     window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
+    return () => { clearTimeout(initial); window.removeEventListener('storage', onStorage) }
   }, [])
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
-    check()
+    const initial = window.setTimeout(check, 0)
     window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
+    return () => { clearTimeout(initial); window.removeEventListener('resize', check) }
   }, [])
+
+  if (path.startsWith('/admin')) return null
 
   async function handleSub(e: React.FormEvent) {
     e.preventDefault()

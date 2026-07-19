@@ -62,7 +62,10 @@ export default function AdminPage() {
     setRefreshing(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    const initial = window.setTimeout(() => void load(), 0)
+    return () => clearTimeout(initial)
+  }, [])
 
   if (loading) {
     return (
@@ -81,7 +84,7 @@ export default function AdminPage() {
   ]
 
   return (
-    <div style={{ minHeight: '100vh', paddingTop: 80, paddingBottom: 80 }}>
+    <div className="admin-page admin-order-center" style={{ minHeight: '100vh', paddingTop: 80, paddingBottom: 80 }}>
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px' }}>
 
         {/* Header */}

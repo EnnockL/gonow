@@ -69,7 +69,10 @@ export default function LogisticsAdminPage() {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    const initial = window.setTimeout(() => void load(), 0)
+    return () => clearTimeout(initial)
+  }, [load])
 
   async function openForPrivate(pkgId: string) {
     setOpeningId(pkgId)
@@ -101,7 +104,7 @@ export default function LogisticsAdminPage() {
   const waiting = byStage('waiting_next_departure')
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--page-gradient)', paddingTop: 88, paddingBottom: 80 }}>
+    <div className="admin-page admin-logistics" style={{ minHeight: '100vh', background: 'var(--page-gradient)', paddingTop: 88, paddingBottom: 80 }}>
       {toast && (
         <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', zIndex: 20000, background: '#0a0a0a', color: '#fff', padding: '12px 22px', borderRadius: 999, fontSize: '0.85rem', fontWeight: 600, boxShadow: '0 8px 32px rgba(0,0,0,0.28)', whiteSpace: 'nowrap' }}>
           <span style={{ color: 'var(--gn)' }}>✓</span> {toast}

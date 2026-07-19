@@ -40,14 +40,17 @@ export default function EnterpriseSendForm({ requestId, sender, recipient, onCon
   const [to, setTo] = useState('')
 
   useEffect(() => {
-    const saved = loadFormDraft()
-    if (!saved) return
-    if (saved.type) setType(saved.type)
-    if (saved.weight !== undefined) setWeight(saved.weight)
-    if (saved.description) setDescription(saved.description)
-    if (saved.specialRequirements) setSpecialRequirements(saved.specialRequirements)
-    if (saved.from) setFrom(saved.from)
-    if (saved.to) setTo(saved.to)
+    const initial = window.setTimeout(() => {
+      const saved = loadFormDraft()
+      if (!saved) return
+      if (saved.type) setType(saved.type)
+      if (saved.weight !== undefined) setWeight(saved.weight)
+      if (saved.description) setDescription(saved.description)
+      if (saved.specialRequirements) setSpecialRequirements(saved.specialRequirements)
+      if (saved.from) setFrom(saved.from)
+      if (saved.to) setTo(saved.to)
+    }, 0)
+    return () => clearTimeout(initial)
   }, [])
   const { result: quote, loading: quoteLoading, error: quoteError, calculate } = useRoutePrice()
   const selectedType = parcelTypes.find(item => item.id === type) ?? parcelTypes[0]
@@ -69,13 +72,13 @@ export default function EnterpriseSendForm({ requestId, sender, recipient, onCon
     sessionStorage.setItem(SEND_FORM_KEY, JSON.stringify({ type, weight, description, specialRequirements, from, to }))
   }, [type, weight, description, specialRequirements, from, to])
 
-  const canContinue = description.trim().length > 1 && from.trim().length > 2 && to.trim().length > 2 && !!quote
+  const canContinue = from.trim().length > 2 && to.trim().length > 2 && !!quote
   const submit = () => canContinue && onContinue({
     request_id: requestId,
     service_type: 'package',
     package_type: type,
     weight_kg: weight,
-    description: description.trim(),
+    description: description.trim() || 'Paket',
     special_requirements: specialRequirements.trim() || undefined,
     pickup_address: from,
     dropoff_address: to,
@@ -169,7 +172,10 @@ function RouteCard({ title, value, onChange, mode, date }: { title:string;value:
   const [open, setOpen] = useState(false)
   useEffect(() => {
     const q = value.trim()
-    if (q.length < 3) { setSugg([]); return }
+    if (q.length < 3) {
+      const reset = window.setTimeout(() => setSugg([]), 0)
+      return () => clearTimeout(reset)
+    }
     const t = setTimeout(async () => {
       try {
         const res = await fetch(
