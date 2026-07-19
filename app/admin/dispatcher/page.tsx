@@ -674,6 +674,14 @@ export default function DispatcherDashboard() {
                       <span style={{ fontSize: '0.56rem', color: MUTED }}>{fmtRel(ev.created_at)}</span>
                     </div>
                     <p className="dp-ev-msg">{ev.message}</p>
+                    {ev.event_type === 'login_failed' && (
+                      <div className="dp-security-meta">
+                        <span>{String(ev.metadata.masked_identifier ?? 'Maskerat konto')}</span>
+                        <span>{Number(ev.metadata.count ?? 1)} försök</span>
+                        <span>Risk: {String(ev.metadata.risk ?? 'medium')}</span>
+                        <span>{String(ev.metadata.action ?? 'Övervakas')}</span>
+                      </div>
+                    )}
                   </div>
                   <button
                     className="dp-btn-resolve"
@@ -1128,6 +1136,17 @@ export default function DispatcherDashboard() {
         .dp-ev-row:hover { background: #2a2e3a; }
         .dp-ev-meta { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; flex-wrap: wrap; }
         .dp-ev-msg { font-size: 0.78rem; color: #fff; margin: 0; line-height: 1.45; font-weight: 500; }
+        .dp-security-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+        .dp-security-meta span {
+          padding: 3px 7px;
+          border: 1px solid rgba(251,191,36,0.17);
+          border-radius: 999px;
+          background: rgba(0,0,0,0.16);
+          color: rgba(244,246,252,0.68);
+          font-family: var(--font-mono, monospace);
+          font-size: 0.54rem;
+          letter-spacing: 0.02em;
+        }
         .dp-btn-resolve {
           flex-shrink: 0; padding: 6px 14px; border-radius: 999px;
           border: 1px solid rgba(255,255,255,0.2); background: transparent;

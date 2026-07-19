@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { checkLoginRateLimit, recordFailedLogin, recordSuccessfulLogin } from '@/lib/system-guardian/login-security'
+
+const GENERIC_AUTH_ERROR = 'E-post eller lösenord är fel.'
 
 export async function POST(req: NextRequest) {
-  const { email, password } = await req.json()
+  const body = await req.json().catch(() => null)
+  const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
+  const password = typeof body?.password === 'string' ? body.password : ''
 
   if (!email || !password) {
     return NextResponse.json({ error: 'E-post och lösenord krävs.' }, { status: 400 })
@@ -12,6 +17,15 @@ export async function POST(req: NextRequest) {
 
   if (!url || !anonKey) {
     return NextResponse.json({ error: 'Supabase saknar klientkonfiguration.' }, { status: 500 })
+  }
+
+  const gate = await checkLoginRateLimit(req, email)
+  if (gate.blocked) {
+    await recordFailedLogin(req, email, true)
+    return NextResponse.json(
+      { error: 'För många försök. Vänta en stund och försök igen.' },
+      { status: 429, headers: { 'Retry-After': String(gate.retryAfter) } },
+    )
   }
 
   const response = await fetch(`${url}/auth/v1/token?grant_type=password`, {
@@ -26,12 +40,14 @@ export async function POST(req: NextRequest) {
   const payload = await response.json().catch(() => null)
 
   if (!response.ok) {
-    return NextResponse.json(
-      {
-        error: payload?.msg || payload?.error_description || payload?.error || 'Kunde inte logga in.',
-      },
-      { status: response.status }
-    )
+    await recordFailedLogin(req, email, response.status === 429)
+    if (response.status === 429) {
+      return NextResponse.json(
+        { error: 'För många försök. Vänta en stund och försök igen.' },
+        { status: 429, headers: { 'Retry-After': '600' } },
+      )
+    }
+    return NextResponse.json({ error: GENERIC_AUTH_ERROR }, { status: 401 })
   }
 
   const accessToken = payload?.access_token
@@ -40,6 +56,8 @@ export async function POST(req: NextRequest) {
   if (!accessToken || !refreshToken) {
     return NextResponse.json({ error: 'Supabase returnerade ingen giltig session.' }, { status: 500 })
   }
+
+  await recordSuccessfulLogin(req, email, payload?.user?.id ?? null)
 
   return NextResponse.json({
     access_token: accessToken,

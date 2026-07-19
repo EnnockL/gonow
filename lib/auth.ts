@@ -26,10 +26,16 @@ export async function signUp(email: string, password: string, name: string, phon
 }
 
 export async function signIn(email: string, password: string) {
-  const supabase = createClient()
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) throw new Error(error.message)
-  return data.user
+  const response = await fetch('/api/auth/sign-in', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  })
+  const payload = await response.json().catch(() => null)
+  if (!response.ok) throw new Error(payload?.error || 'Kunde inte logga in.')
+
+  await loginWithSession(payload.access_token, payload.refresh_token)
+  return payload.user
 }
 
 export async function verifySignupOtp(email: string, token: string) {

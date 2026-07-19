@@ -8,7 +8,7 @@ async function checkRepeatedAuthFailures(db: DB) {
   const { count } = await db
     .from('system_events')
     .select('id', { count: 'exact', head: true })
-    .eq('event_type', 'auth_failure')
+    .in('event_type', ['auth_failure', 'login_failed'])
     .gte('created_at', since)
   if ((count ?? 0) >= 5) {
     await reportEvent({
