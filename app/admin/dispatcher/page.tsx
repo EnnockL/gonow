@@ -825,17 +825,26 @@ export default function DispatcherDashboard() {
 
         /* ── MAIN CONTENT AREA ───────────────────────────────────────── */
         .dp-main {
-          margin-left: 236px;  /* 8 left + 220 sidebar + 8 gap */
+          margin-left: 236px;  /* 8 sidebar-left + 220 width + 8 gap */
           margin-right: 8px;
           margin-top: 8px;
+          margin-bottom: 8px;
           flex: 1;
           min-width: 0;
-          padding-bottom: 80px;
           background: #111318;
-          border-radius: 12px 12px 0 0;
+          border-radius: 12px;
           position: relative;
           z-index: 1;
-          min-height: calc(100vh - 8px);
+          height: calc(100vh - 16px);
+          overflow-y: auto;
+          overflow-x: hidden;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255,255,255,0.12) transparent;
+        }
+        .dp-main::-webkit-scrollbar { width: 6px; }
+        .dp-main::-webkit-scrollbar-track { background: transparent; }
+        .dp-main::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.12); border-radius: 3px;
         }
         /* green gradient bleed inside main panel */
         .dp-main::before {
@@ -848,19 +857,19 @@ export default function DispatcherDashboard() {
           z-index: 0;
         }
 
-        /* ── Base gap background ─────────────────────────────────────── */
+        /* ── Pure black gap background — visible between panels ──────── */
         .dp-bg {
           position: fixed;
           inset: 0;
           z-index: 0;
-          background: #06070b;
+          background: #000000;
           pointer-events: none;
         }
 
         /* ── content wrap ────────────────────────────────────────────── */
         .dp-wrap {
           position: relative; z-index: 1;
-          max-width: 1420px; margin: 0 auto; padding: 0;
+          max-width: 1420px; margin: 0 auto; padding: 0 0 60px;
         }
 
         /* ── breadcrumb ──────────────────────────────────────────────── */
