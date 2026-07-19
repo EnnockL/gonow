@@ -1,24 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getRequestUser, unauthorized } from '@/lib/auth/require-auth'
 import { createServiceClient } from '@/lib/supabase'
+import { buildGuardianFallbackSummary } from '@/lib/system-guardian/fallback-summary'
 import Anthropic from '@anthropic-ai/sdk'
 
-// Simple in-process rate limit: max 3 calls per admin per minute
 const rateLimitMap = new Map<string, number>()
 const RATE_WINDOW_MS = 60_000
-const RATE_MAX = 3
-
 const PII_KEYS = ['email', 'phone', 'name', 'address', 'personal', 'bankid', 'iban']
 
 function sanitizeForAI(meta: unknown): unknown {
   if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return meta
   const out: Record<string, unknown> = {}
-  for (const [k, v] of Object.entries(meta as Record<string, unknown>)) {
-    if (PII_KEYS.some(p => k.toLowerCase().includes(p))) {
-      out[k] = '[REDACTED]'
-    } else {
-      out[k] = sanitizeForAI(v)
-    }
+  for (const [key, value] of Object.entries(meta as Record<string, unknown>)) {
+    out[key] = PII_KEYS.some(part => key.toLowerCase().includes(part))
+      ? '[REDACTED]'
+      : sanitizeForAI(value)
   }
   return out
 }
@@ -29,20 +25,17 @@ export async function POST(req: NextRequest) {
 
   const db = createServiceClient()
   const { data: profile } = await db.from('users').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  // Rate limit per admin
   const now = Date.now()
   const last = rateLimitMap.get(user.id) ?? 0
   if (now - last < RATE_WINDOW_MS) {
-    return NextResponse.json({ error: 'Rate limited — vänta innan du begär en ny sammanfattning.' }, { status: 429 })
+    return NextResponse.json({ error: 'Vänta innan du begär en ny sammanfattning.' }, { status: 429 })
   }
   rateLimitMap.set(user.id, now)
 
   const since = new Date(now - 2 * 60 * 60_000).toISOString()
-  const { data: events } = await db
+  const { data: events, error } = await db
     .from('system_events')
     .select('severity, source, event_type, message, metadata, created_at')
     .is('resolved_at', null)
@@ -50,42 +43,44 @@ export async function POST(req: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(50)
 
-  if (!events || events.length === 0) {
-    return NextResponse.json({ summary: 'Inga olösta händelser de senaste 2 timmarna. Systemet verkar stabilt.' })
+  if (error) {
+    return NextResponse.json({
+      summary: 'Guardian kunde inte läsa incidentloggen. Kontrollera databaskopplingen och använd den operativa översikten tills anslutningen är återställd.',
+      mode: 'rules', ai_available: false,
+    })
   }
 
-  const sanitized = events.map((e: {
+  const sanitized = (events ?? []).map((event: {
     severity: string; source: string; event_type: string;
     message: string; metadata: unknown; created_at: string
   }) => ({
-    severity:   e.severity,
-    source:     e.source,
-    event_type: e.event_type,
-    message:    e.message,
-    created_at: e.created_at,
-    metadata:   sanitizeForAI(e.metadata),
+    severity: event.severity,
+    source: event.source,
+    event_type: event.event_type,
+    message: event.message,
+    created_at: event.created_at,
+    metadata: sanitizeForAI(event.metadata),
   }))
+  const fallback = buildGuardianFallbackSummary(sanitized)
 
-  const client = new Anthropic()
-  const res = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 800,
-    messages: [{
-      role: 'user',
-      content: `Du är operativ on-call-analytiker för Gonow, en transportplattform. Här är olösta systemhändelser från de senaste 2 timmarna:
+  if (sanitized.length === 0 || !process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json({ summary: fallback, mode: 'rules', ai_available: false })
+  }
 
-${JSON.stringify(sanitized, null, 2)}
-
-Ge en kort driftssammanfattning med:
-1. Övergripande incidentsammanfattning (2–3 meningar)
-2. Trolig grundorsak
-3. Påverkade flöden/tjänster
-4. Rekommenderade utredningssteg (max 3 punkter)
-
-Föreslå INTE att exekvera fixar eller ändra data. Håll det kort och handlingsorienterat.`,
-    }],
-  })
-
-  const text = res.content[0].type === 'text' ? res.content[0].text : ''
-  return NextResponse.json({ summary: text })
+  try {
+    const client = new Anthropic()
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 800,
+      messages: [{
+        role: 'user',
+        content: `Du är operativ on-call-analytiker för Gonow. Analysera följande avidentifierade systemhändelser:\n\n${JSON.stringify(sanitized, null, 2)}\n\nGe en kort incidentsammanfattning, trolig grundorsak, berörda flöden och högst tre utredningssteg. Föreslå inte att data ändras.`,
+      }],
+    })
+    const text = response.content[0]?.type === 'text' ? response.content[0].text : ''
+    return NextResponse.json({ summary: text || fallback, mode: text ? 'ai' : 'rules', ai_available: Boolean(text) })
+  } catch (aiError) {
+    console.error('[guardian] AI summary unavailable:', aiError)
+    return NextResponse.json({ summary: fallback, mode: 'rules', ai_available: false })
+  }
 }
