@@ -1492,13 +1492,6 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
                     </button>
                   )}
                   <a
-                    href={`/paket/${createdPackage.id}`}
-                    className="btn-secondary"
-                    style={{ padding: '12px 18px', textDecoration: 'none' }}
-                  >
-                    Se paketets status
-                  </a>
-                  <a
                     href="/profil?tab=my_packages"
                     className="btn-secondary"
                     style={{ padding: '12px 18px', textDecoration: 'none' }}
@@ -3138,15 +3131,15 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
         }
         .sk-confirmed-compact {
           display: grid;
-          grid-template-columns: minmax(300px, 0.72fr) minmax(520px, 1.28fr);
-          align-items: stretch;
-          gap: 0;
-          padding: 30px 0 18px;
+          grid-template-columns: minmax(300px, 0.76fr) minmax(500px, 1.24fr);
+          align-items: center;
+          gap: 22px;
+          padding: 24px;
           text-align: left;
           overflow: hidden;
           border: 1px solid rgba(255,255,255,0.14);
           border-radius: 26px;
-          background: rgba(7,16,13,0.9);
+          background: linear-gradient(135deg, rgba(7,18,14,0.96), rgba(11,20,17,0.92));
           box-shadow: 0 28px 80px rgba(0,0,0,0.3);
           backdrop-filter: blur(22px);
         }
@@ -3155,8 +3148,7 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
           flex-direction: column;
           align-items: flex-start;
           justify-content: center;
-          padding: 34px 30px;
-          border-right: 1px solid rgba(255,255,255,0.1);
+          padding: 18px 14px;
         }
         .sk-confirmed-compact .sk-confirm-title,
         .sk-confirmed-compact .sk-confirm-sub {
@@ -3166,14 +3158,19 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
           max-width: 420px;
           color: rgba(255,255,255,0.65);
         }
+        .sk-confirmed-compact .sk-confirm-hero .btn-secondary {
+          color: rgba(255,255,255,0.72);
+          border-color: rgba(255,255,255,0.14);
+          background: rgba(255,255,255,0.05);
+        }
         .sk-confirmed-compact .sk-package-status-card {
           margin-top: 0 !important;
           max-width: none !important;
           width: 100%;
-          padding: 28px !important;
-          border: 0;
-          border-radius: 0;
-          background: rgba(255,255,255,0.98);
+          padding: 22px !important;
+          border: 1px solid rgba(255,255,255,0.11);
+          border-radius: 20px;
+          background: rgba(255,255,255,0.055);
           box-shadow: none;
           text-align: left;
         }
@@ -3197,7 +3194,7 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
           margin-top: 0;
         }
         .sk-status-heading {
-          color: #101512;
+          color: #fff;
           font-size: 1.15rem;
           font-weight: 800;
           letter-spacing: -0.03em;
@@ -3211,13 +3208,14 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
           padding: 16px;
           border: 1px solid #dce3df;
           border-radius: 17px;
-          background: linear-gradient(135deg, #f7faf8, #eef5f1);
+          background: rgba(255,255,255,0.055);
+          border-color: rgba(255,255,255,0.1);
         }
         .sk-confirm-stop { min-width: 0; }
         .sk-confirm-stop span {
           display: block;
           margin-bottom: 4px;
-          color: #748078;
+          color: rgba(255,255,255,0.48);
           font-size: 0.66rem;
           font-weight: 800;
           letter-spacing: 0.09em;
@@ -3226,7 +3224,7 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
         .sk-confirm-stop strong {
           display: block;
           overflow: hidden;
-          color: #101512;
+          color: #fff;
           font-size: 0.86rem;
           line-height: 1.35;
           text-overflow: ellipsis;
@@ -3238,6 +3236,27 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
           grid-template-columns: 1fr 0.7fr;
           gap: 10px;
           margin-bottom: 16px;
+        }
+        .sk-confirmed-compact .sk-package-status-card > div > div[style] {
+          background: rgba(255,255,255,0.055) !important;
+          border-color: rgba(255,255,255,0.1) !important;
+        }
+        .sk-confirmed-compact .sk-package-status-card strong,
+        .sk-confirmed-compact .sk-package-status-card .sk-form-label {
+          color: #fff !important;
+        }
+        .sk-confirmed-compact .sk-package-status-card p {
+          color: rgba(255,255,255,0.58) !important;
+        }
+        .sk-confirmed-compact .sk-summary-pill {
+          color: #dff9e8;
+          border-color: rgba(49,216,117,0.22);
+          background: rgba(49,216,117,0.1);
+        }
+        .sk-confirmed-compact .sk-package-status-card .btn-secondary {
+          color: #fff;
+          border-color: rgba(255,255,255,0.16);
+          background: rgba(255,255,255,0.06);
         }
 
         .sk-spinner-ring {
@@ -3749,14 +3768,13 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
             display: grid;
             grid-template-columns: 1fr;
             gap: 0;
-            padding: 0;
+            padding: 14px;
             border-radius: 20px;
           }
           .sk-confirm-hero {
             align-items: flex-start;
             padding: 24px 20px;
             border-right: 0;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
             text-align: left;
           }
           .sk-confirmed-compact .sk-confirm-title,
