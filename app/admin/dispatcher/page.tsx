@@ -366,10 +366,8 @@ export default function DispatcherDashboard() {
   return (
     <div className="dp-shell">
 
-      {/* fixed background */}
+      {/* base gap background */}
       <div className="dp-bg" aria-hidden="true" />
-      <div className="dp-glow-tl" aria-hidden="true" />
-      <div className="dp-glow-br" aria-hidden="true" />
 
       {/* ── LEFT SIDEBAR ─────────────────────────────────────────────── */}
       <nav className="dp-sidebar">
@@ -709,12 +707,13 @@ export default function DispatcherDashboard() {
         /* ── LEFT SIDEBAR ────────────────────────────────────────────── */
         .dp-sidebar {
           position: fixed;
-          top: 0;
-          left: 0;
+          top: 8px;
+          left: 8px;
           width: 220px;
-          height: 100vh;
-          background: #0a0c10;
-          border-right: 1px solid rgba(255,255,255,0.05);
+          height: calc(100vh - 16px);
+          background: #0e1015;
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 12px;
           display: flex;
           flex-direction: column;
           padding: 24px 0 20px;
@@ -826,41 +825,36 @@ export default function DispatcherDashboard() {
 
         /* ── MAIN CONTENT AREA ───────────────────────────────────────── */
         .dp-main {
-          margin-left: 220px;
+          margin-left: 236px;  /* 8 left + 220 sidebar + 8 gap */
+          margin-right: 8px;
+          margin-top: 8px;
           flex: 1;
           min-width: 0;
           padding-bottom: 80px;
+          background: #111318;
+          border-radius: 12px 12px 0 0;
+          position: relative;
+          z-index: 1;
+          min-height: calc(100vh - 8px);
+        }
+        /* green gradient bleed inside main panel */
+        .dp-main::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0; height: 480px;
+          background: radial-gradient(ellipse 80% 38% at 50% -4%,
+            rgba(74,222,128,0.13) 0%, transparent 62%);
+          pointer-events: none;
+          z-index: 0;
         }
 
-        /* ── Spotify-dark background ─────────────────────────────────── */
+        /* ── Base gap background ─────────────────────────────────────── */
         .dp-bg {
           position: fixed;
           inset: 0;
           z-index: 0;
-          background: #111318;
+          background: #06070b;
           pointer-events: none;
-        }
-        /* top green gradient bleed like Spotify artist pages */
-        .dp-bg::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: radial-gradient(ellipse 80% 38% at 50% -4%,
-            rgba(74,222,128,0.13) 0%, transparent 62%);
-        }
-
-        /* ── glow orbs ───────────────────────────────────────────────── */
-        .dp-glow-tl, .dp-glow-br {
-          position: fixed; border-radius: 999px;
-          pointer-events: none; z-index: 0;
-        }
-        .dp-glow-tl {
-          width: 480px; height: 480px; top: -60px; left: -100px;
-          background: radial-gradient(circle, rgba(74,222,128,0.055) 0%, transparent 68%);
-        }
-        .dp-glow-br {
-          width: 440px; height: 440px; bottom: -80px; right: -80px;
-          background: radial-gradient(circle, rgba(74,222,128,0.03) 0%, transparent 68%);
         }
 
         /* ── content wrap ────────────────────────────────────────────── */
