@@ -413,22 +413,6 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
     return () => window.clearInterval(id)
   }, [step, createdBookingId, createdPackageId])
 
-  // A completed booking is terminal. Browser Back must not reopen a form that
-  // could submit the same shipment again; users leave via Status or Mina paket.
-  useEffect(() => {
-    if (step !== 'confirmed' || !createdPackageId) return
-
-    const confirmedUrl = `/skicka?stage=confirmed&package_id=${createdPackageId}`
-    const keepCompletedBookingLocked = () => {
-      window.history.pushState({ gonowCompletedBooking: createdPackageId }, '', confirmedUrl)
-      setStep('confirmed')
-      router.replace(confirmedUrl, { scroll: false })
-    }
-
-    window.addEventListener('popstate', keepCompletedBookingLocked)
-    return () => window.removeEventListener('popstate', keepCompletedBookingLocked)
-  }, [step, createdPackageId, router])
-
   const activeTripMeta = useMemo(() => {
     return Object.fromEntries(activeTrips.map((trip) => [trip.id, getTripMeta(trip, bookings, userId)]))
   }, [activeTrips, bookings, userId])
@@ -607,7 +591,9 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
       setCreatedPackageMatches([])
       setCreatedPackageOrder(null)
       setStep('confirmed')
-      router.replace(`/skicka?stage=confirmed&package_id=${data.package.id}`, { scroll: false })
+      const historyState = window.history.state ?? {}
+      window.history.replaceState(historyState, '', '/skicka')
+      window.history.pushState(historyState, '', `/skicka?stage=confirmed&package_id=${data.package.id}`)
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Kunde inte boka pakettransporten.')
       setStep('review')
@@ -724,7 +710,9 @@ export function SkickaPageContent({ onClose }: { onClose?: () => void } = {}) {
         setCreatedPackageOrder(null)
         setStep('confirmed')
         if (data.package?.id) {
-          router.replace(`/skicka?stage=confirmed&package_id=${data.package.id}`, { scroll: false })
+          const historyState = window.history.state ?? {}
+          window.history.replaceState(historyState, '', '/skicka')
+          window.history.pushState(historyState, '', `/skicka?stage=confirmed&package_id=${data.package.id}`)
         }
       } catch {
         setSubmitError('Nätverksfel, försök igen.')
