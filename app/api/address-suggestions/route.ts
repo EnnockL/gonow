@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { searchPhoton } from '@/lib/geocoding'
 
 interface NominatimResult {
   display_name: string
@@ -20,6 +21,14 @@ export async function GET(request: NextRequest) {
   if (query.length > 120) return NextResponse.json({ error: 'Sökningen är för lång.' }, { status: 400 })
 
   try {
+    const photonResults = await searchPhoton(query, 6)
+    if (photonResults.length) {
+      const suggestions = photonResults
+        .map(result => result.display)
+        .filter((value, index, all) => all.indexOf(value) === index)
+      return NextResponse.json({ suggestions, source: 'photon' })
+    }
+
     const url = new URL('https://nominatim.openstreetmap.org/search')
     url.searchParams.set('q', `${query}, Sverige`)
     url.searchParams.set('format', 'json')

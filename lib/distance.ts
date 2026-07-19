@@ -1,3 +1,5 @@
+import { searchPhoton } from '@/lib/geocoding'
+
 function stripApt(address: string): string {
   return address
     .replace(/\s*,?\s*(?:lgh|lägenhet|apt|apartment|unit|enhet)\.?\s*\d+[a-z]?/gi, '')
@@ -9,6 +11,9 @@ export async function geocode(
   place: string
 ): Promise<{ lat: number; lng: number; display: string } | null> {
   const cleaned = stripApt(place)
+  const photonResults = await searchPhoton(cleaned, 1).catch(() => [])
+  if (photonResults.length) return photonResults[0]
+
   const hasStreetNumber = /\d/.test(cleaned) || cleaned.includes(',')
   const query = hasStreetNumber ? cleaned : `${cleaned}, Sverige`
 
