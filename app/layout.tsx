@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
+import Script from 'next/script'
 import { Suspense } from 'react'
 import './globals.css'
 import Navbar from '@/components/layout/Navbar'
@@ -25,7 +26,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="sv" className={geist.variable} suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
-        <script
+        <Script
+          id="gonow-theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(){try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}})()`,
           }}
