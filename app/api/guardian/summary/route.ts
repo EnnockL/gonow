@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getRequestUser, unauthorized } from '@/lib/auth/require-auth'
 import { createServiceClient } from '@/lib/supabase'
 import { buildGuardianFallbackSummary } from '@/lib/system-guardian/fallback-summary'
-import { reportAuthFailure } from '@/lib/system-guardian/report-auth-failure'
+import { requireAdmin } from '@/lib/auth/require-admin'
 import Anthropic from '@anthropic-ai/sdk'
 
 const rateLimitMap = new Map<string, number>()
@@ -21,24 +20,10 @@ function sanitizeForAI(meta: unknown): unknown {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getRequestUser(req)
-  if (!user) {
-    await reportAuthFailure(req, {
-      message: 'Nekat försök att begära Guardian-analys',
-      endpoint: '/api/guardian/summary', method: 'POST',
-    })
-    return unauthorized()
-  }
-
+  const guard = await requireAdmin(req, { endpoint: '/api/guardian/summary' })
+  if (guard.response) return guard.response
+  const user = guard.user!
   const db = createServiceClient()
-  const { data: profile } = await db.from('users').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') {
-    await reportAuthFailure(req, {
-      message: 'Användare utan adminroll försökte begära Guardian-analys',
-      userId: user.id, endpoint: '/api/guardian/summary', method: 'POST',
-    })
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
 
   const now = Date.now()
   const last = rateLimitMap.get(user.id) ?? 0

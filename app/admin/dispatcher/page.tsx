@@ -186,9 +186,9 @@ export default function DispatcherDashboard() {
   const loadAll = useCallback(async () => {
     try {
       const [r1, r2, r3, r4] = await Promise.all([
-        fetch('/api/dispatcher/overview'),
-        fetch('/api/dispatcher/health'),
-        fetch('/api/dispatcher/activity'),
+        authedFetch('/api/dispatcher/overview'),
+        authedFetch('/api/dispatcher/health'),
+        authedFetch('/api/dispatcher/activity'),
         authedFetch('/api/guardian/events?resolved=false&limit=50'),
       ])
       if (!r1.ok || !r2.ok || !r3.ok) return

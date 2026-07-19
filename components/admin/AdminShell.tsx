@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Activity, ArrowLeft, Boxes, ChevronRight, Menu, PackageSearch, Shield, ShieldOff, Truck, X, Zap } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import AdminMfaGate from './AdminMfaGate'
 import './admin-shell.css'
 
 const navigation = [
@@ -23,6 +24,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const pathname = usePathname()
   const { profile, loading } = useAuth()
   const [open, setOpen] = useState(false)
+  const [mfaVerified, setMfaVerified] = useState(false)
+  const handleMfaVerified = useCallback(() => setMfaVerified(true), [])
   const current = navigation.find(item => isActive(pathname, item.href, item.exact)) ?? navigation[0]
 
   if (loading) {
@@ -38,6 +41,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         <Link href="/" className="admin-gate-link"><ArrowLeft size={15} /> Till Gonow</Link>
       </div>
     )
+  }
+
+  if (!mfaVerified) {
+    return <AdminMfaGate onVerified={handleMfaVerified} />
   }
 
   return (
@@ -78,7 +85,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       <main className="admin-main">
         <header className="admin-topbar">
           <div><span>Operations /</span><strong>{current.label}</strong></div>
-          <div className="admin-topbar-status"><Shield size={13} /><span>Skyddad session</span><i /></div>
+          <div className="admin-topbar-status"><Shield size={13} /><span>MFA-skyddad session</span><i /></div>
         </header>
         <div className="admin-workspace">{children}</div>
       </main>

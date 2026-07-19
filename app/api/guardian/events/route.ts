@@ -1,32 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getRequestUser, unauthorized } from '@/lib/auth/require-auth'
 import { createServiceClient } from '@/lib/supabase'
-import { reportAuthFailure } from '@/lib/system-guardian/report-auth-failure'
-
-async function requireAdmin(req: NextRequest) {
-  const user = await getRequestUser(req)
-  if (!user) {
-    await reportAuthFailure(req, {
-      message: 'Nekat försök att läsa Guardian-incidenter',
-      endpoint: '/api/guardian/events', method: 'GET',
-    })
-    return { user: null, adminError: unauthorized() }
-  }
-  const db = createServiceClient()
-  const { data } = await db.from('users').select('role').eq('id', user.id).single()
-  if (data?.role !== 'admin') {
-    await reportAuthFailure(req, {
-      message: 'Användare utan adminroll försökte läsa Guardian-incidenter',
-      userId: user.id, endpoint: '/api/guardian/events', method: 'GET',
-    })
-    return { user: null, adminError: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
-  }
-  return { user, adminError: null }
-}
+import { requireAdmin } from '@/lib/auth/require-admin'
 
 export async function GET(req: NextRequest) {
-  const { adminError } = await requireAdmin(req)
-  if (adminError) return adminError
+  const guard = await requireAdmin(req, { endpoint: '/api/guardian/events' })
+  if (guard.response) return guard.response
 
   const { searchParams } = new URL(req.url)
   const severity  = searchParams.get('severity')

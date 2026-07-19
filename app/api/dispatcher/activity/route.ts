@@ -1,5 +1,7 @@
 import { createServiceClient } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { requireAdmin } from '@/lib/auth/require-admin'
 
 type ActivityItem = {
   id: string
@@ -8,7 +10,9 @@ type ActivityItem = {
   description: string
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const guard = await requireAdmin(req, { endpoint: '/api/dispatcher/activity' })
+  if (guard.response) return guard.response
   try {
     const supabase = createServiceClient()
 
